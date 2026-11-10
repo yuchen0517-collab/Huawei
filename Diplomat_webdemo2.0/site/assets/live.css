@@ -1,0 +1,1324 @@
+/* 头脑风暴 UI 2.0 · 实时层专用样式
+   补充会议状态、出牌动画、加载与复盘弹层，
+   其余全部沿用 styles.css / secret-card.css / event-card.css。 */
+
+.live-badge {
+  border-color: rgba(111, 208, 221, .45) !important;
+  color: #6fd0dd !important;
+  background: rgba(111, 208, 221, .08) !important;
+  letter-spacing: .08em;
+}
+:root[data-theme="light"] .live-badge {
+  border-color: rgba(47, 127, 140, .4) !important;
+  color: #2f7f8c !important;
+  background: rgba(47, 127, 140, .08) !important;
+}
+
+.dialogue-scroll.is-opening {
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 26px;
+}
+.opening-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 12px 18px;
+  border: 1px dashed var(--line-strong);
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-align: center;
+}
+.opening-notice svg { width: 13px; height: 13px; }
+.response-pending {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-solid);
+  color: var(--muted);
+  font-size: 11px;
+  box-shadow: var(--shadow);
+}
+.response-pending-icon,
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+.response-pending-icon { margin: 0; }
+.response-pending-icon i,
+.typing-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: response-pulse 1.2s ease-in-out infinite;
+}
+.response-pending-icon i:nth-child(2),
+.typing-dots i:nth-child(2) { animation-delay: .18s; }
+.response-pending-icon i:nth-child(3),
+.typing-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes response-pulse {
+  0%, 100% { opacity: .25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+.council-own-speech {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed var(--line);
+  font-size: 9px;
+  line-height: 1.6;
+}
+.council-own-speech > span { color: var(--gold); white-space: nowrap; }
+.council-own-speech > p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.council-table::before { display: none; }
+[data-flag] svg {
+  border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
+}
+.seat > span {
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.seat.speaking { transform: translate(-50%, -58%) scale(1.06); }
+.seat.speaking > span::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  animation: seat-ring 1.7s ease-out infinite;
+}
+@keyframes seat-ring {
+  from { transform: scale(.88); opacity: .9; }
+  to { transform: scale(1.25); opacity: 0; }
+}
+.council-speech {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.council-speech::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 76px;
+  height: 2px;
+  background: var(--gold);
+}
+.council-speech.is-system {
+  background: linear-gradient(110deg, var(--gold-soft), transparent 40%), var(--panel);
+}
+.council-speech.is-system .speech-meta strong { color: var(--text-soft); }
+.broadcast-avatar {
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--gold);
+}
+.broadcast-avatar > svg { width: 23px; height: 23px; }
+.broadcast-system {
+  margin-left: 5px;
+  font-family: Georgia, serif;
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+.council-speech.is-pending .council-speech-body > p { color: var(--muted); }
+.council-speech.broadcast-swap { animation: broadcast-in .35s ease; }
+@keyframes broadcast-in {
+  from { opacity: .45; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+
+.strategy-card-flight {
+  position: fixed;
+  z-index: 400;
+  min-height: 0;
+  margin: 0;
+  pointer-events: none;
+  opacity: .96;
+  transform-origin: center;
+  transition: transform .58s cubic-bezier(.2, .72, .25, 1), opacity .58s ease;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, .35);
+}
+.main-stage.card-play-receiving::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, var(--gold-soft), transparent 55%);
+  animation: table-receive .7s ease-out;
+}
+@keyframes table-receive {
+  0% { opacity: 0; }
+  45% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.multi-strategy .card-hand-footer { display: flex; }
+.multi-strategy .end-turn { flex: none; }
+@media (prefers-reduced-motion: reduce) {
+  .strategy-card-flight { transition-duration: .01ms; }
+  .seat.speaking > span::after,
+  .response-pending-icon i,
+  .typing-dots i { animation: none; }
+}
+@media (max-width: 580px) {
+  .opening-notice { padding: 10px 12px; font-size: 10px; }
+  .broadcast-avatar { width: 42px; height: 42px; }
+}
+
+.live-loading {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 420;
+  display: none;
+  padding: 13px 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-solid);
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: .04em;
+  box-shadow: var(--shadow);
+}
+.live-loading.show { display: flex; align-items: center; }
+.live-loading:before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-right: 9px;
+  border: 1px solid var(--gold);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: live-spin .8s linear infinite;
+}
+@keyframes live-spin { to { transform: rotate(360deg); } }
+
+.live-busy .strategy-card,
+.live-busy .end-turn,
+.live-busy #nextSpeech { opacity: .55; }
+.live-busy .strategy-card { pointer-events: none; }
+
+.live-task {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 0;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.live-task small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 8px;
+}
+.live-task.done { color: var(--green); }
+.live-task.done small { color: var(--green); }
+.live-refresh-tasks {
+  margin-top: 7px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 8px;
+}
+.live-refresh-tasks:hover { color: var(--gold); border-color: var(--gold); }
+
+.live-tree-count {
+  font-size: 8px;
+  color: var(--muted);
+}
+
+.live-secret {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px dashed rgba(181, 160, 206, .35);
+  background: var(--purple-bg);
+  color: var(--purple);
+  font-size: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+.live-secret:hover { border-color: var(--purple); }
+
+.live-invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 11px;
+}
+.live-invite-list .content-subtitle { margin-bottom: 2px; }
+.live-invite-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text-soft);
+  font-size: 9px;
+  text-align: left;
+}
+.live-invite-list button:hover {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.restart-button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 10px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+.restart-button:hover {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.topbar.no-mode-nav { grid-template-columns: minmax(340px, 1fr) auto; }
+@media (max-width: 850px) {
+  .topbar.no-mode-nav { grid-template-columns: 155px 1fr; }
+}
+@media (max-width: 580px) {
+  .topbar.no-mode-nav { grid-template-columns: 42px 1fr; }
+}
+@media (max-width: 980px) {
+  .restart-button { padding: 0 9px; font-size: 9px; }
+}
+
+.live-summary {
+  position: fixed;
+  inset: 0;
+  z-index: 520;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 4, 6, .74);
+  backdrop-filter: blur(4px);
+}
+.live-summary-card {
+  width: min(760px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  padding: 20px 22px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+}
+.live-summary-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.live-summary-card header span {
+  font-family: Georgia, serif;
+  font-size: 8px;
+  letter-spacing: .18em;
+  color: var(--muted);
+}
+.live-summary-card h2 {
+  margin-top: 5px;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--gold-bright);
+}
+.live-summary-card header button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+}
+.live-summary-sub {
+  margin: 8px 0 14px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.live-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+.live-summary-table th,
+.live-summary-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.live-summary-table th { color: var(--muted); font-weight: 400; font-size: 9px; }
+.live-summary-table td { color: var(--text-soft); }
+.live-summary-table td:not(:first-child) { font-family: Georgia, serif; color: var(--gold); }
+.live-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.live-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+.live-summary-grid strong { font-size: 9px; color: var(--muted); font-weight: 400; }
+.live-summary-grid span { font-size: 11px; color: var(--text-soft); }
+.live-summary-intel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  font-size: 9px;
+  color: var(--muted);
+}
+.live-summary-intel strong { width: 100%; color: var(--text-soft); font-weight: 400; }
+.live-summary-card footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.live-summary-card footer button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  font-size: 10px;
+}
+.live-summary-card .primary-button {
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.live-summary-card .secondary-button { color: var(--text-soft); }
+.live-report-link { color: var(--gold); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+.live-report-link:hover { color: var(--gold-bright); }
+
+@media (max-width: 640px) {
+  .live-summary-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------------- 定向发言：目标选择 ---------------- */
+.target-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; margin-right: 6px;
+  border: 1px dashed var(--line-strong); border-radius: 999px;
+  background: transparent; color: var(--text-soft);
+  font: inherit; font-size: 12px; line-height: 1.4;
+  cursor: pointer; white-space: nowrap; transition: all .18s ease;
+}
+.target-chip:hover { color: var(--text); border-color: var(--gold); }
+.target-chip.active {
+  border-style: solid; border-color: var(--gold);
+  color: var(--gold-bright); background: var(--gold-soft);
+}
+.target-chip svg { width: 13px; height: 13px; }
+.target-chip small { color: var(--muted); font-size: 11px; }
+.target-chip i { font-style: normal; color: var(--muted); font-size: 11px; }
+.target-chip.active i { color: var(--gold-dim); }
+
+.seat.selected {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(201, 160, 97, .32);
+}
+.seat.selected small { color: var(--gold-bright) !important; letter-spacing: .08em; }
+
+/* ================= 手牌（轻微扇形，不互相压字） ================= */
+.strategy-cards {
+  display: flex; justify-content: center; align-items: flex-end;
+  gap: 10px; padding: 24px 8px 20px; min-height: 232px;
+  perspective: 1200px;
+}
+.strategy-cards .strategy-card.game-card {
+  position: relative; flex: none; display: block;
+  width: 150px; height: 206px; min-height: 0; padding: 0;
+  margin: 0; border-radius: 12px;
+  border: 1px solid rgba(201, 160, 97, .42);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255, 236, 200, .07), transparent 62%),
+    linear-gradient(162deg, #251a10 0%, #17110b 46%, #0d0906 100%);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(0, 0, 0, .55);
+  transform-origin: 50% 118%;
+  transition: transform .18s ease, box-shadow .18s ease, margin .18s ease;
+  overflow: visible; text-align: left;
+  color: var(--text);
+}
+.strategy-cards .game-card:nth-child(1) { transform: rotate(-3deg) translateY(8px); }
+.strategy-cards .game-card:nth-child(2) { transform: rotate(-1.5deg) translateY(3px); }
+.strategy-cards .game-card:nth-child(3) { transform: rotate(0deg) translateY(0); }
+.strategy-cards .game-card:nth-child(4) { transform: rotate(1.5deg) translateY(3px); }
+.strategy-cards .game-card:nth-child(5) { transform: rotate(3deg) translateY(8px); }
+.strategy-cards .game-card:hover {
+  transform: translateY(-24px) rotate(0deg) scale(1.06);
+  z-index: 6; box-shadow: 0 22px 40px rgba(0, 0, 0, .55);
+}
+.strategy-cards .game-card.selected {
+  transform: translateY(-14px) rotate(0deg) scale(1.03);
+  z-index: 5; border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 16px 34px rgba(201, 160, 97, .35);
+}
+.strategy-cards .game-card.recommended:not(.selected) { border-color: rgba(128, 190, 160, .5); }
+.strategy-cards .game-card:disabled { opacity: .42; filter: saturate(.55); }
+
+.gc-cost {
+  position: absolute; top: -10px; left: -10px; z-index: 2;
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid rgba(255, 235, 190, .55);
+  background: radial-gradient(circle at 35% 28%, #f6e0b2, #b8863d 72%);
+  color: #2a1a08; font-family: Georgia, serif; font-size: 15px; font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .55), inset 0 -2px 3px rgba(0, 0, 0, .3);
+}
+.gc-frame { display: flex; flex-direction: column; gap: 5px; height: 100%; padding: 9px 9px 8px; }
+.gc-name {
+  font-size: 11px; font-weight: 600; text-align: center; letter-spacing: .06em;
+  padding: 2px 0 4px; color: var(--gold-bright);
+  border-bottom: 1px solid rgba(201, 160, 97, .28);
+}
+.gc-art {
+  position: relative; overflow: hidden;
+  height: 62px; border-radius: 7px; display: grid; place-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, var(--c, #c9a061), transparent 68%),
+    linear-gradient(160deg, rgba(0, 0, 0, .1), rgba(0, 0, 0, .55));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), inset 0 -8px 18px rgba(0, 0, 0, .45);
+}
+.gc-art::after {
+  content: ""; position: absolute; inset: -30% -10%;
+  background: linear-gradient(118deg, transparent 42%, rgba(255, 244, 214, .14) 50%, transparent 58%);
+  pointer-events: none;
+}
+.gc-art svg { width: 30px; height: 30px; color: #0d0906; opacity: .82; }
+.gc-type { font-size: 8px; letter-spacing: .1em; color: var(--c, var(--muted)); text-align: center; opacity: .85; }
+.gc-desc {
+  font-size: 9px; line-height: 1.55; color: var(--text-soft);
+  flex: 1 1 auto; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.gc-effects { list-style: none; display: flex; flex-wrap: wrap; gap: 3px; margin: 0; padding: 0; }
+.gc-effects li {
+  font-size: 7.5px; line-height: 1.3; padding: 1px 4px; border-radius: 3px;
+  border: 1px solid rgba(201, 160, 97, .28); color: var(--gold);
+  background: rgba(201, 160, 97, .07); white-space: nowrap;
+}
+.gc-effect-more { font-size: 7.5px; color: var(--muted); }
+.gc-em {
+  position: absolute; left: 0; right: 0; bottom: -17px; text-align: center;
+  font-size: 8px; font-style: normal; color: var(--green); letter-spacing: .08em;
+}
+
+/* 卡面插画：单色遮罩，按卡牌颜色着色 */
+.gc-art-art {
+  position: absolute; inset: 7px;
+  background: var(--c, #c9a061); opacity: .9;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-size: contain; mask-size: contain;
+}
+.gc-art[data-art="pressure"] .gc-art-art { -webkit-mask-image: url(art/card-pressure.svg); mask-image: url(art/card-pressure.svg); }
+.gc-art[data-art="coop"] .gc-art-art { -webkit-mask-image: url(art/card-coop.svg); mask-image: url(art/card-coop.svg); }
+.gc-art[data-art="probe"] .gc-art-art { -webkit-mask-image: url(art/card-probe.svg); mask-image: url(art/card-probe.svg); }
+.gc-art[data-art="procedure"] .gc-art-art { -webkit-mask-image: url(art/card-procedure.svg); mask-image: url(art/card-procedure.svg); }
+.gc-art[data-art="evidence"] .gc-art-art { -webkit-mask-image: url(art/card-evidence.svg); mask-image: url(art/card-evidence.svg); }
+.gc-art[data-art="intel"] .gc-art-art { -webkit-mask-image: url(art/card-intel.svg); mask-image: url(art/card-intel.svg); }
+.gc-art[data-art="mobilize"] .gc-art-art { -webkit-mask-image: url(art/card-mobilize.svg); mask-image: url(art/card-mobilize.svg); }
+.gc-art[data-art="endgame"] .gc-art-art { -webkit-mask-image: url(art/card-endgame.svg); mask-image: url(art/card-endgame.svg); }
+.gc-art-icon { position: absolute; right: 6px; bottom: 4px; width: 14px; height: 14px; opacity: .5; color: var(--c); }
+
+/* 情报账本 */
+.intel-entry { border: 1px solid var(--line); background: var(--card); padding: 9px 10px; margin-top: 6px; border-radius: 4px; }
+.intel-entry > div { display: flex; justify-content: space-between; align-items: center; }
+.intel-entry strong { font-size: 10px; color: var(--text); }
+.intel-entry em { font-style: normal; font-size: 9px; color: var(--muted); }
+.intel-entry p { font-size: 9px; color: var(--text-soft); margin: 5px 0 7px; line-height: 1.55; }
+.intel-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.intel-actions button {
+  font: inherit; font-size: 9px; padding: 3px 9px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--gold-soft); color: var(--gold);
+  border-radius: 3px;
+}
+.intel-actions button:hover { background: var(--gold); color: var(--bg); }
+
+/* 侧栏收起按钮更明显 */
+.panel-heading .collapse-button {
+  width: 26px; height: 26px; border-radius: 4px;
+  border: 1px solid var(--line); color: var(--gold); background: var(--gold-soft);
+}
+.panel-heading .collapse-button:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+
+/* 收起后显示重开把手（把手在 #app 外面，用兄弟选择器） */
+#app.left-collapsed ~ .reopen-left,
+#app.right-collapsed ~ .reopen-right { display: flex; }
+
+/* 覆盖 styles.css 里把这两个控件强制隐藏的 !important */
+#app .panel-heading .collapse-button { display: grid !important; }
+#app.left-collapsed ~ .reopen-left,
+#app.right-collapsed ~ .reopen-right { display: flex !important; }
+
+/* ===== 右侧「态势」改为浮层抽屉：默认收起，打开时覆盖舞台并虚化背景 ===== */
+.workspace { grid-template-columns: 224px minmax(0, 1fr); }
+#app.left-collapsed .workspace { grid-template-columns: 0 minmax(0, 1fr); }
+
+.right-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 330px;
+  z-index: 46;
+  transform: translateX(103%);
+  transition: transform .26s cubic-bezier(.22,.61,.36,1);
+  background: var(--panel-solid);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -22px 0 48px rgba(0, 0, 0, .45);
+}
+#app.right-open .right-panel { transform: translateX(0); }
+
+.right-scrim {
+  position: absolute; inset: 0; z-index: 45;
+  background: rgba(6, 5, 3, .42);
+  -webkit-backdrop-filter: blur(5px) saturate(.9);
+  backdrop-filter: blur(5px) saturate(.9);
+  opacity: 0; pointer-events: none;
+  transition: opacity .24s ease;
+}
+#app.right-open .right-scrim { opacity: 1; pointer-events: auto; }
+
+/* 右侧把手常驻，点了打开抽屉 */
+#app ~ .reopen-right { display: flex !important; }
+#app.right-open ~ .reopen-right { opacity: 0; pointer-events: none; }
+
+@media (max-width: 1280px) {
+  .workspace { grid-template-columns: 205px minmax(0, 1fr); }
+  .right-panel { width: 300px; }
+}
+@media (max-width: 1050px) {
+  .workspace { grid-template-columns: 182px minmax(0, 1fr); }
+  .right-panel { width: 280px; }
+}
+
+/* 会场变宽后，长发言不再把版面顶出去 */
+.council-stage .council-speech,
+.observe-stage .council-speech {
+  max-height: 30vh; overflow-y: auto; min-height: 0;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+
+/* 首屏占位与「直接打开文件」提示 */
+.hand-placeholder {
+  width: 100%; text-align: center; padding: 46px 0;
+  font-size: 11px; color: var(--muted); letter-spacing: .12em;
+}
+.live-file-tip {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 200; max-width: 520px; padding: 26px 30px;
+  background: var(--panel-solid); border: 1px solid var(--line-strong);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55); border-radius: 6px;
+  color: var(--text-soft); font-size: 12px; line-height: 1.75;
+}
+.live-file-tip strong { display: block; font-size: 15px; color: var(--gold-bright); margin-bottom: 8px; }
+.live-file-tip p { margin: 6px 0; }
+.live-file-tip code {
+  padding: 2px 6px; border: 1px solid var(--line); background: var(--gold-soft);
+  color: var(--gold); font-size: 11px; border-radius: 3px; word-break: break-all;
+}
+.live-file-tip button {
+  margin-top: 12px; padding: 5px 14px; cursor: pointer; font: inherit; font-size: 11px;
+  border: 1px solid var(--line-strong); background: var(--gold-soft); color: var(--gold); border-radius: 3px;
+}
+.live-file-tip button:hover { background: var(--gold); color: var(--bg); }
+
+/* 静态预览提示条：底部一行，不挡会场 */
+.live-file-tip {
+  top: auto; bottom: 18px; left: 50%; transform: translateX(-50%);
+  max-width: 780px; padding: 10px 16px;
+  display: flex; align-items: center; gap: 16px;
+  font-size: 11px; line-height: 1.6;
+}
+.live-file-tip strong { display: inline; margin: 0 10px 0 0; font-size: 12px; }
+.live-file-tip p { margin: 0; }
+.live-file-tip code { font-size: 10px; }
+.live-file-tip button { margin: 0; flex: none; }
+.live-file-tip > div { min-width: 0; }
+
+/* 矮屏自适应：手牌区按视口高度收缩，避免把发言区挤到贴边 */
+@media (max-height: 900px) {
+  .strategy-cards { min-height: 206px; padding: 16px 8px 12px; }
+  .strategy-cards .strategy-card.game-card { width: 138px; height: 188px; }
+  .gc-art { height: 62px; }
+}
+@media (max-height: 800px) {
+  .strategy-cards { min-height: 176px; padding: 12px 8px 8px; }
+  .strategy-cards .strategy-card.game-card { width: 124px; height: 166px; }
+  .gc-art { height: 50px; }
+  .gc-name { font-size: 11px; padding-bottom: 3px; }
+  .gc-desc { font-size: 8.4px; -webkit-line-clamp: 2; }
+  .gc-effects li { font-size: 7px; padding: 1px 3px; }
+  .strategy-area { padding-top: 6px; padding-bottom: 8px; }
+}
+@media (max-height: 700px) {
+  .strategy-cards { min-height: 148px; padding: 10px 8px 6px; }
+  .strategy-cards .strategy-card.game-card { width: 108px; height: 142px; }
+  .gc-art { height: 38px; }
+  .gc-desc { display: none; }
+  .gc-em { display: none; }
+}
+
+/* 最终尺寸：跟随视口高度自适应（覆盖上面的固定断点） */
+.strategy-cards { min-height: clamp(176px, 27vh, 236px); }
+.strategy-cards .strategy-card.game-card {
+  width: clamp(118px, 9.2vw, 152px);
+  height: clamp(150px, 24vh, 206px);
+}
+.gc-art { height: clamp(40px, 8.4vh, 70px); }
+
+/* 更矮的窗口：手牌压成紧凑条，把空间还给发言区 */
+@media (max-height: 680px) {
+  .strategy-cards { min-height: 146px; padding: 8px 8px 6px; }
+  .strategy-cards .strategy-card.game-card { width: 106px; height: 136px; }
+  .gc-art { height: 32px; }
+  .gc-desc, .gc-em, .gc-effects { display: none; }
+  .gc-name { font-size: 10px; padding: 1px 0 3px; }
+  .gc-type { font-size: 7px; }
+  .strategy-area { padding-top: 4px; padding-bottom: 6px; }
+  .strategy-heading { margin-bottom: 4px; }
+}
+
+/* 策略区：恢复左右内边距（之前 .multi-strategy 把 padding 写成 0），并与发言区分隔 */
+.strategy-area, .multi-strategy {
+  padding: 10px 22px 10px !important;
+  border-top: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, var(--gold-soft), transparent 55%), var(--panel);
+}
+.strategy-heading { margin-bottom: 6px; }
+.strategy-cards { padding: 10px 0 4px; min-height: 0; }
+.card-hand-footer { margin-top: 6px; }
+
+/* 左侧栏加宽 + 策略框压扁 + 卡牌探出框外 */
+.workspace { grid-template-columns: 300px minmax(0, 1fr) !important; }
+#app.left-collapsed .workspace { grid-template-columns: 0 minmax(0, 1fr) !important; }
+
+.strategy-area {
+  padding: 6px 22px 6px !important;
+  overflow: visible;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .28), transparent 40%), var(--panel);
+}
+.strategy-heading { margin-bottom: 2px; }
+
+.strategy-cards {
+  padding: 0 0 0;
+  margin-top: -34px;          /* 卡牌向上探出策略框 */
+  min-height: 0;
+  overflow: visible;
+}
+.strategy-cards .strategy-card.game-card { align-self: flex-end; }
+.card-hand-footer { margin-top: 2px; }
+
+@media (max-width: 1500px) {
+  .workspace { grid-template-columns: 270px minmax(0, 1fr) !important; }
+}
+@media (max-width: 1200px) {
+  .workspace { grid-template-columns: 236px minmax(0, 1fr) !important; }
+}
+
+/* 策略区不再画大框：去掉底色，只留一条分隔线，卡牌直接浮在舞台上 */
+.strategy-area {
+  background: none !important;
+  border-top: 1px solid var(--line) !important;
+  padding: 4px 22px 6px !important;
+}
+.strategy-cards { margin-top: 0; padding: 4px 0 0; min-height: 0; }
+
+/* 发言区可收缩，保证手牌完整显示，不被舞台裁掉 */
+.bilateral-stage { grid-template-rows: auto minmax(90px, 1fr) auto auto auto; }
+.council-stage { grid-template-rows: 54px minmax(140px, 1fr) auto auto; }
+.observe-stage { grid-template-rows: 54px minmax(180px, 1fr) auto auto; }
+
+/* ===== 回滚到稳定版布局（保留左栏加宽）===== */
+.bilateral-stage { grid-template-rows: auto minmax(120px, 1fr) auto auto auto; }
+.council-stage { grid-template-rows: 54px minmax(205px, 1fr) auto auto auto; }
+.observe-stage { grid-template-rows: 54px minmax(245px, 1fr) auto 34px; }
+.strategy-area, .multi-strategy {
+  padding: 10px 22px 10px !important;
+  border-top: 1px solid var(--line-strong) !important;
+  background: linear-gradient(180deg, var(--gold-soft), transparent 55%), var(--panel) !important;
+}
+.strategy-cards { margin-top: 0; padding: 10px 0 4px; min-height: 0; }
+
+/* 双边舞台改 flex：发言区吃掉剩余高度，策略区/状态栏按内容固定 */
+.bilateral-stage { display: flex; flex-direction: column; }
+.bilateral-stage .dialogue-scroll { flex: 1 1 auto; min-height: 120px; }
+.bilateral-stage .risk-banner { flex: none; }
+.bilateral-stage .strategy-area { flex: none; }
+.bilateral-stage .statusbar { flex: none; }
+
+/* 让手牌容器至少和卡牌一样高，避免卡片压到页脚 */
+.strategy-cards { min-height: clamp(150px, 24vh, 206px) !important; }
+.strategy-area { overflow: visible; }
+
+/* 双边舞台：三行网格（发言 1fr / 策略 auto / 状态 auto），风险条改为浮动 */
+.bilateral-stage {
+  display: grid !important;
+  grid-template-rows: minmax(200px, 1fr) auto auto !important;
+  position: relative;
+}
+.bilateral-stage .risk-banner {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 9; margin: 0; width: auto; max-width: 70%;
+}
+.strategy-cards { min-height: 0 !important; }
+
+/* 卡牌与页脚留出安全距离 */
+.strategy-cards { padding-bottom: 16px !important; }
+.card-hand-footer { margin-top: 2px; }
+
+/* 策略区只留上下两条分隔线，卡牌"浮"在舞台上（不再被框包住） */
+.strategy-area, .multi-strategy { background: transparent !important; }
+.card-hand-footer { border-top: 1px solid var(--line); padding-top: 6px; }
+
+/* 真正的「卡牌浮在框外」：策略区只剩标题+页脚两条窄条，卡牌悬在它上方 */
+.strategy-area { position: relative; padding: 8px 22px 8px !important; }
+.strategy-cards {
+  position: absolute; left: 0; right: 0; bottom: 100%;
+  margin: 0 0 -26px; padding: 0 !important;
+  min-height: 0 !important;
+}
+.strategy-cards .strategy-card.game-card { flex: none; }
+.strategy-heading { margin-bottom: 0; }
+.card-hand-footer { margin-top: 4px; }
+
+/* 卡牌浮起后，给发言区底部留出同样高度的空白，避免遮住内容 */
+.bilateral-stage .dialogue-scroll { padding-bottom: 250px; }
+.council-stage .council-speech, .observe-stage .council-speech { margin-bottom: 240px; }
+
+/* 卡牌正好停在控制条上方，不压住标题与行动点 */
+.strategy-cards { margin-bottom: 0 !important; }
+
+/* 卡牌整体再抬起 16px，避免旋转下沿压到控制条标题 */
+.strategy-cards { margin-bottom: 16px !important; }
+
+/* ============================================================
+   最终定版（回滚"卡牌浮起"实验）：
+   策略区恢复为带边框的条带，卡牌放回条带内
+   ============================================================ */
+.bilateral-stage {
+  display: grid !important;
+  grid-template-rows: minmax(200px, 1fr) auto auto !important;
+}
+.bilateral-stage .dialogue-scroll { flex: none; padding-bottom: 20px; }
+.council-stage .council-speech, .observe-stage .council-speech { margin-bottom: 0; }
+
+.strategy-area, .multi-strategy {
+  position: static !important;
+  padding: 10px 22px 10px !important;
+  border-top: 1px solid var(--line-strong) !important;
+  background: linear-gradient(180deg, var(--gold-soft), transparent 55%), var(--panel) !important;
+  overflow: visible;
+}
+.strategy-cards {
+  position: static !important;
+  margin: 0 !important;
+  padding: 10px 0 6px !important;
+  min-height: clamp(150px, 24vh, 206px) !important;
+}
+.strategy-cards .strategy-card.game-card {
+  width: clamp(118px, 9.2vw, 152px) !important;
+  height: clamp(150px, 24vh, 206px) !important;
+}
+
+/* 发言框给一个稳定高度，避免被压成一条线 */
+.council-stage .council-speech,
+.observe-stage .council-speech {
+  min-height: 132px !important;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+/* 紧凑排布：矮窗口下也保证手牌与页脚完整可见 */
+.council-stage {
+  grid-template-rows: 54px minmax(180px, 1fr) auto auto !important;
+}
+.council-stage .council-speech {
+  min-height: 110px !important;
+  max-height: 26vh;
+}
+.observe-stage {
+  grid-template-rows: 54px minmax(180px, 1fr) auto 30px !important;
+}
+.observe-stage .council-speech { min-height: 104px !important; max-height: 24vh; }
+
+/* 策略条再收 20px：压缩内边距与标题行 */
+.strategy-area, .multi-strategy { padding: 6px 22px 6px !important; }
+.strategy-heading { margin-bottom: 0 !important; min-height: 0 !important; padding-bottom: 0 !important; }
+.strategy-cards { padding: 6px 0 4px !important; }
+.card-hand-footer { margin-top: 2px !important; padding-top: 4px; }
+
+/* 卡牌高度上限按视口再收一点，矮窗口优先保证完整可见 */
+.strategy-cards .strategy-card.game-card {
+  height: clamp(140px, 22vh, 206px) !important;
+  width: clamp(112px, 9vw, 152px) !important;
+}
+.strategy-cards { min-height: clamp(140px, 22vh, 206px) !important; }
+
+/* 极矮窗口（<730px）终极紧凑档 */
+@media (max-height: 730px) {
+  .council-stage { grid-template-rows: 50px minmax(150px, 1fr) auto auto !important; }
+  .council-stage .council-speech { min-height: 92px !important; max-height: 20vh; }
+  .strategy-cards .strategy-card.game-card { height: 116px !important; width: 88px !important; }
+  .strategy-cards { min-height: 116px !important; }
+  .gc-desc, .gc-em, .gc-effects { display: none !important; }
+  .gc-art { height: 28px !important; }
+  .gc-name { font-size: 9px !important; }
+  .strategy-area, .multi-strategy { padding: 4px 16px !important; }
+}
+
+/* ============================================================
+   去掉卡面插画，把空间全部让给文字
+   ============================================================ */
+.gc-art { display: none !important; }
+.gc-frame { padding: 13px 11px 10px; gap: 6px; }
+.gc-name {
+  font-size: 14px; letter-spacing: .04em; line-height: 1.3;
+  padding: 0 0 6px; text-align: left;
+}
+.gc-type { font-size: 9.5px; letter-spacing: .12em; text-align: left; }
+.gc-desc {
+  font-size: 11px; line-height: 1.7; -webkit-line-clamp: 5;
+  color: var(--text); opacity: .92;
+}
+.gc-effects { gap: 4px; margin-top: 2px; }
+.gc-effects li { font-size: 9px; padding: 2px 5px; }
+.gc-effect-more { font-size: 9px; }
+.gc-em { font-size: 9px; }
+
+/* 文字版卡面：稍加宽，效果标签不必每行一个 */
+.strategy-cards .strategy-card.game-card {
+  width: clamp(126px, 9.6vw, 170px) !important;
+}
+
+/* ============================================================
+   多边紧凑布局 A：桌面固定高度，余量全给发言区
+   ============================================================ */
+#app.mode-multi .council-stage {
+  grid-template-rows: 50px 210px minmax(150px, 1fr) auto !important;
+}
+#app.mode-multi .council-table { min-height: 0; }
+#app.mode-multi .council-speech {
+  min-height: 150px !important;
+  max-height: none;
+}
+
+/* ============================================================
+   按"真实视口"重排：桌面/发言/手牌都用 vh 联动，永不溢出
+   （125% 缩放下 1920 屏 ≈ 1536×730 CSS 像素）
+   ============================================================ */
+#app.mode-multi .council-stage {
+  grid-template-rows: 48px clamp(132px, 25vh, 240px) minmax(92px, 1fr) auto !important;
+}
+#app.mode-multi .council-table { min-height: 0; }
+#app.mode-multi .council-speech {
+  min-height: 0 !important;
+  height: auto;
+  max-height: none;
+}
+.strategy-cards .strategy-card.game-card {
+  height: clamp(112px, 20vh, 206px) !important;
+}
+.strategy-cards { min-height: clamp(112px, 20vh, 206px) !important; }
+
+/* 兜底：极端窗口下可滚动，绝不裁切 */
+.council-stage, .bilateral-stage, .observe-stage { overflow-y: auto; }
+
+/* 手牌再压一档：18vh，矮屏隐藏副标题与顾问建议，给页脚腾地方 */
+.strategy-cards .strategy-card.game-card { height: clamp(104px, 18vh, 206px) !important; }
+.strategy-cards { min-height: clamp(104px, 18vh, 206px) !important; }
+@media (max-height: 760px) {
+  .strategy-heading small, .strategy-heading > span { display: none !important; }
+  .gc-em { display: none !important; }
+  .gc-desc { -webkit-line-clamp: 4; font-size: 10.5px; line-height: 1.6; }
+  .card-hand-footer span { font-size: 9px; }
+  .card-hand-footer { padding-top: 2px; }
+}
+
+/* 125% 缩放（≈1536×740）与更矮屏幕的专用档 */
+@media (max-height: 700px) {
+  #app.mode-multi .council-stage {
+    grid-template-rows: 44px clamp(108px, 22vh, 200px) minmax(80px, 1fr) auto !important;
+  }
+  .strategy-cards .strategy-card.game-card { height: clamp(94px, 16vh, 170px) !important; }
+  .strategy-cards { min-height: clamp(94px, 16vh, 170px) !important; }
+  .strategy-area, .multi-strategy { padding: 4px 18px !important; }
+}
+
+/* 矮屏只隐藏英文副标题，保留「本轮策略」 */
+@media (max-height: 760px) {
+  .strategy-heading > span { display: inline-flex !important; }
+  .strategy-heading small { display: none !important; }
+}
+
+/* 效果标签不要再一行一个：缩小字号、放宽卡面，让它俩俩并排 */
+.strategy-cards .strategy-card.game-card { width: clamp(136px, 10vw, 176px) !important; }
+.gc-effects { gap: 3px !important; }
+.gc-effects li {
+  font-size: 8px !important;
+  padding: 1px 4px !important;
+  letter-spacing: -.01em;
+}
+.gc-effect-more { font-size: 8px !important; }
+
+/* 主题按钮：跟随系统时显示右上角小光点（与首页一致） */
+.theme-toggle { position: relative; }
+.theme-toggle::after {
+  content: "";
+  position: absolute; top: 2px; right: 2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #d2ab6d; border: 1.5px solid transparent;
+  box-shadow: 0 0 8px rgba(201, 151, 85, .6);
+  opacity: 0; transform: scale(.3);
+  transition: opacity .35s ease, transform .35s ease;
+  pointer-events: none;
+}
+.theme-toggle.is-auto::after { opacity: 1; transform: scale(1); }
+
+
+/* 结束谈判弹窗 */
+.live-end-ask { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center;
+  background: rgba(0,0,0,.72); backdrop-filter: blur(3px); }
+.live-end-ask > section { width: min(560px, 88vw); padding: 34px 36px 26px; text-align: center;
+  background: linear-gradient(180deg, #17110b, #0f0a06); border: 1px solid var(--line-strong);
+  box-shadow: 0 26px 70px rgba(0,0,0,.6); }
+.live-end-ask .kicker { font-size: 11px; letter-spacing: .34em; color: var(--muted); }
+.live-end-ask h2 { margin: 10px 0 12px; font-size: 25px; color: var(--gold-bright); letter-spacing: .06em; }
+.live-end-ask .sub { margin: 0 0 16px; font-size: 13px; color: var(--text-soft); }
+.live-end-ask .tip { margin: 0 0 22px; font-size: 13px; line-height: 1.85; color: var(--text-soft); }
+.live-end-ask .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.live-end-ask button { padding: 13px 10px; font: inherit; font-size: 14px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--gold); color: #120d07; }
+.live-end-ask button.ghost { background: transparent; color: var(--text-soft); }
+.live-end-ask button.ghost:hover { color: var(--gold-bright); border-color: var(--gold); }
+.live-end-ask button.back { margin-top: 16px; padding: 6px; background: none; border: 0;
+  color: var(--muted); text-decoration: underline; font-size: 12px; }
+
+/* ===== 浅色主题：手牌跟随主题变亮 ===== */
+:root[data-theme="light"] .strategy-cards .strategy-card.game-card {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(201,160,97,.14), transparent 62%),
+    linear-gradient(162deg, #fffdf8 0%, #f7eddc 48%, #efe3c9 100%);
+  border-color: rgba(150, 112, 56, .38);
+  box-shadow: 0 10px 22px rgba(120, 92, 44, .16), inset 0 0 0 1px rgba(255, 255, 255, .7);
+  color: #2a2113;
+}
+:root[data-theme="light"] .gc-name {
+  color: #6b4d1c;
+  border-bottom-color: rgba(150, 112, 56, .28);
+}
+:root[data-theme="light"] .gc-type { color: #8a6a2f; }
+:root[data-theme="light"] .gc-desc { color: #3b2f1e; opacity: .95; }
+:root[data-theme="light"] .gc-effects li {
+  color: #6b4d1c;
+  border-color: rgba(150, 112, 56, .32);
+  background: rgba(180, 140, 80, .12);
+}
+:root[data-theme="light"] .gc-effect-more,
+:root[data-theme="light"] .gc-em { color: #8a6a2f; }
+:root[data-theme="light"] .card-hand-footer,
+:root[data-theme="light"] .card-hand-footer > span,
+:root[data-theme="light"] .strategy-heading > span,
+:root[data-theme="light"] .strategy-heading small { color: #6e5b3d; }
+
+
+/* 立场标签：强制横排，不再竖着挤成一条 */
+.delegation em, .stance, .camp-chip, .evidence-list .stance {
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  min-width: 42px;
+  text-align: center;
+}
+
+/* 谈判树：暗线开关（紫白滑块） */
+.tree-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.secret-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-left: auto; padding: 3px 4px 3px 4px; cursor: pointer;
+  background: none; border: 0; font: inherit;
+}
+.secret-toggle i {
+  position: relative; width: 38px; height: 20px; border-radius: 999px;
+  background: #e9e2d4; border: 1px solid rgba(120, 100, 70, .35);
+  transition: background .2s ease, border-color .2s ease;
+  flex: none;
+}
+.secret-toggle i::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  transition: transform .2s ease;
+}
+.secret-toggle em { font-style: normal; font-size: 12px; color: #6e5b3d; letter-spacing: .04em; }
+.secret-toggle.on i { background: #9b7fc4; border-color: #7d64a8; }
+.secret-toggle.on i::after { transform: translateX(18px); }
+.secret-toggle.on em { color: #7d64a8; }
+:root[data-theme="dark"] .secret-toggle i { background: #2a2318; border-color: rgba(201, 160, 97, .35); }
+:root[data-theme="dark"] .secret-toggle.on i { background: #8f74bb; border-color: #a98fd0; }
+:root[data-theme="dark"] .secret-toggle em { color: #bca785; }
+:root[data-theme="dark"] .secret-toggle.on em { color: #c4abd8; }
+
+.tree-secret-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 6px 0 8px; padding: 6px 8px;
+  border: 1px solid rgba(181, 160, 206, .35); background: rgba(159, 126, 190, .07);
+}
+.tree-secret-row > span { font-size: 12px; color: var(--text-soft); letter-spacing: .06em; }
+.tree-secret-row .secret-toggle { margin-left: 0; }
+
+/* 旁白更新时的轻微高亮，提示这是本轮新内容 */
+@keyframes narratorFlash {
+  0%   { background: rgba(201, 160, 97, .22); }
+  100% { background: transparent; }
+}
+.narrator-card p.narrator-flash { animation: narratorFlash .9s ease-out; border-radius: 3px; }
+
+/* 内心 OS：默认两行折叠，点「展开」看全文 */
+.inner-os #observeOs {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.inner-os.expanded #observeOs {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+.inner-os #expandOs {
+  margin-left: 8px; padding: 0; background: none; border: 0; cursor: pointer;
+  font: inherit; font-size: 11px; color: var(--gold); text-decoration: underline;
+}
+
+
+/* 谈判树：紧凑卡片，正文最多两行 */
+.negotiation-tree .tree-card {
+  padding: 9px 12px !important;
+  gap: 3px !important;
+}
+.negotiation-tree .tree-card > div { display: flex; align-items: baseline; gap: 6px; }
+.negotiation-tree .tree-card strong { font-size: 12px; }
+.negotiation-tree .tree-card em { font-size: 10px; opacity: .7; margin-left: auto; }
+.negotiation-tree .tree-card p {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin: 2px 0 0; font-size: 12px; line-height: 1.55; color: var(--text-soft);
+}
+.negotiation-tree .tree-card small { font-size: 10.5px; color: var(--muted); }
+.negotiation-tree .tree-node { margin-bottom: 8px; }
+
+/* 事件列表 / 回合回看的行样式 */
+.event-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+  background: rgba(201,160,97,.06); border: 1px solid rgba(201,160,97,.22);
+  color: var(--text-soft); font: inherit; text-align: left;
+}
+.event-row:hover { background: rgba(201,160,97,.14); color: var(--gold-bright); }
+.event-row b { color: var(--gold); font-weight: 500; min-width: 62px; }
+.event-row span { flex: 1; }
+.event-row em { color: var(--muted); font-style: normal; font-size: 11px; }
+
+/* 发言框：直接放大，去掉折叠 */
+.council-speech .council-speech-body p,
+.council-speech .speech-body p {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  overflow: visible !important;
+  max-height: none !important;
+}
+.council-stage .council-speech, .observe-stage .council-speech {
+  max-height: 42vh !important;
+  overflow-y: auto !important;
+}
+.inner-os #expandOs, #expandOs { display: none !important; }
+.inner-os #observeOs {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  overflow: visible !important;
+}
+
+/* 弹窗右上角关闭叉 */
+.live-end-ask .modal-x {
+  position: absolute; top: 12px; right: 12px;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  padding: 0; cursor: pointer; background: none; border: 0;
+  color: var(--muted);
+}
+.live-end-ask .modal-x svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.live-end-ask .modal-x:hover { color: var(--gold-bright); }
+
+/* ===== 浅色主题：结束谈判 / 事件列表 / 回合回看弹窗 ===== */
+:root[data-theme="light"] .live-end-ask { background: rgba(60, 45, 25, .38); }
+:root[data-theme="light"] .live-end-ask > section {
+  background: linear-gradient(180deg, #fffdf7, #f7efdf);
+  border-color: rgba(150, 112, 56, .38);
+  box-shadow: 0 24px 60px rgba(120, 92, 44, .22);
+}
+:root[data-theme="light"] .live-end-ask .kicker { color: #9a8560; }
+:root[data-theme="light"] .live-end-ask h2 { color: #6b4d1c; }
+:root[data-theme="light"] .live-end-ask .sub,
+:root[data-theme="light"] .live-end-ask .tip,
+:root[data-theme="light"] .live-end-ask p { color: #4a3b25; }
+:root[data-theme="light"] .live-end-ask button.ghost { color: #6e5b3d; border-color: rgba(150, 112, 56, .38); }
+:root[data-theme="light"] .live-end-ask button.back { color: #8a7550; }
+:root[data-theme="light"] .live-end-ask .modal-x { color: #8a7550; }
+:root[data-theme="light"] .live-end-ask .modal-x:hover { color: #6b4d1c; }
+
+:root[data-theme="light"] .event-row {
+  background: rgba(201, 160, 97, .1);
+  border-color: rgba(150, 112, 56, .28);
+  color: #4a3b25;
+}
+:root[data-theme="light"] .event-row:hover { background: rgba(201, 160, 97, .2); color: #6b4d1c; }
+:root[data-theme="light"] .event-row b { color: #8a6a2f; }
+:root[data-theme="light"] .event-row em { color: #9a8560; }
+
+/* 正在发言：旗标外环呼吸光圈 */
+.seat.speaking > span::before,
+.seat.speaking > span::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+  border: 1px solid rgba(201, 160, 97, .55);
+  animation: seatPulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+.seat.speaking > span::after { animation-delay: 1.1s; }
+@keyframes seatPulse {
+  0%   { transform: scale(.92); opacity: .85; }
+  70%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.seat.speaking > span { position: relative; }
+
+/* 观战发言区：正文、内心 OS、结算说明顺序排列，不再叠在一起 */
+.council-speech .inner-os {
+  position: static !important;
+  display: block !important;
+  margin-top: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px dashed rgba(201, 160, 97, .28) !important;
+}
+.council-speech .inner-os > span { color: var(--purple, #b5a0ce); margin-right: 6px; }
+.council-speech .inner-os p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.7; color: var(--text-soft); }
+.council-speech .fact-source { margin-top: 8px !important; font-size: 11.5px; color: var(--muted); }
+.council-speech .council-speech-body { display: flex; flex-direction: column; gap: 4px; }
+
+/* 视角切换中的轻量提示（不再全屏遮罩） */
+.perspective-card.is-switching { opacity: .72; transition: opacity .2s ease; }
+.perspective-card.is-switching::after {
+  content: "切换中…"; position: absolute; right: 12px; bottom: 8px;
+  font-size: 11px; color: var(--purple, #b5a0ce);
+}
+.perspective-card { position: relative; }
+
+/* 发言重点高亮 */
+mark.hl {
+  background: rgba(201, 160, 97, .3);
+  color: inherit; padding: 0 3px; border-radius: 3px;
+  font-weight: 600;
+}
+mark.hl-num { background: none; color: #e0b36a; font-weight: 600; }
+:root[data-theme="light"] mark.hl { background: rgba(201, 160, 97, .34); }
+:root[data-theme="light"] mark.hl-num { color: #8a5a12; }
+
+/* 关键词加粗高亮 */
+b.hl-kw { color: #f0c887; font-weight: 700; }
+:root[data-theme="light"] b.hl-kw { color: #8a5a12; }
+
+/* 谈判树：暗线节点的双方旗帜 */
+.tree-pair { font-style: normal; color: var(--muted); letter-spacing: 1px; margin: 0 2px; }
+.negotiation-tree .tree-card > div { display: flex; align-items: center; gap: 6px; }
+.negotiation-tree .tree-card > div > span[data-flag] { width: 18px; height: 18px; flex: none; }
+
+/* 深色主题：事件日志行（深底 + 金边，别用亮块） */
+:root[data-theme="dark"] .event-row {
+  background: rgba(201, 160, 97, .05);
+  border-color: rgba(201, 160, 97, .28);
+  color: var(--text);
+}
+:root[data-theme="dark"] .event-row:hover {
+  background: rgba(201, 160, 97, .16);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+:root[data-theme="dark"] .event-row b { color: var(--gold); }
+:root[data-theme="dark"] .event-row em { color: var(--muted); }
+
+/* 发言头部的“回应某人”标注 */
+.addr-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  font-size: 11px; color: #b5a0ce;
+  border: 1px solid rgba(181, 160, 206, .4); background: rgba(159, 126, 190, .1);
+  border-radius: 10px; white-space: nowrap;
+}
+:root[data-theme="light"] .addr-chip { color: #6d4f96; border-color: rgba(120, 90, 160, .35); background: rgba(120, 90, 160, .09); }
+
+
+/* 非正式沟通卡弹层 */
+.secret-card-layer {
+  position: fixed; inset: 0; z-index: 500; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  background: rgba(0, 0, 0, .78); backdrop-filter: blur(4px);
+}
+.secret-card-stage { position: relative; display: flex; justify-content: center; }
+.secret-card-stage iframe {
+  width: min(92vw, 820px); height: min(84vh, 1120px);
+  border: 0; background: transparent; overflow: hidden;
+}
+.secret-card-x {
+  position: absolute; top: 6px; right: 6px; width: 30px; height: 30px;
+  border: 1px solid rgba(181,160,206,.5); border-radius: 50%; cursor: pointer;
+  background: rgba(20,14,10,.8); color: #d9c9ef; font-size: 16px; line-height: 1;
+}
+.secret-card-actions { display: flex; align-items: center; gap: 14px; color: var(--text-soft); font-size: 13px; }
+
+/* 非正式沟通卡：与事件卡同尺寸 */
+.secret-card-stage iframe { width: min(94vw, 760px) !important; height: min(86vh, 980px) !important; }
+
+/* 非正式沟通卡：中性遮罩，不铺紫色底板 */
+.secret-card-layer { background: rgba(0, 0, 0, .62); }
+.secret-card-stage iframe { background: transparent !important; }
+.secret-card-x { display: none !important; }

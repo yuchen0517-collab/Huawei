@@ -1,0 +1,71 @@
+body.report-page {
+  overflow: auto;
+  height: auto;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(201, 160, 97, .1), transparent 42%),
+    var(--bg);
+}
+.report-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px clamp(18px, 5vw, 64px);
+  border-bottom: 1px solid var(--line);
+}
+.report-top .brand { display: flex; align-items: center; gap: 10px; }
+.report-top .brand svg { width: 26px; height: 26px; fill: none; stroke: var(--gold); stroke-width: 1.4; }
+.report-top strong { font-family: Georgia, serif; letter-spacing: .14em; font-size: 14px; }
+.report-top span { color: var(--muted); font-size: 9px; }
+.report-top-actions { display: flex; align-items: center; gap: 8px; }
+.report-top-actions a,
+.report-top-actions button {
+  min-height: 32px; display: inline-flex; align-items: center;
+  padding: 0 12px; border: 1px solid var(--line);
+  color: var(--text-soft); font-size: 9px; text-decoration: none; background: transparent;
+}
+.report-top-actions a:hover,
+.report-top-actions button:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+.report-main { width: min(1080px, calc(100% - 36px)); margin: 0 auto; padding: 40px 0 50px; }
+.report-kicker { color: var(--muted); font-family: Georgia, serif; font-size: 9px; letter-spacing: .2em; }
+.report-title { margin-top: 8px; font-size: clamp(26px, 4vw, 42px); font-weight: 400; color: var(--gold-bright); }
+.report-sub { margin-top: 10px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
+.report-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 26px; }
+.report-card { padding: 13px 14px; border: 1px solid var(--line); background: var(--card); }
+.report-card strong { display: block; color: var(--muted); font-size: 8px; font-weight: 400; letter-spacing: .08em; }
+.report-card span { display: block; margin-top: 6px; color: var(--text); font-family: Georgia, serif; font-size: 18px; }
+.report-section { margin-top: 28px; }
+.report-section h2 {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px; color: var(--text-soft); font-size: 12px; font-weight: 400;
+}
+.report-section h2:before { content: ""; width: 5px; height: 5px; background: var(--gold); transform: rotate(45deg); }
+.report-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.report-table th, .report-table td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; }
+.report-table th { color: var(--muted); font-weight: 400; font-size: 8px; letter-spacing: .05em; }
+.report-table td { color: var(--text-soft); }
+.report-table td.num { font-family: Georgia, serif; color: var(--gold); }
+.report-list { display: flex; flex-direction: column; gap: 7px; }
+.report-row {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 10px; border: 1px solid var(--line); background: var(--card);
+  font-size: 10px; line-height: 1.65;
+}
+.report-row .tag { flex: none; color: var(--muted); font-size: 8px; padding-top: 2px; }
+.report-row strong { color: var(--text-soft); font-weight: 400; }
+.report-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+.report-row.done { border-color: rgba(91, 164, 126, .3); }
+.report-row.done .tag { color: var(--green); }
+.report-row.fiction { border-color: rgba(181, 160, 206, .28); }
+.report-row.fiction .tag { color: var(--purple); }
+.report-empty { padding: 60px 0; text-align: center; color: var(--muted); font-size: 12px; line-height: 2; }
+.report-empty a { color: var(--gold); }
+.report-note { margin-top: 10px; padding: 11px 12px; border: 1px solid var(--line); background: var(--gold-soft); color: var(--muted); font-size: 9px; line-height: 1.7; }
+.report-button {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px;
+  margin-right: 7px; border: 1px solid var(--line-strong);
+  color: var(--gold); font-size: 9px; text-decoration: none;
+  background: var(--gold-soft);
+}
+.report-button:hover { border-color: var(--gold); background: var(--gold); color: var(--bg); }
+@media (max-width: 820px) {
+  .report-cards { grid-template-columns: 1fr 1fr; }
+}

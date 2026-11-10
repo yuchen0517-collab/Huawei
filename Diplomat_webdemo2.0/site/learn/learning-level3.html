@@ -1,0 +1,1604 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070402">
+<title>外交谈判模拟器 · 第三关 终局收束</title>
+<script>
+  window.THEME_CFG = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG;
+      var manual = localStorage.getItem('neg-theme-mode') === 'manual';
+      var saved = manual ? localStorage.getItem('neg-theme') : null;
+      var now = new Date();
+      var mins = now.getHours() * 60 + now.getMinutes();
+      var theme = manual ? (saved === 'light' ? 'light' : 'dark')
+        : (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60 ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#070402');
+    }catch(e){}
+  })();
+</script>
+<script src="progress.js"></script>
+<script>LearningProgress.requireLevel(3);</script>
+<link href="../assets/fonts.css" rel="stylesheet">
+<style>
+  /* ========== 设计令牌 ========== */
+  :root[data-theme="dark"]{
+    --bg:#070402;
+    --bg-soft:#0c0703;
+    --bg-card:rgba(18,11,5,.72);
+    --bg-card-hover:rgba(26,15,7,.85);
+    --bg-inset:rgba(10,6,3,.55);
+    --gold:#c9a061;
+    --gold-bright:#efd7a8;
+    --gold-dim:#8b7149;
+    --gold-soft:rgba(201,160,97,.15);
+    --gold-line:rgba(201,160,97,.35);
+    --gold-line-strong:rgba(201,160,97,.55);
+    --ivory:#f4e9d4;
+    --text-primary:#f0dcb5;
+    --text-secondary:#b59b74;
+    --text-muted:#8a7352;
+    --text-on-gold:#2a1d0c;
+    --shadow-card:0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(201,151,85,.06);
+    --divider:rgba(201,160,97,.14);
+    --success:#b8d4a3;
+    --success-line:rgba(184,212,163,.4);
+    --warning:#e9c67a;
+    --warning-line:rgba(233,198,122,.35);
+    --locked:#5e4e36;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f9f2e3;
+    --bg-soft:#f4e9d4;
+    --bg-card:rgba(255,255,255,.82);
+    --bg-card-hover:rgba(255,252,246,.95);
+    --bg-inset:rgba(244,233,212,.55);
+    --gold:#a07c3f;
+    --gold-bright:#c9a061;
+    --gold-dim:#7d6338;
+    --gold-soft:rgba(160,124,63,.1);
+    --gold-line:rgba(160,124,63,.3);
+    --gold-line-strong:rgba(160,124,63,.5);
+    --ivory:#f4e9d4;
+    --text-primary:#2a1d0c;
+    --text-secondary:#5c4a2e;
+    --text-muted:#8c7754;
+    --text-on-gold:#fff8ea;
+    --shadow-card:0 4px 20px rgba(120,90,40,.12),0 0 24px rgba(201,151,85,.04);
+    --divider:rgba(160,124,63,.16);
+    --success:#5a8c3e;
+    --success-line:rgba(90,140,62,.35);
+    --warning:#b8842a;
+    --warning-line:rgba(184,132,42,.3);
+    --locked:#a89470;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  html{background:var(--bg);transition:background .5s var(--ease);scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:"Noto Serif SC","Source Han Serif SC","Songti SC",STSong,"SimSun",serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    transition:background .5s var(--ease),color .5s var(--ease);
+    overflow-x:hidden;
+  }
+  button{font:inherit;cursor:pointer;background:none;border:none;color:inherit;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ========== 背景装饰 ========== */
+  .page-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.06),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(201,160,97,.04),transparent 70%);
+  }
+  :root[data-theme="light"] .page-bg{
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.12),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(160,124,63,.06),transparent 70%);
+  }
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    opacity:.035;mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:160px 160px;
+  }
+
+  /* ========== 四角细线 ========== */
+  .corner{position:fixed;z-index:10;width:44px;height:44px;pointer-events:none;opacity:.5;}
+  .corner::before,.corner::after{content:"";position:absolute;}
+  .corner::before{width:100%;height:1px;background:linear-gradient(90deg,var(--gold-line),transparent);}
+  .corner::after{width:1px;height:100%;background:linear-gradient(180deg,var(--gold-line),transparent);}
+  .corner-tl{top:18px;left:18px;}
+  .corner-tr{top:18px;right:18px;transform:scaleX(-1);}
+  .corner-bl{bottom:18px;left:18px;transform:scaleY(-1);}
+  .corner-br{bottom:18px;right:18px;transform:scale(-1);}
+
+  /* ========== 顶栏 ========== */
+  .topbar{
+    position:relative;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:24px 40px;
+  }
+  .brand{display:flex;align-items:center;gap:14px;margin-right:auto;}
+  .brand-mark{
+    width:38px;height:38px;
+    border:1px solid var(--gold-line-strong);
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:var(--gold-soft);
+    transition:border-color .5s var(--ease);
+  }
+  .brand-mark svg{width:20px;height:20px;fill:var(--gold);}
+  .brand-text{display:flex;flex-direction:column;gap:3px;}
+  .brand-name{
+    font-size:15px;font-weight:600;letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand-sub{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.32em;text-indent:.32em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+
+  /* 关卡标签 */
+  .level-chip{
+    display:flex;align-items:center;gap:9px;
+    height:44px;padding:0 16px;
+    border:1px solid var(--gold-line);
+    background:var(--gold-soft);
+  }
+  .level-chip .chip-label{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.26em;color:var(--text-muted);
+    text-transform:uppercase;
+  }
+  .level-chip .chip-value{
+    font-size:11.5px;letter-spacing:.14em;color:var(--gold);
+  }
+  .level-chip .chip-sep{width:1px;height:16px;background:var(--gold-line);}
+
+  /* 主题切换 */
+  .theme-toggle{
+    position:relative;width:44px;height:44px;
+    border:1px solid var(--gold-line);border-radius:50%;
+    display:grid;place-items:center;
+    transition:all .4s var(--ease);
+    background:var(--gold-soft);
+  }
+  .theme-toggle:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,151,85,.2);}
+  .theme-toggle svg{width:18px;height:18px;transition:all .5s var(--ease);}
+  .theme-toggle .icon-sun{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:rotate(-90deg) scale(.5);position:absolute;}
+  .theme-toggle .icon-moon{fill:var(--gold);opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:rotate(90deg) scale(.5);}
+  .theme-toggle::after{
+    content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold-bright);box-shadow:0 0 8px rgba(201,151,85,.6);
+    opacity:0;transform:scale(.3);transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+  }
+  .theme-toggle.is-auto::after{opacity:1;transform:scale(1);}
+
+  /* 返回按钮 */
+  .back-btn{
+    display:inline-flex;align-items:center;gap:7px;
+    height:44px;padding:0 18px;
+    border:1px solid var(--gold-line);border-radius:22px;
+    background:var(--gold-soft);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.16em;text-indent:.16em;
+    transition:all .4s var(--ease);
+    white-space:nowrap;flex-shrink:0;
+  }
+  .back-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,151,85,.2);transform:translateY(-1px);}
+  .back-btn svg{
+    width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;transition:transform .35s var(--ease);
+  }
+  .back-btn:hover svg{transform:translateX(-3px);}
+
+  /* ========== 主内容 ========== */
+  .main{position:relative;z-index:5;max-width:1180px;margin:0 auto;padding:26px 40px 56px;}
+
+  /* ========== 头部标题 ========== */
+  .header{text-align:center;padding:14px 0 26px;}
+  .eyebrow{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;letter-spacing:.42em;text-indent:.42em;
+    color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;
+  }
+  .main-title{
+    font-size:clamp(26px,3vw,36px);font-weight:600;
+    letter-spacing:.14em;text-indent:.14em;line-height:1.35;
+    background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 45%,var(--gold-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));
+  }
+  .title-rule{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 18px;}
+  .title-rule i{display:block;width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .title-rule i:last-child{transform:scaleX(-1);}
+  .title-rule b{display:block;width:5px;height:5px;border:1px solid var(--gold);transform:rotate(45deg);}
+  .subtitle{
+    font-size:13.5px;line-height:1.85;letter-spacing:.04em;
+    color:var(--text-secondary);max-width:600px;margin:0 auto;
+  }
+  .subtitle .highlight{color:var(--gold);font-weight:500;}
+
+  /* ========== 关卡概览条 ========== */
+  .progress-overview{
+    display:flex;align-items:center;justify-content:space-between;gap:24px;
+    padding:20px 28px;margin-bottom:22px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);backdrop-filter:blur(10px);
+    box-shadow:var(--shadow-card);position:relative;
+  }
+  .progress-overview::before,.progress-overview::after{
+    content:"";position:absolute;width:8px;height:8px;border:1px solid var(--gold-line-strong);
+  }
+  .progress-overview::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .progress-overview::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .progress-stage{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:11px;letter-spacing:.28em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:8px;
+  }
+  .progress-text{font-size:14px;color:var(--text-secondary);line-height:1.6;}
+  .progress-text b{
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:600;
+  }
+  .progress-meta{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin-top:9px;font-size:11px;color:var(--text-muted);
+  }
+  .progress-meta span{display:flex;align-items:center;gap:5px;}
+  .progress-meta svg{width:12px;height:12px;fill:var(--gold-dim);}
+  .progress-meta i{width:3px;height:3px;border-radius:50%;background:var(--gold-dim);display:block;}
+  .progress-value{text-align:right;flex-shrink:0;}
+  .progress-value-num{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:42px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .progress-value-label{font-size:10px;letter-spacing:.2em;color:var(--text-muted);margin-top:4px;}
+
+  /* ========== 知识点导航 ========== */
+  .nav-track{display:flex;gap:10px;margin-bottom:24px;}
+  .nav-item{
+    flex:1 1 0;min-width:0;
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    transition:all .35s var(--ease);
+    text-align:left;
+  }
+  .nav-item:hover{border-color:var(--gold-line-strong);background:var(--bg-card-hover);}
+  .nav-num{
+    flex-shrink:0;
+    width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--gold-line);
+    display:grid;place-items:center;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;color:var(--text-muted);
+    transition:all .35s var(--ease);
+  }
+  .nav-label{
+    font-size:12px;letter-spacing:.05em;color:var(--text-secondary);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .nav-item.done .nav-num{
+    color:var(--success);border-color:var(--success-line);
+    background:rgba(184,212,163,.08);
+  }
+  .nav-item.done .nav-label{color:var(--text-primary);}
+
+  /* ========== 布局 ========== */
+  .layout{
+    display:grid;
+    grid-template-columns:264px minmax(0,1fr);
+    gap:22px;align-items:start;
+  }
+
+  /* ========== 侧栏 ========== */
+  .sidebar{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px;}
+  .side-card{
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:20px 18px;
+    position:relative;
+  }
+  .side-card::before,.side-card::after{
+    content:"";position:absolute;width:7px;height:7px;border:1px solid var(--gold-line-strong);
+  }
+  .side-card::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .side-card::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .side-kicker{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.28em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:14px;
+  }
+
+  /* 进度环 */
+  .ring-wrap{display:flex;align-items:center;gap:16px;}
+  .ring{position:relative;width:78px;height:78px;flex-shrink:0;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring-track{fill:none;stroke:var(--divider);stroke-width:3;}
+  .ring-bar{
+    fill:none;stroke:url(#ringGrad);stroke-width:3;stroke-linecap:round;
+    stroke-dasharray:213.6;stroke-dashoffset:213.6;
+    transition:stroke-dashoffset .8s var(--ease);
+  }
+  .ring-text{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1px;
+  }
+  .ring-num{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:19px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .ring-sub{font-size:9px;letter-spacing:.1em;color:var(--text-muted);}
+  .ring-info{min-width:0;}
+  .ring-title{font-size:13.5px;font-weight:600;letter-spacing:.08em;color:var(--text-primary);margin-bottom:5px;}
+  .ring-desc{font-size:11px;line-height:1.6;color:var(--text-muted);}
+
+  /* 知识点对照清单 */
+  .goal-list{display:flex;flex-direction:column;gap:6px;}
+  .goal{
+    display:flex;gap:9px;align-items:flex-start;
+    width:100%;text-align:left;
+    padding:6px 8px;
+    border:1px solid transparent;
+    font-size:11.5px;line-height:1.65;color:var(--text-secondary);
+    transition:all .35s var(--ease);
+  }
+  .goal:hover{border-color:var(--gold-line);background:var(--gold-soft);}
+  .goal-num{
+    flex-shrink:0;width:21px;height:21px;border-radius:50%;
+    border:1px solid var(--gold-line);
+    display:grid;place-items:center;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;line-height:1;color:var(--text-muted);
+    margin-top:1px;
+    transition:all .35s var(--ease);
+  }
+  .goal-body{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .goal-title{font-size:12px;letter-spacing:.06em;color:var(--text-secondary);transition:color .3s var(--ease);}
+  .goal-hint{font-size:10px;line-height:1.5;color:var(--text-muted);}
+  .goal.on{border-color:var(--gold-line);background:var(--gold-soft);}
+  .goal.on .goal-num{background:var(--gold);border-color:var(--gold);color:var(--text-on-gold);font-size:10px;}
+  .goal.on .goal-title{color:var(--text-primary);}
+  .goal.on .goal-hint{color:var(--gold-dim);}
+
+  /* 术语 */
+  .terms{display:flex;flex-direction:column;gap:0;}
+  .term{padding:10px 0;border-bottom:1px dashed var(--divider);}
+  .term:last-child{border-bottom:none;padding-bottom:0;}
+  .term:first-child{padding-top:0;}
+  .term-word{
+    font-size:11.5px;letter-spacing:.08em;color:var(--gold);
+    display:flex;align-items:baseline;gap:7px;margin-bottom:4px;
+  }
+  .term-word em{
+    font-family:Georgia,"Times New Roman",serif;font-style:normal;
+    font-size:8px;letter-spacing:.16em;color:var(--text-muted);text-transform:uppercase;
+  }
+  .term-def{font-size:11px;line-height:1.65;color:var(--text-muted);}
+
+  /* 提示 */
+  .side-note{
+    border:1px solid var(--warning-line);
+    background:var(--gold-soft);
+    padding:14px 15px;
+    font-size:11px;line-height:1.75;color:var(--text-secondary);
+  }
+  .side-note b{color:var(--warning);font-weight:600;}
+
+  /* ========== 知识卡片 ========== */
+  .content{display:flex;flex-direction:column;gap:20px;min-width:0;}
+  .card{
+    position:relative;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:30px 32px 26px;
+    scroll-margin-top:24px;
+    transition:border-color .45s var(--ease),background .45s var(--ease);
+  }
+  .card:hover{border-color:var(--gold-line-strong);}
+  .card.mastered{border-color:var(--success-line);}
+  .card::after{
+    content:"";position:absolute;top:10px;right:10px;
+    width:14px;height:14px;
+    border-top:1px solid var(--gold-line);border-right:1px solid var(--gold-line);
+    pointer-events:none;
+  }
+  .card.mastered::after{border-color:var(--success-line);}
+
+  .card-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;}
+  .card-index{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:38px;font-weight:700;line-height:.9;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 60%,transparent 130%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    flex-shrink:0;opacity:.85;
+  }
+  .card-head-text{min-width:0;padding-top:2px;}
+  .card-kicker{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.28em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:7px;
+  }
+  .card-title{font-size:19px;font-weight:600;letter-spacing:.1em;color:var(--text-primary);line-height:1.4;}
+  .card-title span{font-size:12px;font-weight:400;letter-spacing:.06em;color:var(--text-muted);margin-left:8px;}
+
+  .card-lead{
+    font-size:13px;line-height:1.9;color:var(--text-primary);
+    padding:14px 16px 14px 18px;
+    border-left:2px solid var(--gold);
+    background:linear-gradient(90deg,var(--gold-soft),transparent 85%);
+    margin-bottom:24px;
+    letter-spacing:.02em;
+  }
+  .card-lead b{color:var(--gold-bright);font-weight:600;}
+
+  .sec{margin-bottom:22px;}
+  .sec:last-of-type{margin-bottom:0;}
+  .sec-title{
+    display:flex;align-items:center;gap:9px;
+    font-size:11.5px;letter-spacing:.22em;color:var(--gold);
+    margin-bottom:12px;
+  }
+  .sec-title::before{
+    content:"";width:4px;height:4px;background:var(--gold);
+    transform:rotate(45deg);flex-shrink:0;
+  }
+  .sec-title .sec-en{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8px;letter-spacing:.2em;color:var(--text-muted);
+    text-transform:uppercase;margin-left:auto;
+  }
+
+  .points{display:flex;flex-direction:column;gap:9px;}
+  .point{
+    display:flex;gap:11px;align-items:flex-start;
+    font-size:12.5px;line-height:1.8;color:var(--text-secondary);
+  }
+  .point em{
+    flex-shrink:0;
+    font-family:Georgia,"Times New Roman",serif;font-style:normal;
+    font-size:10px;letter-spacing:.05em;color:var(--gold-dim);
+    width:14px;text-align:right;line-height:1.9;
+  }
+  .point b{color:var(--text-primary);font-weight:600;}
+  .point .q{color:var(--gold);}
+
+  /* 话术示例 */
+  .dialogue{
+    border:1px solid var(--divider);
+    background:var(--bg-inset);
+    padding:16px 18px;
+  }
+  .dlg-line{display:flex;gap:10px;font-size:12.5px;line-height:1.9;color:var(--text-secondary);}
+  .dlg-line + .dlg-line{margin-top:9px;padding-top:9px;border-top:1px dashed var(--divider);}
+  .dlg-speaker{
+    flex-shrink:0;font-size:11px;letter-spacing:.1em;color:var(--gold);
+    padding-top:2px;min-width:52px;
+  }
+  .dlg-line.foe .dlg-speaker{color:var(--text-muted);}
+  .dlg-text{color:var(--text-primary);opacity:.92;}
+  .dlg-note{
+    margin-top:12px;padding-top:11px;
+    border-top:1px dashed var(--divider);
+    font-size:11.5px;line-height:1.75;color:var(--text-muted);
+  }
+  .dlg-note b{color:var(--gold-dim);font-weight:600;}
+
+  /* 对比表 */
+  .rows{border:1px solid var(--divider);}
+  .row{
+    display:grid;grid-template-columns:1fr 1.15fr;
+    gap:0;
+  }
+  .row + .row{border-top:1px solid var(--divider);}
+  .row > div{
+    padding:11px 14px;
+    font-size:11.5px;line-height:1.7;color:var(--text-secondary);
+  }
+  .row > div + div{border-left:1px solid var(--divider);color:var(--text-primary);opacity:.88;}
+  .row.head > div{
+    font-size:9.5px;letter-spacing:.2em;color:var(--text-muted);
+    text-transform:uppercase;background:var(--gold-soft);
+    font-family:Georgia,"Times New Roman",serif;
+    padding:9px 14px;opacity:1;
+  }
+
+  /* 误区 */
+  .misread{
+    border:1px solid var(--warning-line);
+    border-left:2px solid var(--warning);
+    background:var(--gold-soft);
+    padding:14px 16px;
+  }
+  .misread-title{
+    display:flex;align-items:center;gap:8px;
+    font-size:10.5px;letter-spacing:.2em;color:var(--warning);
+    margin-bottom:9px;text-transform:uppercase;
+    font-family:Georgia,"Times New Roman",serif;
+  }
+  .misread-title::before{
+    content:"!";display:grid;place-items:center;
+    width:13px;height:13px;border:1px solid var(--warning);
+    border-radius:50%;font-size:9px;letter-spacing:0;
+  }
+  .misread ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+  .misread li{
+    font-size:12px;line-height:1.75;color:var(--text-secondary);
+    padding-left:12px;position:relative;
+  }
+  .misread li::before{
+    content:"";position:absolute;left:0;top:8px;
+    width:4px;height:1px;background:var(--warning);
+  }
+
+  /* 卡片底部 */
+  .card-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    margin-top:24px;padding-top:18px;
+    border-top:1px solid var(--divider);
+    flex-wrap:wrap;
+  }
+  .card-foot-note{font-size:10.5px;letter-spacing:.1em;color:var(--text-muted);}
+  .card-foot-note.done{color:var(--success);}
+
+  /* 按钮 */
+  .btn-gold{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 22px;
+    border:1px solid var(--gold-line-strong);
+    background:linear-gradient(180deg,rgba(201,160,97,.15),rgba(139,113,73,.08));
+    color:var(--gold-bright);
+    font-size:12px;letter-spacing:.15em;
+    transition:all .4s var(--ease);
+    position:relative;overflow:hidden;
+  }
+  .btn-gold::before{
+    content:"";position:absolute;top:0;left:-100%;
+    width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(239,215,168,.15),transparent);
+    transition:left .6s var(--ease);
+  }
+  .btn-gold:hover::before{left:100%;}
+  .btn-gold:hover{border-color:var(--gold);color:var(--ivory);box-shadow:0 0 18px rgba(201,151,85,.25);}
+  .btn-gold svg{width:12px;height:12px;fill:currentColor;}
+  .btn-gold.ghost{background:transparent;color:var(--text-muted);border-color:var(--gold-line);}
+  .btn-gold.ghost:hover{color:var(--text-secondary);border-color:var(--gold-line-strong);}
+  .btn-gold.done{
+    color:var(--success);border-color:var(--success-line);
+    background:rgba(184,212,163,.08);
+  }
+  .btn-gold.done::before{display:none;}
+
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 28px;
+    background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    color:var(--text-on-gold);
+    font-size:12.5px;font-weight:600;letter-spacing:.14em;
+    transition:all .4s var(--ease);
+    box-shadow:0 4px 16px rgba(201,151,85,.2);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,151,85,.35);}
+  .btn-primary svg{width:14px;height:14px;fill:currentColor;}
+  .btn-primary:disabled{
+    background:var(--divider);color:var(--text-muted);
+    box-shadow:none;cursor:not-allowed;transform:none;
+  }
+
+  /* ========== 情景小练 ========== */
+  .drill{
+    border:1px solid var(--gold-line-strong);
+    background:var(--bg-card);
+    backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:30px 32px 28px;
+    position:relative;
+    scroll-margin-top:24px;
+  }
+  .drill::before,.drill::after{
+    content:"";position:absolute;width:10px;height:10px;border:1px solid var(--gold-line-strong);
+  }
+  .drill::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .drill::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+
+  .drill-kicker{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.3em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:8px;
+  }
+  .drill-title{font-size:19px;font-weight:600;letter-spacing:.1em;margin-bottom:18px;}
+  .drill-title em{font-style:normal;color:var(--gold);}
+
+  .brief{
+    border:1px solid var(--divider);
+    background:var(--bg-inset);
+    padding:18px 20px;margin-bottom:20px;
+  }
+  .brief-meta{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    font-size:10px;letter-spacing:.14em;color:var(--text-muted);
+    text-transform:uppercase;
+    font-family:Georgia,"Times New Roman",serif;
+    padding-bottom:12px;margin-bottom:12px;
+    border-bottom:1px dashed var(--divider);
+  }
+  .brief-meta b{color:var(--gold);font-weight:500;letter-spacing:.1em;}
+  .brief-meta i{width:3px;height:3px;border-radius:50%;background:var(--gold-dim);}
+  .brief p{font-size:12.5px;line-height:1.95;color:var(--text-secondary);letter-spacing:.02em;}
+  .brief p + p{margin-top:8px;}
+  .brief p b{color:var(--text-primary);font-weight:600;}
+  .brief .quote{color:var(--gold-bright);}
+
+  .options{display:flex;flex-direction:column;gap:10px;}
+  .option{
+    display:flex;gap:13px;align-items:flex-start;
+    width:100%;text-align:left;
+    padding:15px 17px;
+    border:1px solid var(--gold-line);
+    background:transparent;
+    transition:all .35s var(--ease);
+  }
+  .option:hover{border-color:var(--gold-line-strong);background:var(--gold-soft);}
+  .option .opt-key{
+    flex-shrink:0;
+    width:22px;height:22px;
+    border:1px solid var(--gold-line-strong);
+    border-radius:50%;
+    display:grid;place-items:center;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10.5px;color:var(--gold);
+    transition:all .35s var(--ease);
+  }
+  .option .opt-text{font-size:12.5px;line-height:1.85;color:var(--text-secondary);}
+  .option .opt-text b{color:var(--text-primary);font-weight:500;}
+  .option.sel{border-color:var(--gold);background:var(--gold-soft);box-shadow:0 0 18px rgba(201,151,85,.15);}
+  .option.sel .opt-key{background:var(--gold);color:var(--text-on-gold);border-color:var(--gold);}
+  .option.sel .opt-text{color:var(--text-primary);}
+  .option.correct{border-color:var(--success-line);background:rgba(184,212,163,.07);}
+  .option.correct .opt-key{background:var(--success);border-color:var(--success);color:#0b1206;}
+  .option.wrong{border-color:var(--warning-line);}
+  .option.wrong .opt-key{border-color:var(--warning);color:var(--warning);}
+  .option:disabled{cursor:default;}
+  .option:disabled:hover{background:transparent;}
+  .option.correct:disabled:hover{background:rgba(184,212,163,.07);}
+
+  .drill-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;align-items:center;}
+  .drill-hint{font-size:11px;letter-spacing:.08em;color:var(--text-muted);}
+
+  .feedback{
+    margin-top:20px;padding:20px 22px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-inset);
+    animation:fade-up .5s var(--ease) both;
+  }
+  .feedback.ok{border-color:var(--success-line);}
+  .feedback.mid{border-color:var(--warning-line);}
+  .feedback.bad{border-color:var(--warning-line);}
+  .fb-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+  .fb-verdict{
+    font-size:11px;letter-spacing:.18em;
+    padding:4px 11px;
+    border:1px solid var(--gold-line-strong);
+    color:var(--gold-bright);
+  }
+  .feedback.ok .fb-verdict{color:var(--success);border-color:var(--success-line);background:rgba(184,212,163,.08);}
+  .feedback.mid .fb-verdict,.feedback.bad .fb-verdict{color:var(--warning);border-color:var(--warning-line);background:var(--gold-soft);}
+  .fb-score{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:22px;font-weight:700;line-height:1;margin-left:auto;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .fb-score small{font-size:10px;color:var(--text-muted);-webkit-text-fill-color:var(--text-muted);margin-left:2px;}
+  .fb-body{font-size:12.5px;line-height:1.95;color:var(--text-secondary);}
+  .fb-body b{color:var(--text-primary);font-weight:600;}
+  .fb-body .k{color:var(--gold);}
+  .fb-steps{
+    display:flex;gap:8px;flex-wrap:wrap;
+    margin-top:14px;padding-top:14px;border-top:1px dashed var(--divider);
+  }
+  .fb-step{
+    font-size:10.5px;letter-spacing:.1em;color:var(--text-muted);
+    border:1px solid var(--divider);padding:5px 10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .fb-step b{color:var(--gold);font-family:Georgia,"Times New Roman",serif;font-weight:400;}
+
+  /* ========== 完成条 ========== */
+  .finish{
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+    padding:24px 28px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    box-shadow:var(--shadow-card);
+    flex-wrap:wrap;
+    position:relative;
+  }
+  .finish::before,.finish::after{
+    content:"";position:absolute;width:8px;height:8px;border:1px solid var(--gold-line-strong);
+  }
+  .finish::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .finish::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .finish-text{min-width:0;}
+  .finish-title{font-size:15px;font-weight:600;letter-spacing:.1em;color:var(--text-primary);margin-bottom:6px;}
+  .finish-desc{font-size:11.5px;line-height:1.7;color:var(--text-muted);letter-spacing:.02em;}
+  .finish-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+
+  /* ========== 底部 ========== */
+  .page-foot{margin-top:44px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .foot-rule{display:flex;align-items:center;gap:8px;width:min(260px,50vw);}
+  .foot-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .foot-rule i:last-child{transform:scaleX(-1);}
+  .foot-rule b{width:3px;height:3px;border:1px solid var(--gold-line-strong);transform:rotate(45deg);}
+  .foot-text{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.3em;text-indent:.3em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+
+  /* ========== Toast ========== */
+  .toast{
+    position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);
+    z-index:100;
+    padding:13px 24px;
+    border:1px solid var(--gold-line-strong);
+    background:rgba(18,11,5,.95);
+    color:var(--gold-bright);
+    font-size:12px;letter-spacing:.1em;
+    box-shadow:0 8px 32px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;
+    transition:all .45s var(--ease);
+    backdrop-filter:blur(10px);
+  }
+  :root[data-theme="light"] .toast{background:rgba(255,252,246,.97);color:var(--gold);}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  @keyframes fade-up{
+    from{opacity:0;transform:translateY(8px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @keyframes pulse-glow{
+    0%,100%{box-shadow:0 0 0 rgba(201,151,85,0);}
+    50%{box-shadow:0 0 12px rgba(201,151,85,.25);}
+  }
+
+  /* ========== 响应式 ========== */
+  @media (max-width:1080px){
+    .layout{grid-template-columns:236px minmax(0,1fr);}
+    .card{padding:26px 24px 22px;}
+    .drill{padding:26px 24px 24px;}
+  }
+  @media (max-width:900px){
+    .layout{grid-template-columns:minmax(0,1fr);}
+    .sidebar{position:static;order:2;}
+    .content{order:1;}
+    .sidebar{flex-direction:row;flex-wrap:wrap;}
+    .side-card{flex:1 1 260px;}
+    .nav-track{flex-wrap:wrap;}
+    .nav-item{flex:1 1 45%;}
+  }
+  @media (max-width:768px){
+    .topbar{padding:18px 20px;flex-wrap:wrap;gap:12px;}
+    .main{padding:20px 20px 60px;}
+    .corner{width:32px;height:32px;}
+    .corner-tl,.corner-tr{top:12px;}
+    .corner-tl,.corner-bl{left:12px;}
+    .corner-tr,.corner-br{right:12px;}
+    .corner-bl,.corner-br{bottom:12px;}
+    .main-title{font-size:22px;letter-spacing:.1em;}
+    .progress-overview{flex-direction:column;align-items:flex-start;gap:16px;padding:18px 20px;}
+    .progress-value{text-align:left;}
+    .level-chip{height:40px;padding:0 12px;}
+    .level-chip .chip-label{display:none;}
+    .card-index{font-size:30px;}
+    .card-title{font-size:17px;}
+    .card-title span{display:block;margin-left:0;margin-top:4px;}
+    .row{grid-template-columns:1fr;}
+    .row > div + div{border-left:none;border-top:1px solid var(--divider);}
+    .row.head > div:last-child{display:none;}
+    .brief{padding:15px 16px;}
+    .feedback{padding:16px 16px;}
+    .finish{flex-direction:column;align-items:flex-start;}
+    .finish-actions{width:100%;}
+    .finish-actions .btn-primary{flex:1;justify-content:center;}
+  }
+  @media (max-width:560px){
+    .brand-sub{display:none;}
+    .nav-track{gap:8px;}
+    .nav-item{flex:1 1 100%;}
+    .back-btn span{display:none;}
+    .back-btn{padding:0 13px;}
+    .card{padding:22px 18px 20px;}
+    .drill{padding:22px 18px 20px;}
+    .card-foot{flex-direction:column;align-items:stretch;}
+    .card-foot .btn-gold{justify-content:center;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 背景装饰 -->
+<div class="page-bg"></div>
+<div class="grain"></div>
+
+<!-- 四角 -->
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回学习地图">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <span>学习地图</span>
+  </button>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">外交谈判模拟器</div>
+      <div class="brand-sub">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="level-chip">
+      <span class="chip-label">LEVEL</span>
+      <span class="chip-value">03 / 03</span>
+      <span class="chip-sep"></span>
+      <span class="chip-value">终局收束</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme(event)" aria-label="切换主题" title="单击切换亮暗，长按恢复跟随系统时间">
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4V4.8M12 21.6V19.2M2.4 12H4.8M21.6 12H19.2M5.2 5.2L6.9 6.9M18.8 18.8L17.1 17.1M5.2 18.8L6.9 17.1M18.8 5.2L17.1 6.9"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<main class="main">
+
+  <!-- 标题区 -->
+  <header class="header">
+    <div class="eyebrow">LEVEL 03 · ENDGAME</div>
+    <h1 class="main-title">终局收束</h1>
+    <div class="title-rule"><i></i><b></b><i></i></div>
+    <p class="subtitle">
+      谈成的东西不写下来，等于没谈成。本关学习<span class="highlight">僵局破解</span>、<span class="highlight">第三方调停</span>、
+      <span class="highlight">结果确认</span>与<span class="highlight">履约固化</span>——把桌上的共识，变成纸上的协议。
+    </p>
+  </header>
+
+  <!-- 关卡概览 -->
+  <div class="progress-overview">
+    <div class="progress-info">
+      <div class="progress-stage">STAGE 3 OF 3 · 终局收束</div>
+      <div class="progress-text">
+        本关共 <b>4</b> 个知识点，逐一掌握后完成情景小练，即可开启实战模式
+      </div>
+      <div class="progress-meta">
+        <span>
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+          约 10 分钟
+        </span>
+        <i></i>
+        <span>
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span id="metaMastered">0</span> / 4 知识点
+        </span>
+        <i></i>
+        <span>
+          <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+          <span id="metaDrill">情景小练未完成</span>
+        </span>
+      </div>
+    </div>
+    <div class="progress-value">
+      <div class="progress-value-num" id="progressNum">0%</div>
+      <div class="progress-value-label">PROGRESS</div>
+    </div>
+  </div>
+
+  <!-- 知识点导航 -->
+  <div class="nav-track">
+    <button class="nav-item" data-jump="k1"><span class="nav-num">01</span><span class="nav-label">僵局破解</span></button>
+    <button class="nav-item" data-jump="k2"><span class="nav-num">02</span><span class="nav-label">第三方调停</span></button>
+    <button class="nav-item" data-jump="k3"><span class="nav-num">03</span><span class="nav-label">结果确认</span></button>
+    <button class="nav-item" data-jump="k4"><span class="nav-num">04</span><span class="nav-label">履约固化</span></button>
+    <button class="nav-item" data-jump="drill"><span class="nav-num">✎</span><span class="nav-label">情景小练</span></button>
+  </div>
+
+  <!-- 主体 -->
+  <div class="layout">
+
+    <!-- 侧栏 -->
+    <aside class="sidebar">
+
+      <div class="side-card">
+        <div class="side-kicker">LEVEL PROGRESS</div>
+        <div class="ring-wrap">
+          <div class="ring">
+            <svg width="78" height="78" viewBox="0 0 78 78">
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#efd7a8"/>
+                  <stop offset="100%" stop-color="#c9a061"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-track" cx="39" cy="39" r="34"/>
+              <circle class="ring-bar" id="ringBar" cx="39" cy="39" r="34"/>
+            </svg>
+            <div class="ring-text">
+              <span class="ring-num" id="ringNum">0/4</span>
+              <span class="ring-sub">掌握</span>
+            </div>
+          </div>
+          <div class="ring-info">
+            <div class="ring-title">第三关 · 终局收束</div>
+            <div class="ring-desc">四步把共识变成协议：破僵局、借调停、定成果、固履约。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <div class="side-kicker">KNOWLEDGE POINTS</div>
+        <div class="goal-list">
+          <button class="goal" data-goal="g1" data-target="k1" data-num="01" aria-label="定位知识点一 僵局破解">
+            <span class="goal-num">01</span>
+            <span class="goal-body">
+              <span class="goal-title">僵局破解</span>
+              <span class="goal-hint">识别僵局类型并选对药方</span>
+            </span>
+          </button>
+          <button class="goal" data-goal="g2" data-target="k2" data-num="02" aria-label="定位知识点二 第三方调停">
+            <span class="goal-num">02</span>
+            <span class="goal-body">
+              <span class="goal-title">第三方调停</span>
+              <span class="goal-hint">把调停者当台阶，不当裁判</span>
+            </span>
+          </button>
+          <button class="goal" data-goal="g3" data-target="k3" data-num="03" aria-label="定位知识点三 结果确认">
+            <span class="goal-num">03</span>
+            <span class="goal-body">
+              <span class="goal-title">结果确认</span>
+              <span class="goal-hint">逐项核对承诺，关闭所有括号</span>
+            </span>
+          </button>
+          <button class="goal" data-goal="g4" data-target="k4" data-num="04" aria-label="定位知识点四 履约固化">
+            <span class="goal-num">04</span>
+            <span class="goal-body">
+              <span class="goal-title">履约固化</span>
+              <span class="goal-hint">给协议装上时间表与监督机制</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <div class="side-kicker">GLOSSARY</div>
+        <div class="terms">
+          <div class="term">
+            <div class="term-word">走廊外交 <em>Corridor Talk</em></div>
+            <div class="term-def">正式会议之外的私下沟通，用来试探底线、传递不便当面说的话。</div>
+          </div>
+          <div class="term">
+            <div class="term-word">调停 <em>Mediation</em></div>
+            <div class="term-def">第三方协助沟通但不裁决。它的价值是提供台阶与信息，不是替你谈判。</div>
+          </div>
+          <div class="term">
+            <div class="term-word">未决条款 <em>Brackets</em></div>
+            <div class="term-def">案文中尚未关闭的括号。收束阶段的任务：全部关闭，或明确移入附件。</div>
+          </div>
+          <div class="term">
+            <div class="term-word">履约机制 <em>Compliance</em></div>
+            <div class="term-def">时间表、监督、违约后果、争议解决四件套。没有它，协议只是意向。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-note">
+        <b>本关规则</b><br>
+        四张知识卡全部标记「已掌握」，并通过情景小练，即可开启实战模式，与 AI 对手过招。
+      </div>
+
+    </aside>
+
+    <!-- 知识内容 -->
+    <div class="content">
+
+      <!-- 知识点 01 -->
+      <article class="card" id="k1" data-card="k1">
+        <div class="card-head">
+          <div class="card-index">01</div>
+          <div class="card-head-text">
+            <div class="card-kicker">DEADLOCK BREAKING</div>
+            <h2 class="card-title">僵局破解<span>僵局不是终点，是谈判在换气</span></h2>
+          </div>
+        </div>
+
+        <div class="card-lead">
+          僵局几乎必然出现。它的意义不是宣告失败，而是告诉双方：<b>当前的方式走不通了</b>——需要换的往往不是立场，而是处理立场的方式。
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">先分型，再下药<span class="sec-en">THREE TYPES</span></div>
+          <div class="rows">
+            <div class="row head"><div>类型</div><div>表象与药方</div></div>
+            <div class="row">
+              <div>立场僵局：数字、条款谈不拢</div>
+              <div>回到利益层重谈：问「这项安排对贵方究竟意味着什么」，在共同利益上重建组合</div>
+            </div>
+            <div class="row">
+              <div>程序僵局：先谈什么、谁让谁、文本由谁起草</div>
+              <div>先把程序定价：把程序问题单列成一项协议，宁可慢半步，不让程序拖垮实质</div>
+            </div>
+            <div class="row">
+              <div>人事僵局：面子和信任出了问题</div>
+              <div>换场合、换轨道：走廊外交、技术层磋商、请更高层出面——先修复关系再谈条款</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">破局五招<span class="sec-en">FIVE MOVES</span></div>
+          <div class="points">
+            <div class="point"><em>01</em><span><b>重述共同利益</b>　把双方拉回同一侧：「我们都无法承受机制落空的结果。」先降温，再解题。</span></div>
+            <div class="point"><em>02</em><span><b>变换议题层次</b>　拆小（单列僵持项）或升级（与更大的一揽子交换绑定），改变问题的形状。</span></div>
+            <div class="point"><em>03</em><span><b>引入新信息</b>　新的测算、第三方报告、专家非正式意见——用新变量重启被锁死的讨论。</span></div>
+            <div class="point"><em>04</em><span><b>暂停与走廊</b>　休会不是拖延。走廊外交让各方在无记录环境里说出真实约束。</span></div>
+            <div class="point"><em>05</em><span><b>程序性让步</b>　在不触碰实质的地方先让一步（会议形式、文件编号），换取实质议题的松动。</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">话术示例<span class="sec-en">SCRIPT</span></div>
+          <div class="dialogue">
+            <div class="dlg-line foe">
+              <span class="dlg-speaker">对方</span>
+              <span class="dlg-text">「贵方立场与各方差距过大，谈判恐怕难以继续。」</span>
+            </div>
+            <div class="dlg-line">
+              <span class="dlg-speaker">我方</span>
+              <span class="dlg-text">「如果分歧集中在评估基准一项，建议把它单列：由技术专家组先出一份非正式报告，各代表团今晚休会消化。问题没有变，但处理问题的方式可以变。」</span>
+            </div>
+            <div class="dlg-note"><b>要点</b>　不否认僵局，也不急于让步——把僵持项从全局中剥离，给双方都留下体面的通道。</div>
+          </div>
+        </div>
+
+        <div class="misread">
+          <div class="misread-title">常见误区</div>
+          <ul>
+            <li>把僵局当失败，恐慌性让步——僵局本身不产生损失，错误反应才产生。</li>
+            <li>在全体会议上重复同一立场，把双方都逼进无法回头的公开表态。</li>
+            <li>让僵局在媒体上发酵，外部压力会压扁所有回旋空间。</li>
+          </ul>
+        </div>
+
+        <div class="card-foot">
+          <div class="card-foot-note">自测：当前僵局属于哪一型？我的药方对型了吗？</div>
+          <button class="btn-gold" data-master="k1">标记已掌握 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></button>
+        </div>
+      </article>
+
+      <!-- 知识点 02 -->
+      <article class="card" id="k2" data-card="k2">
+        <div class="card-head">
+          <div class="card-index">02</div>
+          <div class="card-head-text">
+            <div class="card-kicker">MEDIATION</div>
+            <h2 class="card-title">第三方调停<span>调停者不是裁判，是台阶的搬运工</span></h2>
+          </div>
+        </div>
+
+        <div class="card-lead">
+          调停者的价值是<b>提供双方自己给不了的东西</b>：中立的提议、担保的能力、传话的渠道。用得好是杠杆，用不好是负担。
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">什么时候需要调停<span class="sec-en">WHEN</span></div>
+          <div class="rows">
+            <div class="row head"><div>情形</div><div>价值与风险</div></div>
+            <div class="row">
+              <div>双方信任耗尽，直接沟通失灵</div>
+              <div>价值：调停者充当传话渠道；风险：信息经过滤而失真</div>
+            </div>
+            <div class="row">
+              <div>需要中立的技术测算或方案</div>
+              <div>价值：专家意见能绕开立场的攻防；风险：谁出钱，谁影响结论</div>
+            </div>
+            <div class="row">
+              <div>需要担保或压力促成让步</div>
+              <div>价值：调停者的信用可背书；风险：让渡部分议程控制权</div>
+            </div>
+            <div class="row">
+              <div>双方都需要台阶下</div>
+              <div>价值：向第三方让步比向对手让步体面；风险：形成依赖，弱化直接谈判</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">接受调停前先问三句<span class="sec-en">THREE QUESTIONS</span></div>
+          <div class="points">
+            <div class="point"><em>?</em><span>调停者<span class="q">接受谁的委托</span>——他的动机决定他偏向谁；</span></div>
+            <div class="point"><em>?</em><span>他能提供什么——<span class="q">信息、担保还是压力</span>，三者的用法完全不同；</span></div>
+            <div class="point"><em>?</em><span>调停失败的成本<span class="q">由谁承担</span>——事前说清，避免被反咬。</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">话术示例<span class="sec-en">SCRIPT</span></div>
+          <div class="dialogue">
+            <div class="dlg-line">
+              <span class="dlg-speaker">我方</span>
+              <span class="dlg-text">「若各方同意，可请主席就评估基准一项组织非正式磋商。主席的斡旋不触碰实质立场，只为各方传递不便当面说明的信息。」</span>
+            </div>
+            <div class="dlg-note"><b>要点</b>　把调停限定在「传话与搭台」，实质立场不外包。调停者搬运台阶，但台阶通向哪里仍由双方决定。</div>
+          </div>
+        </div>
+
+        <div class="misread">
+          <div class="misread-title">常见误区</div>
+          <ul>
+            <li>把调停者当盟友公开拉拢——一旦被贴上标签，他的中立性就报废了。</li>
+            <li>让调停者代拟实质条款——文本主权一旦让出，收不回来。</li>
+            <li>调停受挫后公开怪罪调停者，堵死下一次借力的门。</li>
+          </ul>
+        </div>
+
+        <div class="card-foot">
+          <div class="card-foot-note">自测：本轮最该借的是谁的力量？他要价是什么？</div>
+          <button class="btn-gold" data-master="k2">标记已掌握 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></button>
+        </div>
+      </article>
+
+      <!-- 知识点 03 -->
+      <article class="card" id="k3" data-card="k3">
+        <div class="card-head">
+          <div class="card-index">03</div>
+          <div class="card-head-text">
+            <div class="card-kicker">CLOSING &amp; CONFIRMATION</div>
+            <h2 class="card-title">结果确认<span>谈成的东西不写下来，等于没谈成</span></h2>
+          </div>
+        </div>
+
+        <div class="card-lead">
+          收束阶段最常见的损失不是谈崩，而是<b>谈成的部分悄悄蒸发</b>：口头共识没有落成案文，模糊措辞埋下争端，签字的人没有授权。
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">收束四查<span class="sec-en">FOUR CHECKS</span></div>
+          <div class="points">
+            <div class="point"><em>01</em><span><b>逐项核对承诺</b>　每一项都要答出三要素：谁、做什么、何时。答不出的，就是不存在的承诺。</span></div>
+            <div class="point"><em>02</em><span><b>关闭所有括号</b>　未决条款要么关闭，要么明确移入附件并写明处理时限——不允许出现「模糊的悬置」。</span></div>
+            <div class="point"><em>03</em><span><b>口头共识落成案文</b>　「刚才双方同意的过渡期安排，请秘书处写入第二部分。」共识一旦入文，才成为可执行的义务。</span></div>
+            <div class="point"><em>04</em><span><b>确认授权边界</b>　核对签署人的授权范围与国内批准程序——能签的才签，签不了的写明生效条件。</span></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">话术示例<span class="sec-en">SCRIPT</span></div>
+          <div class="dialogue">
+            <div class="dlg-line">
+              <span class="dlg-speaker">我方</span>
+              <span class="dlg-text">「在通过之前，建议逐段核对：第一部分，各项义务由谁承担、何时生效；第二部分，技术援助的金额与来源；第三部分，评估安排。请秘书处将修订清单分发各方，十五分钟后逐段确认。」</span>
+            </div>
+            <div class="dlg-note"><b>要点</b>　主动主持收束程序的人，握有文本的最后定义权。逐段确认看似缓慢，实际是在保护已经谈成的一切。</div>
+          </div>
+        </div>
+
+        <div class="misread">
+          <div class="misread-title">常见误区</div>
+          <ul>
+            <li>在深夜的疲态下接受「适当考虑」「尽快」这类无法核查的措辞。</li>
+            <li>跳过逐项确认直接表决，把漏洞带进生效文本。</li>
+            <li>让未获授权的成员替代表团点头——签字时才发现协议不能生效。</li>
+          </ul>
+        </div>
+
+        <div class="card-foot">
+          <div class="card-foot-note">自测：现在文本里还有几个括号？每一个的出路是什么？</div>
+          <button class="btn-gold" data-master="k3">标记已掌握 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></button>
+        </div>
+      </article>
+
+      <!-- 知识点 04 -->
+      <article class="card" id="k4" data-card="k4">
+        <div class="card-head">
+          <div class="card-index">04</div>
+          <div class="card-head-text">
+            <div class="card-kicker">IMPLEMENTATION</div>
+            <h2 class="card-title">履约固化<span>协议的生命，在签字之后</span></h2>
+          </div>
+        </div>
+
+        <div class="card-lead">
+          签字只是中间站。没有<b>时间表、监督、后果、争议解决</b>四件套的协议，执行力约等于一份新闻稿。
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">固化四件套<span class="sec-en">FOUR PILLARS</span></div>
+          <div class="rows">
+            <div class="row head"><div>机制</div><div>作用与设计要点</div></div>
+            <div class="row">
+              <div>时间表：里程碑 + 具体日期</div>
+              <div>把「承诺」翻译成可核查的事件；节点越具体，拖延越难藏</div>
+            </div>
+            <div class="row">
+              <div>监督机制：定期评估 + 报告</div>
+              <div>让监督成为程序而不是指控；周期与评估标准在文本里写死</div>
+            </div>
+            <div class="row">
+              <div>违约条款：分级后果</div>
+              <div>轻微违约对应纠偏，重大违约对应暂停资格或解除——阶梯清晰才可信</div>
+            </div>
+            <div class="row">
+              <div>争议解决：磋商 → 专家 → 仲裁</div>
+              <div>先给协商留足通道，再逐级升级；避免任何一方绕开机制单边行动</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title">话术示例<span class="sec-en">SCRIPT</span></div>
+          <div class="dialogue">
+            <div class="dlg-line">
+              <span class="dlg-speaker">我方</span>
+              <span class="dlg-text">「我方建议设立联合工作组，每季度审议执行情况，并将审议结果列入下一轮全体会议议程——让监督成为程序，而不是指控。」</span>
+            </div>
+            <div class="dlg-note"><b>要点</b>　把「我不信你」翻译成「我们都需要一套例行程序」。对方接受的是程序，你得到的是监督。</div>
+          </div>
+        </div>
+
+        <div class="misread">
+          <div class="misread-title">常见误区</div>
+          <ul>
+            <li>把履约寄托于对方的善意——善意会换届，机制不会。</li>
+            <li>监督机制没有牙齿：只要求报告、不设后果，等于给拖延发许可证。</li>
+            <li>忽略国内批准程序，协议在议会搁浅，谈判桌上的一切归零。</li>
+          </ul>
+        </div>
+
+        <div class="card-foot">
+          <div class="card-foot-note">记住一句话：宁可少签一条，也要签成能执行的一条。</div>
+          <button class="btn-gold" data-master="k4">标记已掌握 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg></button>
+        </div>
+      </article>
+
+      <!-- 情景小练 -->
+      <section class="drill" id="drill">
+        <div class="drill-kicker">SCENARIO DRILL</div>
+        <h2 class="drill-title">第八轮 · <em>收官时刻</em></h2>
+
+        <div class="brief">
+          <div class="brief-meta">
+            <span>场景 <b>AI 安全监管机制多边谈判</b></span><i></i>
+            <span>轮次 <b>第八轮（最后一轮）</b></span><i></i>
+            <span>身份 <b>中国代表团首席代表</b></span>
+          </div>
+          <p>
+            前七轮已就六项核心条款达成一致，仅剩<span class="quote">「评估基准」</span>一项僵持至深夜。美方放话：
+            若今晚不能整体通过，代表团将离场，<b>全部成果作废</b>。主席转向你：「各方能否总结本轮成果？」
+          </p>
+          <p>
+            深夜的疲惫、离场的威胁、七轮的心血都压在这一句回应上。<b>你有一次机会。</b>
+          </p>
+        </div>
+
+        <div class="options" id="options">
+          <button class="option" data-key="A">
+            <span class="opt-key">A</span>
+            <span class="opt-text">「我方接受现有文本，个别分歧留待解释性声明处理。」</span>
+          </button>
+          <button class="option" data-key="B">
+            <span class="opt-key">B</span>
+            <span class="opt-text">「我方建议：将评估基准单列为附件，交由技术专家组两周内提出报告；其余六项已达成一致的条款今晚先行通过。成果不应因一项分歧而全部作废。」</span>
+          </button>
+          <button class="option" data-key="C">
+            <span class="opt-key">C</span>
+            <span class="opt-text">「若美方坚持离场，我方只能表示遗憾。谈判破裂的责任，不在中方。」</span>
+          </button>
+        </div>
+
+        <div class="drill-actions">
+          <button class="btn-primary" id="submitDrill">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            提交判断
+          </button>
+          <button class="btn-gold ghost" id="resetDrill">重新作答</button>
+          <span class="drill-hint" id="drillHint">请选择一项最符合终局收束原则的回应</span>
+        </div>
+
+        <div class="feedback" id="feedback" hidden>
+          <div class="fb-head">
+            <span class="fb-verdict" id="fbVerdict">—</span>
+            <span class="fb-score"><span id="fbScore">0</span><small>分</small></span>
+          </div>
+          <div class="fb-body" id="fbBody"></div>
+          <div class="fb-steps">
+            <span class="fb-step"><b>01</b>拆议题</span>
+            <span class="fb-step"><b>02</b>保成果</span>
+            <span class="fb-step"><b>03</b>留通道</span>
+            <span class="fb-step"><b>04</b>固履约</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 完成条 -->
+      <div class="finish">
+        <div class="finish-text">
+          <div class="finish-title">完成本关 · 开启实战</div>
+          <div class="finish-desc" id="finishDesc">尚有 4 个知识点未标记掌握，情景小练未完成</div>
+        </div>
+        <div class="finish-actions">
+          <button class="btn-gold ghost" onclick="location.href='notes-level3.html'">查看学习笔记</button>
+          <button class="btn-gold ghost" onclick="goBack()">返回学习地图</button>
+          <button class="btn-primary" id="nextLevel" disabled>
+            开启谈判 · 进入实战
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部 -->
+  <div class="page-foot">
+    <div class="foot-rule"><i></i><b></b><i></i></div>
+    <div class="foot-text">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast">已标记</div>
+
+<script src="../assets/theme.js"></script>
+<script>
+  function goBack(){
+    location.href = 'index.html';
+  }
+
+  /* ========== 状态 ========== */
+  const STORAGE_KEY = 'neg-l3-state';
+  const state = { mastered: [], drill: null };
+
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed.mastered)) state.mastered = parsed.mastered;
+      if(parsed.drill) state.drill = parsed.drill;
+    }
+  }catch(e){}
+
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ========== Toast ========== */
+  let toastTimer = null;
+  function toast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  /* ========== 进度渲染 ========== */
+  const RING_LEN = 2 * Math.PI * 34;
+
+  function render(){
+    const n = state.mastered.length;
+    const pct = Math.round(n / 4 * 100);
+
+    document.getElementById('ringNum').textContent = n + '/4';
+    document.getElementById('progressNum').textContent = pct + '%';
+    document.getElementById('metaMastered').textContent = n;
+
+    const bar = document.getElementById('ringBar');
+    bar.style.strokeDasharray = RING_LEN;
+    bar.style.strokeDashoffset = RING_LEN * (1 - n / 4);
+
+    // 卡片 / 按钮 / 导航
+    document.querySelectorAll('[data-master]').forEach(btn => {
+      const key = btn.getAttribute('data-master');
+      const card = document.getElementById(key);
+      const on = state.mastered.indexOf(key) > -1;
+      btn.classList.toggle('done', on);
+      btn.innerHTML = on
+        ? '已掌握 <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>'
+        : '标记已掌握 <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>';
+      if(card) card.classList.toggle('mastered', on);
+    });
+
+    document.querySelectorAll('[data-jump="k1"],[data-jump="k2"],[data-jump="k3"],[data-jump="k4"]').forEach(nav => {
+      const key = nav.getAttribute('data-jump');
+      nav.classList.toggle('done', state.mastered.indexOf(key) > -1);
+    });
+
+    // 左侧知识点对照：严格按真实点击（data-target 对应卡片 id）回显
+    document.querySelectorAll('.goal').forEach(g => {
+      const target = g.getAttribute('data-target');
+      const on = !!target && state.mastered.indexOf(target) > -1;
+      g.classList.toggle('on', on);
+      const num = g.querySelector('.goal-num');
+      if(num) num.textContent = on ? '✓' : (g.getAttribute('data-num') || '');
+      g.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    // 小练状态
+    const drillDone = state.drill === 'B';
+    document.getElementById('metaDrill').textContent = drillDone
+      ? '情景小练已通过'
+      : (state.drill ? '情景小练待改进' : '情景小练未完成');
+    document.querySelector('[data-jump="drill"]').classList.toggle('done', drillDone);
+
+    // 解锁
+    const ready = n === 4 && drillDone;
+    const nextBtn = document.getElementById('nextLevel');
+    nextBtn.disabled = !ready;
+
+    let desc = [];
+    if(n < 4) desc.push('尚有 ' + (4 - n) + ' 个知识点未标记掌握');
+    if(!drillDone) desc.push(state.drill ? '情景小练需选出最佳回应' : '情景小练未完成');
+    document.getElementById('finishDesc').textContent = ready
+      ? '三关全部完成，实战模式已开启'
+      : desc.join('，');
+    document.querySelector('.finish-desc').style.color = ready ? 'var(--success)' : '';
+  }
+
+  /* ========== 标记掌握 ========== */
+  document.querySelectorAll('[data-master]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-master');
+      const i = state.mastered.indexOf(key);
+      if(i > -1){
+        state.mastered.splice(i, 1);
+        toast('已取消标记');
+      }else{
+        state.mastered.push(key);
+        toast('知识点已掌握');
+      }
+      save();
+      render();
+    });
+  });
+
+  /* ========== 导航跳转（顶部导航 + 左侧知识点对照） ========== */
+  document.querySelectorAll('[data-jump],[data-target]').forEach(nav => {
+    nav.addEventListener('click', () => {
+      const id = nav.getAttribute('data-jump') || nav.getAttribute('data-target');
+      const target = document.getElementById(id);
+      if(target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  });
+
+  /* ========== 情景小练 ========== */
+  const ANSWER = {
+    A: {
+      score: 50, cls: 'mid', verdict: '疲态收尾',
+      body: '你用一张<b>解释性声明</b>掩埋了唯一没有谈成的分歧——声明没有约束力，评估基准会在执行阶段原样爆开。「接受现有文本」说出口的那一刻，七轮谈判建立的信用成了对方下一次要价的抵押品。'
+    },
+    B: {
+      score: 100, cls: 'ok', verdict: '最佳收束',
+      body: '三步齐备：<b>拆议题</b>（僵持项单列为附件，不再绑架全局）、<b>保成果</b>（六项共识先行通过，成果落袋）、<b>留通道</b>（专家组两周报告，给了僵局一个体面的出口）。没有深夜让步，没有整体破裂——收束的定义就是：能成的先成，未成的有期。'
+    },
+    C: {
+      score: 40, cls: 'bad', verdict: '情绪接棒',
+      body: '对方用离场做赌注，你用<b>责任归属</b>应赌——赌注升级成了互相问责，而七轮成果成了筹码。终局的回应不评价谁对谁错，只解决「还有什么可以成」。这句表态在媒体上好看，在谈判桌上寸功未立。'
+    }
+  };
+
+  let picked = state.drill || null;
+
+  if(picked){
+    const opt = document.querySelector('.option[data-key="' + picked + '"]');
+    if(opt) opt.classList.add('sel');
+  }
+
+  document.querySelectorAll('.option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if(document.getElementById('feedback').hidden === false) return;
+      document.querySelectorAll('.option').forEach(o => o.classList.remove('sel'));
+      opt.classList.add('sel');
+      picked = opt.getAttribute('data-key');
+      document.getElementById('drillHint').textContent = '已选择 ' + picked + '，提交后查看解析';
+    });
+  });
+
+  document.getElementById('submitDrill').addEventListener('click', () => {
+    if(!picked){ toast('请先选择一项回应'); return; }
+    const fb = document.getElementById('feedback');
+    if(!fb.hidden) return;
+
+    const res = ANSWER[picked];
+    fb.hidden = false;
+    fb.className = 'feedback ' + res.cls;
+    document.getElementById('fbVerdict').textContent = res.verdict;
+    document.getElementById('fbScore').textContent = res.score;
+    document.getElementById('fbBody').innerHTML = res.body;
+
+    document.querySelectorAll('.option').forEach(o => {
+      o.disabled = true;
+      const k = o.getAttribute('data-key');
+      if(k === 'B') o.classList.add('correct');
+      if(k === picked && k !== 'B') o.classList.add('wrong');
+      if(k !== picked) o.classList.remove('sel');
+    });
+
+    document.getElementById('drillHint').textContent = res.score === 100
+      ? '收束动作完整，可以进入实战'
+      : '可点击「重新作答」再试一次';
+
+    state.drill = picked;
+    save();
+    render();
+
+    fb.scrollIntoView({ behavior:'smooth', block:'center' });
+  });
+
+  document.getElementById('resetDrill').addEventListener('click', () => {
+    document.getElementById('feedback').hidden = true;
+    document.getElementById('drillHint').textContent = '请选择一项最符合终局收束原则的回应';
+    document.querySelectorAll('.option').forEach(o => {
+      o.disabled = false;
+      o.classList.remove('sel','correct','wrong');
+    });
+    picked = null;
+    state.drill = null;
+    save();
+    render();
+  });
+
+  /* ========== 进入实战 ========== */
+  document.getElementById('nextLevel').addEventListener('click', () => {
+    if(document.getElementById('nextLevel').disabled) return;
+    location.href = '../index.html';
+  });
+
+  render();
+</script>
+
+<!-- webdemo 2.0 · 学完进入实战 -->
+<div id="learnCta" style="position:fixed;right:26px;bottom:26px;z-index:1200;display:flex;gap:10px;align-items:center">
+  <a href="../index.html" style="font-size:13px;padding:9px 16px;border:1px solid rgba(201,160,97,.45);color:#c9a061;text-decoration:none;background:rgba(201,160,97,.08)">返回首页</a>
+  <a href="../select/start.html" style="font-size:13px;padding:9px 18px;border:1px solid #c9a061;color:#120d07;background:#c9a061;text-decoration:none;font-weight:600">学完了，去谈判 →</a>
+</div>
+</body>
+</html>
