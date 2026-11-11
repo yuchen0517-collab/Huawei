@@ -1,0 +1,2 @@
+11.11 A写
+引擎收到了，20 条测试我跑过全绿，👍。发现行动类型命名有冲突：契约里是 conditional_exchange / walk_away / probe / statement，你引擎里是 conditional_swap / withdraw。请按照 action_schema.json 文件中的各类项目为准，不改名，麻烦你在引擎入口加个别名映射（walk_away→withdraw 等），probe/statement 按普通行动放行。action_schema.json已在分支中
