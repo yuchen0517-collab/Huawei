@@ -1,0 +1,47 @@
+{
+  "session_id": "sess-20261111-001",
+  "round": 4,
+  "phase": "bargaining",
+  "current_version": 3,
+  "latest_offer": {
+    "action_id": "act-us-003",
+    "actor": "US",
+    "version": 3,
+    "clauses": {
+      "领海宽度": 12,
+      "群岛国海峡通行强度": 70,
+      "专属经济区宽度": 188
+    },
+    "created_round": 4,
+    "kind": "counter_offer",
+    "conditions": [
+      { "if": "领海宽度 == 12", "then": "群岛国海峡通行强度 >= 70" }
+    ]
+  },
+  "my_latest_offer": {
+    "action_id": "act-cn-002",
+    "actor": "CN",
+    "version": 2,
+    "clauses": {
+      "领海宽度": 12,
+      "群岛国海峡通行强度": 50,
+      "专属经济区宽度": 200
+    },
+    "created_round": 3,
+    "kind": "offer",
+    "conditions": []
+  },
+  "agreement": null,
+  "open_issues": ["履约监督机制", "争端解决程序"],
+  "action_points": 2,
+  "public_events": [
+    { "round": 2, "type": "statement", "actor": "SG", "text": "呼吁兼顾群岛国利益" }
+  ],
+  "status": "active",
+  "terminal": null,
+  "private_state": {
+    "hidden_task": "争取 12 海里写入正文",
+    "redline": { "领海宽度": { "min": 12 }, "群岛国海峡通行强度": { "max": 60 } },
+    "batna": 0.35
+  }
+}
