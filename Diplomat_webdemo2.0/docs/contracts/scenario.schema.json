@@ -1,0 +1,602 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:diplomat:schema:scenario:1.0",
+  "title": "谈判场景契约",
+  "description": "Diplomat 场景编译 Agent 的场景输入契约。顶层 11 个业务字段（scenario_id 至 terminal_rules）为冻结字段，不得改名、不得增减；negotiability 为编译器回填的只读审计字段，不属于输入侧业务字段。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scenario_id",
+    "title",
+    "scenario_type",
+    "background",
+    "assumptions",
+    "parties",
+    "issues",
+    "public_facts",
+    "private_state_by_party",
+    "max_rounds",
+    "terminal_rules"
+  ],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "场景唯一标识，由小写字母、数字、点、下划线或连字符组成，例如 cn-us-chip-export-2026。"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "场景标题，面向玩家展示的一句话名称。"
+    },
+    "scenario_type": {
+      "type": "string",
+      "enum": [
+        "documented",
+        "hypothesis"
+      ],
+      "description": "场景类型。documented 表示资料驱动，依据公开事实卡编译；hypothesis 表示假设推演，基于显式假设生成。"
+    },
+    "background": {
+      "type": "string",
+      "minLength": 1,
+      "description": "背景设定：会场、时间、议题由来与当前局势的一段中文说明，供所有参与方阅读。"
+    },
+    "assumptions": {
+      "type": "array",
+      "description": "编译时使用的显式假设清单，每条假设都必须可追溯，不得隐含在背景正文里；资料驱动场景可为空数组。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assumption_id",
+          "text",
+          "reason",
+          "affects"
+        ],
+        "properties": {
+          "assumption_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "假设编号，场景内唯一，例如 A1。"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "假设内容本身，一句话陈述。"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "为什么这样假设：所依据的资料、推理链或推演前提。"
+          },
+          "affects": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "该假设影响到的 issue_id 列表。"
+          }
+        }
+      }
+    },
+    "parties": {
+      "type": "array",
+      "minItems": 2,
+      "description": "参与谈判的各方，至少两个；party_id 在同一场景内必须唯一。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "party_id",
+          "name",
+          "role_label",
+          "public_position"
+        ],
+        "properties": {
+          "party_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "参与方唯一键，必须与 private_state_by_party 的键一致，例如 cn、us。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "参与方正式名称，例如 中华人民共和国。"
+          },
+          "role_label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "本方在本场谈判中的席位或角色称谓，例如 中国代表团团长。"
+          },
+          "public_position": {
+            "type": "string",
+            "minLength": 1,
+            "description": "对外公开立场的一句话概括，所有参与方均可看到。"
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "minItems": 1,
+      "description": "待谈议题清单；每个议题要么是数值型 numeric，要么是枚举型 enumerated。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "issue_id",
+          "name",
+          "type",
+          "unit"
+        ],
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "议题唯一标识，场景内不得重复，例如 export_license_scope。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "议题中文名称。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "numeric",
+              "enumerated"
+            ],
+            "description": "议题类型。numeric 为连续数值型，必须提供 range；enumerated 为离散枚举型，必须提供 options。"
+          },
+          "unit": {
+            "type": "string",
+            "description": "计量单位。numeric 议题填 %、月、nm 等；enumerated 议题填「选项」或空字符串。"
+          },
+          "description": {
+            "type": "string",
+            "description": "议题补充说明（可选），用于记录现状值、方向偏好或排序口径等背景信息；不参与校验，也不替代 range 与 options。"
+          },
+          "range": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "min",
+              "max",
+              "step"
+            ],
+            "description": "数值型议题的取值范围。max 必须大于 min，step 必须为正数；两者的跨字段关系由代码校验。",
+            "properties": {
+              "min": {
+                "type": "number",
+                "description": "取值下限（含端点）。"
+              },
+              "max": {
+                "type": "number",
+                "description": "取值上限（含端点）。"
+              },
+              "step": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "最小变动步长，必须为大于 0 的数值。"
+              }
+            }
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "description": "枚举型议题的可选方案；order 表示对我方有利程度，从 1 开始连续递增，1 表示对我方最有利。",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "option_id",
+                "label",
+                "order"
+              ],
+              "properties": {
+                "option_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "方案唯一标识，场景内同一议题下不得重复。"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "方案的中文展示名称。"
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "对我方有利程度排序，从 1 开始递增，1 表示对我方最有利；同一议题内应连续且不重复。"
+                }
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "numeric"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "range"
+              ],
+              "not": {
+                "required": [
+                  "options"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "enumerated"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "options"
+              ],
+              "not": {
+                "required": [
+                  "range"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "public_facts": {
+      "type": "array",
+      "description": "公开事实卡清单，所有参与方均可引用；资料驱动场景应至少包含一条。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fact_id",
+          "text",
+          "type",
+          "source",
+          "applies_to"
+        ],
+        "properties": {
+          "fact_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "事实唯一编号，场景内不得重复，例如 CN-01。"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "事实正文，须可直接引用，不得加入推断。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "立场",
+              "行动",
+              "数字",
+              "引用",
+              "智库"
+            ],
+            "description": "事实类型：立场为公开表态；行动为已发生的政策或举措；数字为统计或金额；引用为人物原话；智库为研究机构判断。"
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "url",
+              "published_at",
+              "confidence"
+            ],
+            "description": "事实来源，必须可回溯。",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "来源名称，例如 中国政府网、路透社。"
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?://",
+                "description": "来源链接，必须以 http 或 https 开头。"
+              },
+              "published_at": {
+                "type": "string",
+                "format": "date",
+                "description": "发布时间，ISO 日期格式 YYYY-MM-DD。"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C"
+                ],
+                "description": "可信度等级。A 表示官方一手；B 表示权威媒体或机构；C 表示待核实。"
+              }
+            }
+          },
+          "applies_to": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "该事实适用的 issue_id 列表。"
+          }
+        }
+      }
+    },
+    "private_state_by_party": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "按 party_id 索引的私密状态；键必须与 parties 中某个 party_id 一致，跨对象一致性由代码校验。",
+      "patternProperties": {
+        "^[A-Za-z0-9_-]+$": {
+          "$ref": "#/$defs/partyPrivateState"
+        }
+      },
+      "additionalProperties": false
+    },
+    "max_rounds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "本场谈判的轮次上限，正整数；达到上限后按 terminal_rules 结算。"
+    },
+    "terminal_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow_walk_away",
+        "accept_requires_no_open_issue",
+        "partial_agreement_allowed"
+      ],
+      "description": "终局判定规则，决定何时可以结束谈判以及如何认定结果。",
+      "properties": {
+        "allow_walk_away": {
+          "type": "boolean",
+          "description": "是否允许任一方中途退出谈判。"
+        },
+        "accept_requires_no_open_issue": {
+          "type": "boolean",
+          "description": "为 true 时，只要还存在未决议题，就不得判定为最终达成。"
+        },
+        "partial_agreement_allowed": {
+          "type": "boolean",
+          "description": "是否允许只就部分议题达成协议并结束谈判。"
+        }
+      }
+    },
+    "negotiability": {
+      "type": "object",
+      "readOnly": true,
+      "additionalProperties": false,
+      "description": "系统只读审计字段，由场景编译器回填，调用方不得自行填写；不属于场景输入的 11 个业务字段。",
+      "required": [
+        "verdict",
+        "zopa_exists",
+        "notes"
+      ],
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "direct",
+            "needs_narrowing",
+            "unsupported"
+          ],
+          "description": "可谈性结论。direct 表示可直接开谈；needs_narrowing 表示需先收窄议题或红线；unsupported 表示现有资料或假设不足，不支持编译。"
+        },
+        "zopa_exists": {
+          "type": "boolean",
+          "description": "是否存在协议区间（ZOPA）；true 表示各方的可接受范围存在重叠。"
+        },
+        "notes": {
+          "type": "string",
+          "description": "结论说明，应指出缺口、需要收窄的 issue_id 或资料不足的具体原因。"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "partyPrivateState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "goals",
+        "redlines",
+        "batna",
+        "hidden_task",
+        "priority_ranking"
+      ],
+      "description": "单个参与方的私密状态，其他参与方不可见。",
+      "properties": {
+        "goals": {
+          "type": "array",
+          "minItems": 1,
+          "description": "该方在各议题上的目标；同一方全部 goals 的 weight 之和必须等于 1，该约束无法用 JSON Schema 表达，由代码校验。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "issue_id",
+              "target",
+              "weight",
+              "direction"
+            ],
+            "properties": {
+              "issue_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "目标对应的议题 issue_id，必须存在于 issues 中。"
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ],
+                "description": "目标值。numeric 议题填数值；enumerated 议题填 option_id 字符串。"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "该目标的相对权重，取值 0 到 1；【约束】同一方内所有 goals 的 weight 之和必须等于 1，此项由代码校验。"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "higher_better",
+                  "lower_better",
+                  "ranked"
+                ],
+                "description": "目标方向。numeric 议题用 higher_better（越高越好）或 lower_better（越低越好）；enumerated 议题必须用 ranked，并按 options.order 比较。"
+              }
+            }
+          }
+        },
+        "redlines": {
+          "type": "array",
+          "description": "不可交易区；hard 为 true 表示绝不退让，false 表示可施压但仍有余地。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "issue_id",
+              "op",
+              "value",
+              "hard",
+              "reason"
+            ],
+            "properties": {
+              "issue_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "红线所约束的议题 issue_id。"
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "min",
+                  "max",
+                  "eq",
+                  "in"
+                ],
+                "description": "比较方式。min 表示不得低于 value；max 表示不得高于 value；eq 表示必须等于 value；in 表示必须落在 value 数组内。"
+              },
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "description": "红线阈值。min 与 max 填数值；eq 填数值或 option_id；in 填数值或 option_id 组成的数组。"
+              },
+              "hard": {
+                "type": "boolean",
+                "description": "是否为硬红线；true 表示触发即退出或转入强硬，false 表示软红线。"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "description": "该红线的依据或内部理由。"
+              }
+            }
+          }
+        },
+        "batna": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "utility",
+            "description",
+            "basis"
+          ],
+          "description": "最佳替代方案（BATNA）。",
+          "properties": {
+            "utility": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "谈不成时的替代方案效用，取值 0 到 100，越高表示越不依赖本场谈判。"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "替代方案的具体内容。"
+            },
+            "basis": {
+              "type": "string",
+              "minLength": 1,
+              "description": "效用判断的依据，例如现有产能、盟友安排或公开政策。"
+            }
+          }
+        },
+        "hidden_task": {
+          "type": "string",
+          "minLength": 1,
+          "description": "该方的隐藏任务，其他参与方不可见。"
+        },
+        "priority_ranking": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "该方议题优先级排序，按 issue_id 从前到后由高到低。"
+        }
+      }
+    }
+  }
+}
