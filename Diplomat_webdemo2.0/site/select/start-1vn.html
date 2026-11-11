@@ -1,0 +1,958 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070402">
+<script>
+  /* 主题引导：首屏绘制前先定主题，避免闪白/闪黑；与首页共用负-theme偏好 */
+  window.THEME_CFG = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG;
+      var manual = false, saved = null;
+      try{
+        manual = localStorage.getItem('neg-theme-mode') === 'manual';
+        if(manual) saved = localStorage.getItem('neg-theme');
+      }catch(e){}
+      var theme;
+      if(manual){
+        theme = saved === 'light' ? 'light' : 'dark';
+      }else{
+        var now = new Date();
+        var mins = now.getHours() * 60 + now.getMinutes();
+        theme = (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+      var mt = document.querySelector('meta[name="theme-color"]');
+      if(mt) mt.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#070402');
+    }catch(e){}
+  })();
+</script>
+<title>外交谈判模拟器 · 起手式 · 多方对谈</title>
+<link href="../assets/fonts.css" rel="stylesheet">
+<style>
+  :root[data-theme="dark"]{
+    --bg:#070402;--bg-card:rgba(18,11,5,.72);--bg-inset:rgba(10,6,3,.5);
+    --gold:#c9a061;--gold-bright:#efd7a8;--gold-dim:#8b7149;--gold-soft:rgba(201,160,97,.15);
+    --gold-line:rgba(201,160,97,.35);--gold-line-strong:rgba(201,160,97,.55);
+    --ivory:#f4e9d4;--text-primary:#f0dcb5;--text-secondary:#b59b74;--text-muted:#8a7352;
+    --text-on-gold:#2a1d0c;--agent:#d8dde4;--agent-soft:rgba(216,221,228,.08);--agent-line:rgba(216,221,228,.35);
+    --shadow-card:0 8px 32px rgba(0,0,0,.5);--divider:rgba(201,160,97,.14);
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f9f2e3;--bg-card:rgba(255,255,255,.82);--bg-inset:rgba(244,233,212,.6);
+    --gold:#a07c3f;--gold-bright:#c9a061;--gold-dim:#7d6338;--gold-soft:rgba(160,124,63,.1);
+    --gold-line:rgba(160,124,63,.3);--gold-line-strong:rgba(160,124,63,.5);
+    --ivory:#f4e9d4;--text-primary:#2a1d0c;--text-secondary:#5c4a2e;--text-muted:#8c7754;
+    --text-on-gold:#fff8ea;--agent:#4a5768;--agent-soft:rgba(74,87,104,.06);--agent-line:rgba(74,87,104,.28);
+    --shadow-card:0 4px 20px rgba(120,90,40,.12);--divider:rgba(160,124,63,.16);
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  html{background:var(--bg);transition:background .5s var(--ease);}
+  body{background:var(--bg);color:var(--text-primary);font-family:"Noto Serif SC","Songti SC",STSong,"SimSun","Source Han Serif SC",serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .5s var(--ease),color .5s var(--ease);}
+  button{font:inherit;cursor:pointer;background:none;border:none;color:inherit;}
+  a{text-decoration:none;color:inherit;}
+
+  .page-bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  .page-bg::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 42% 58% at 12% 40%,rgba(201,160,97,.10),transparent 68%),radial-gradient(ellipse 46% 62% at 88% 52%,rgba(201,160,97,.07),transparent 68%);}
+  :root[data-theme="light"] .page-bg::before{background:radial-gradient(ellipse 42% 58% at 12% 40%,rgba(201,160,97,.17),transparent 68%),radial-gradient(ellipse 46% 62% at 88% 52%,rgba(160,124,63,.08),transparent 68%);}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;mix-blend-mode:soft-light;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");background-size:160px 160px;}
+  .corner{position:fixed;z-index:10;width:44px;height:44px;pointer-events:none;opacity:.5;}
+  .corner::before,.corner::after{content:"";position:absolute;}
+  .corner::before{width:100%;height:1px;background:linear-gradient(90deg,var(--gold-line),transparent);}
+  .corner::after{width:1px;height:100%;background:linear-gradient(180deg,var(--gold-line),transparent);}
+  .corner-tl{top:18px;left:18px;}
+  .corner-tr{top:18px;right:18px;transform:scaleX(-1);}
+  .corner-bl{bottom:18px;left:18px;transform:scaleY(-1);}
+  .corner-br{bottom:18px;right:18px;transform:scale(-1);}
+
+  .topbar{position:relative;z-index:20;display:flex;align-items:center;gap:16px;padding:20px 40px 14px;}
+  .brand{display:flex;align-items:center;gap:14px;margin-right:auto;}
+  .brand-mark{width:36px;height:36px;border:1px solid var(--gold-line-strong);border-radius:50%;display:grid;place-items:center;background:var(--gold-soft);}
+  .brand-mark svg{width:19px;height:19px;fill:var(--gold);}
+  .brand-text{display:flex;flex-direction:column;gap:3px;}
+  .brand-name{font-size:14px;font-weight:600;letter-spacing:.18em;text-indent:.18em;background:linear-gradient(180deg,var(--gold-bright),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .brand-sub{font-family:Georgia,"Times New Roman",serif;font-size:8px;letter-spacing:.3em;text-indent:.3em;color:var(--text-muted);text-transform:uppercase;}
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+  .level-chip{display:flex;align-items:center;gap:9px;height:40px;padding:0 15px;border:1px solid var(--gold-line);background:var(--gold-soft);}
+  .level-chip .chip-label{font-family:Georgia,"Times New Roman",serif;font-size:8px;letter-spacing:.24em;color:var(--text-muted);text-transform:uppercase;}
+  .level-chip .chip-value{font-size:11px;letter-spacing:.14em;color:var(--gold);}
+  .back-btn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--gold-line);border-radius:20px;background:var(--gold-soft);color:var(--gold);font-size:11.5px;letter-spacing:.14em;transition:all .4s var(--ease);white-space:nowrap;flex-shrink:0;}
+  .back-btn:hover{border-color:var(--gold);transform:translateY(-1px);}
+  .back-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .theme-toggle{position:relative;width:40px;height:40px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;transition:all .4s var(--ease);background:var(--gold-soft);}
+  .theme-toggle:hover{border-color:var(--gold);}
+  .theme-toggle svg{width:17px;height:17px;transition:all .5s var(--ease);}
+  .theme-toggle .icon-sun{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:rotate(-90deg) scale(.5);position:absolute;}
+  .theme-toggle .icon-moon{fill:var(--gold);opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:rotate(90deg) scale(.5);}
+  .theme-toggle:active{transform:scale(.94);}
+  .theme-toggle:focus-visible{outline:1px dashed var(--gold);outline-offset:4px;}
+  .theme-toggle::after{
+    content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold-bright);box-shadow:0 0 8px rgba(201,151,85,.6);
+    opacity:0;transform:scale(.3);transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+  }
+  .theme-toggle.is-auto::after{opacity:1;transform:scale(1);}
+
+  .main{position:relative;z-index:5;max-width:1340px;margin:0 auto;padding:6px 40px 40px;}
+  .head{text-align:center;margin-bottom:20px;}
+  .eyebrow{font-family:Georgia,"Times New Roman",serif;font-size:9px;letter-spacing:.4em;text-indent:.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;}
+  .title{font-size:clamp(22px,2.6vw,30px);font-weight:600;letter-spacing:.16em;text-indent:.16em;background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{margin-top:10px;font-size:12px;letter-spacing:.06em;color:var(--text-muted);line-height:1.9;}
+  .sub b{color:var(--gold);font-weight:500;}
+  .v-switch{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .v-switch > span{font-size:11px;letter-spacing:.1em;color:var(--text-muted);border:1px solid var(--gold-line);padding:7px 15px;cursor:default;user-select:none;}
+  .v-switch > span.on{color:var(--text-on-gold);background:var(--gold);border-color:var(--gold);}
+
+  .duo{display:flex;gap:20px;align-items:flex-start;}
+  .panel{border:1px solid var(--gold-line);background:var(--bg-card);backdrop-filter:blur(10px);box-shadow:var(--shadow-card);position:relative;}
+  .panel::before,.panel::after{content:"";position:absolute;width:9px;height:9px;border:1px solid var(--gold-line-strong);pointer-events:none;}
+  .panel::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .panel::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .panel-topic{flex:0 0 35%;max-width:450px;}
+  .panel-side{flex:1 1 0;min-width:0;}
+  .panel-head{display:flex;align-items:center;gap:11px;padding:16px 20px 13px;border-bottom:1px solid var(--divider);}
+  .panel-num{width:25px;height:25px;flex-shrink:0;border:1px solid var(--gold-line-strong);display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif;font-size:11px;color:var(--gold);}
+  .panel-title{font-size:14px;font-weight:600;letter-spacing:.14em;color:var(--text-primary);}
+  .panel-en{margin-left:auto;font-family:Georgia,"Times New Roman",serif;font-size:8.5px;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;}
+  .panel-body{padding:15px 18px 18px;}
+
+  .cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .cat-tab{font-size:10.5px;letter-spacing:.06em;color:var(--text-muted);border:1px solid var(--gold-line);padding:5px 10px;transition:all .3s var(--ease);}
+  .cat-tab:hover{color:var(--gold);border-color:var(--gold-line-strong);}
+  .cat-tab.on{color:var(--text-on-gold);background:var(--gold);border-color:var(--gold);}
+  .topic-list{display:flex;flex-direction:column;gap:8px;max-height:426px;overflow-y:auto;padding-right:5px;}
+  .topic-list::-webkit-scrollbar{width:5px;}
+  .topic-list::-webkit-scrollbar-thumb{background:var(--gold-line);}
+  .topic-card{display:block;width:100%;flex:0 0 auto;text-align:left;padding:11px 13px;border:1px solid var(--gold-line);background:var(--bg-inset);transition:all .3s var(--ease);}
+  .topic-card:hover{border-color:var(--gold-line-strong);transform:translateX(3px);}
+  .topic-card.on{border-color:var(--gold);background:var(--gold-soft);box-shadow:inset 3px 0 0 var(--gold);}
+  .topic-card.dim{opacity:.32;}
+  .topic-card.dim:hover{opacity:.66;transform:none;}
+  .tc-top{display:flex;align-items:flex-start;gap:9px;margin-bottom:6px;}
+  .tc-title{font-size:12.5px;line-height:1.6;color:var(--text-primary);letter-spacing:.02em;flex:1;min-width:0;}
+  .topic-card.on .tc-title{color:var(--gold-bright);}
+  .tc-tag{font-family:Georgia,"Times New Roman",serif;font-size:8.5px;letter-spacing:.1em;color:var(--gold);border:1px solid var(--gold-line);padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+  .tc-focus{display:block;font-size:10.5px;line-height:1.65;color:var(--text-muted);margin-bottom:7px;}
+  .tc-flags{display:flex;gap:3px;flex-wrap:wrap;}
+  .tc-flags i{display:block;width:19px;height:13px;background:var(--f) center/cover no-repeat;border:1px solid var(--gold-line);opacity:.42;transition:opacity .3s var(--ease);}
+  .topic-card.on .tc-flags i,.topic-card:hover .tc-flags i{opacity:1;}
+  .custom-row{display:flex;gap:8px;margin-top:11px;}
+  .custom-row input{flex:1;min-width:0;background:var(--bg-inset);border:1px solid var(--gold-line);color:var(--text-primary);font-family:inherit;font-size:11.5px;padding:9px 12px;transition:border-color .3s var(--ease);}
+  .custom-row input::placeholder{color:var(--text-muted);}
+  .custom-row input:focus{outline:none;border-color:var(--gold);}
+  .custom-row button{border:1px solid var(--gold-line-strong);background:var(--gold-soft);color:var(--gold);font-size:11px;letter-spacing:.1em;padding:0 15px;transition:all .3s var(--ease);white-space:nowrap;}
+  .custom-row button:hover{background:var(--gold);color:var(--text-on-gold);}
+
+  .size-row{display:flex;gap:8px;margin-bottom:14px;}
+  .size-btn{flex:1;border:1px solid var(--gold-line);background:transparent;color:var(--text-muted);font-family:Georgia,"Times New Roman",serif;font-size:12px;letter-spacing:.1em;padding:9px 4px;transition:all .3s var(--ease);}
+  .size-btn:hover{color:var(--gold);border-color:var(--gold-line-strong);}
+  .size-btn.on{background:var(--gold);border-color:var(--gold);color:var(--text-on-gold);}
+
+  .stage{display:grid;grid-template-columns:0.82fr 76px 1.7fr;align-items:stretch;gap:0;}
+  .fighter{display:flex;flex-direction:column;min-width:0;padding:0 2px;}
+  .f-tag{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:10px;}
+  .f-side{font-family:Georgia,"Times New Roman",serif;font-size:clamp(12px,1.1vw,16px);font-weight:700;letter-spacing:.2em;line-height:1;background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 58%,var(--gold-dim) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .fighter.agent-side .f-side{background:linear-gradient(180deg,#f4f7fa 0%,var(--agent) 58%,#8b93a0 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .f-role{font-size:8.5px;letter-spacing:.18em;color:var(--gold);border:1px solid var(--gold-line);padding:2px 8px;flex-shrink:0;margin-bottom:2px;}
+  .fighter.agent-side .f-role{color:var(--agent);border-color:var(--agent-line);}
+  .f-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed var(--divider);min-height:196px;padding:14px;}
+  .f-empty[hidden]{display:none;}
+  .f-empty-icon{width:34px;height:34px;border:1px solid var(--gold-line);border-radius:50%;display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif;font-size:14px;color:var(--gold-dim);margin-bottom:2px;}
+  .f-empty p{font-size:11.5px;letter-spacing:.16em;color:var(--text-muted);}
+  .f-empty span{font-size:10px;letter-spacing:.05em;color:var(--text-muted);opacity:.75;text-align:center;line-height:1.7;}
+  .f-card{display:none;flex:1;flex-direction:column;animation:fade-up .45s var(--ease) both;}
+  .fighter.filled .f-card{display:flex;}
+  .portrait{position:relative;flex:1;display:flex;align-items:center;justify-content:center;isolation:isolate;}
+  .portrait-glow{position:absolute;inset:2% 0;z-index:0;pointer-events:none;background-image:var(--flag);background-size:cover;background-position:center;filter:blur(24px) saturate(1.5);opacity:.42;}
+  .flag-plate{position:relative;z-index:1;width:100%;aspect-ratio:3/2;border:1px solid var(--gold-line-strong);background:#0a0603;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.5);animation:plate-in .55s var(--ease) both;}
+  .fighter.agent-side .flag-plate{border-color:var(--agent-line);}
+  .plate-bg{position:absolute;inset:-30%;display:block;background:var(--flag) center/cover no-repeat;filter:blur(38px) saturate(1.3) brightness(.6);}
+  .flag-plate > i{position:absolute;inset:0;display:block;background:var(--flag) center/contain no-repeat;}
+  .flag-plate > i::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,6,3,.42),rgba(10,6,3,0) 26%,rgba(10,6,3,0) 58%,rgba(10,6,3,.55));}
+  .flag-plate::before{content:"";position:absolute;inset:5px;z-index:2;pointer-events:none;border:1px solid rgba(255,255,255,.14);}
+  :root[data-theme="light"] .portrait-glow{opacity:.26;}
+  :root[data-theme="light"] .flag-plate > i::after{background:linear-gradient(180deg,rgba(10,6,3,.1),rgba(10,6,3,0) 22%,rgba(10,6,3,0) 72%,rgba(10,6,3,.18));}
+  .plate-x{position:absolute;top:7px;right:7px;z-index:5;width:23px;height:23px;display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif;font-size:12px;line-height:1;border:1px solid var(--agent-line);background:rgba(10,6,3,.6);color:var(--agent);opacity:.75;transition:all .3s var(--ease);}
+  .plate-x:hover{opacity:1;background:var(--agent);color:var(--bg);}
+  .f-name{margin-top:9px;font-size:11.5px;letter-spacing:.08em;color:var(--text-primary);text-align:center;}
+  .f-style{margin-top:4px;font-size:9.5px;line-height:1.6;color:var(--text-muted);text-align:center;}
+
+  .f-multi{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;align-content:start;flex:1;max-height:216px;overflow-y:auto;padding:2px;}
+  .f-multi::-webkit-scrollbar{width:5px;}
+  .f-multi::-webkit-scrollbar-thumb{background:var(--agent-line);}
+  .f-mini{position:relative;height:78px;animation:fade-up .4s var(--ease) both;}
+  .mini-plate{position:absolute;inset:0;overflow:hidden;border:1px solid var(--agent-line);background:#0a0603;box-shadow:0 8px 18px rgba(0,0,0,.42);}
+  .mini-plate i{position:absolute;inset:0;display:block;background:var(--flag) center/cover no-repeat;}
+  .mini-plate::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,6,3,.2),rgba(10,6,3,.03) 45%,rgba(10,6,3,.5));}
+  .mini-name{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:3px 5px;font-size:9px;letter-spacing:.04em;color:#f2e8d6;text-align:center;background:linear-gradient(180deg,transparent,rgba(6,4,2,.78));}
+  .f-mini-x{position:absolute;top:-6px;right:-6px;z-index:3;width:18px;height:18px;display:grid;place-items:center;font-size:11px;line-height:1;border:1px solid var(--agent-line);background:rgba(10,6,3,.88);color:var(--agent);transition:all .3s var(--ease);}
+  .f-mini-x:hover{background:var(--agent);color:var(--bg);}
+
+  .vs{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+  .vs::before,.vs::after{content:"";width:1px;flex:1;background:linear-gradient(180deg,transparent,var(--gold-line),transparent);}
+  .vs-round{font-family:Georgia,"Times New Roman",serif;font-size:8px;letter-spacing:.24em;color:var(--text-muted);text-transform:uppercase;}
+  .vs-mark{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:700;font-size:30px;line-height:1;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,var(--gold-dim));-webkit-background-clip:text;background-clip:text;color:transparent;transition:all .5s var(--ease);}
+  .vs.ready .vs-mark{filter:drop-shadow(0 0 20px rgba(201,151,85,.55));}
+  .vs-state{font-size:8px;letter-spacing:.18em;color:var(--text-muted);text-transform:uppercase;text-align:center;}
+  .vs.ready .vs-state{color:var(--gold);}
+
+  .roster-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 11px;padding-top:16px;border-top:1px solid var(--divider);flex-wrap:wrap;}
+  .rh-left{display:flex;align-items:baseline;gap:10px;}
+  .rh-title{font-size:11.5px;letter-spacing:.2em;color:var(--gold);}
+  .rh-count{font-family:Georgia,"Times New Roman",serif;font-size:8.5px;letter-spacing:.14em;color:var(--text-muted);}
+  .side-tabs{display:flex;border:1px solid var(--gold-line);}
+  .side-tab{display:flex;align-items:center;gap:7px;padding:6px 13px;font-size:10.5px;letter-spacing:.1em;color:var(--text-muted);transition:all .35s var(--ease);}
+  .side-tab + .side-tab{border-left:1px solid var(--gold-line);}
+  .side-tab i{width:4px;height:4px;border:1px solid var(--gold-dim);transform:rotate(45deg);transition:all .35s var(--ease);}
+  .side-tab.on{color:var(--gold-bright);background:var(--gold-soft);}
+  .side-tab.on i{background:var(--gold);border-color:var(--gold);}
+  .side-tab.agent-on.on{color:var(--agent);background:var(--agent-soft);}
+  .side-tab.agent-on.on i{background:var(--agent);border-color:var(--agent);}
+  .tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+  .tile{position:relative;display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--gold-line);background:transparent;transition:all .3s var(--ease);overflow:hidden;text-align:left;}
+  .tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent;transition:background .3s var(--ease);}
+  .tile:hover{border-color:var(--gold-line-strong);background:var(--gold-soft);transform:translateY(-2px);}
+  .tile:hover::before{background:var(--gold);}
+  .tile.dim{opacity:.34;}
+  .tile.dim:hover{opacity:.72;}
+  .tile-flag{width:30px;height:20px;flex-shrink:0;background:var(--f) center/cover no-repeat;border:1px solid var(--gold-line);}
+  .tile-names{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .tile-name{font-size:11.5px;letter-spacing:.04em;color:var(--text-primary);white-space:nowrap;}
+  .tile-code{font-family:Georgia,"Times New Roman",serif;font-size:6.5px;letter-spacing:.18em;color:var(--text-muted);}
+  .tile-badge{position:absolute;top:3px;right:4px;font-family:Georgia,"Times New Roman",serif;font-size:6.5px;letter-spacing:.1em;padding:1px 4px;opacity:0;transition:opacity .3s var(--ease);}
+  .tile.you{border-color:var(--gold);background:var(--gold-soft);}
+  .tile.you::before{background:var(--gold);}
+  .tile.you .tile-badge{opacity:1;color:var(--text-on-gold);background:var(--gold);}
+  .tile.agent{border-color:var(--agent-line);background:var(--agent-soft);border-style:dashed;}
+  .tile.agent::before{background:var(--agent);}
+  .tile.agent .tile-badge{opacity:1;color:var(--bg);background:var(--agent);}
+  .side-hint{margin-top:13px;padding-top:11px;border-top:1px solid var(--divider);font-size:10.5px;line-height:1.8;color:var(--text-muted);display:flex;gap:8px;}
+  .side-hint i{width:4px;height:4px;border:1px solid var(--gold);transform:rotate(45deg);flex-shrink:0;margin-top:7px;}
+  .side-hint b{color:var(--gold);font-weight:500;}
+
+  .action-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:22px;}
+  .foot-hint{font-size:11px;letter-spacing:.04em;color:var(--text-muted);line-height:1.8;}
+  .foot-hint b{color:var(--gold);font-weight:500;}
+  .foot-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-primary{display:inline-flex;align-items:center;gap:9px;padding:11px 24px;background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);color:var(--text-on-gold);font-size:12.5px;font-weight:600;letter-spacing:.14em;transition:all .4s var(--ease);}
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-primary:disabled{background:var(--divider);color:var(--text-muted);cursor:not-allowed;transform:none;}
+  .btn-primary svg{width:13px;height:13px;fill:currentColor;}
+  .btn-gold{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:1px solid var(--gold-line-strong);background:linear-gradient(180deg,rgba(201,160,97,.15),rgba(139,113,73,.08));color:var(--gold-bright);font-size:11.5px;letter-spacing:.12em;transition:all .4s var(--ease);}
+  .btn-gold:hover{border-color:var(--gold);color:var(--ivory);}
+  .btn-gold.ghost{background:transparent;color:var(--text-muted);border-color:var(--gold-line);}
+  .btn-gold.ghost:hover{color:var(--gold);border-color:var(--gold-line-strong);}
+  .page-foot{margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:9px;}
+  .foot-rule{display:flex;align-items:center;gap:8px;width:min(240px,50vw);}
+  .foot-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .foot-rule i:last-child{transform:scaleX(-1);}
+  .foot-rule b{width:3px;height:3px;border:1px solid var(--gold-line-strong);transform:rotate(45deg);}
+  .foot-text{font-family:Georgia,"Times New Roman",serif;font-size:8.5px;letter-spacing:.3em;text-indent:.3em;color:var(--text-muted);text-transform:uppercase;}
+  .toast{position:fixed;left:50%;bottom:36px;transform:translate(-50%,18px);z-index:80;padding:11px 20px;border:1px solid var(--gold-line-strong);background:rgba(18,11,5,.95);color:var(--gold-bright);font-size:11.5px;letter-spacing:.1em;opacity:0;pointer-events:none;transition:all .4s var(--ease);}
+  :root[data-theme="light"] .toast{background:rgba(255,252,246,.97);color:var(--gold);}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  @keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes plate-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+  @media (max-width:1180px){
+    .duo{flex-direction:column;}
+    .panel-topic{flex:1 1 auto;max-width:none;width:100%;}
+    .panel-side{width:100%;}
+    .topic-list{max-height:280px;}
+    .tiles{grid-template-columns:repeat(4,1fr);}
+  }
+  @media (max-width:820px){
+    .main{padding:6px 18px 34px;}
+    .topbar{padding:16px 18px 10px;flex-wrap:wrap;gap:10px;}
+    .stage{grid-template-columns:1fr;gap:12px;}
+    .vs{flex-direction:row;gap:12px;padding:4px 0;}
+    .vs::before,.vs::after{width:auto;height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--gold-line),transparent);}
+    .vs-mark{font-size:22px;}
+    .f-empty{min-height:110px;}
+    .f-multi{max-height:none;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));}
+    .tiles{grid-template-columns:repeat(3,1fr);}
+    .foot-actions{width:100%;}
+    .foot-actions .btn-primary{flex:1;justify-content:center;}
+  }
+  @media (max-width:560px){
+    .brand-sub,.level-chip .chip-label{display:none;}
+    .back-btn span{display:none;}
+    .back-btn{padding:0 12px;}
+    .title{font-size:20px;}
+    .tiles{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;}}
+</style>
+</head>
+<body>
+
+<div class="page-bg"></div>
+<div class="grain"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回上一页">
+    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <span>返回</span>
+  </button>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">外交谈判模拟器</div>
+      <div class="brand-sub">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="level-chip">
+      <span class="chip-label">OPENING</span>
+      <span class="chip-value">起手式 · 多方对谈</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme(event)" aria-label="切换主题">
+      <svg aria-hidden="true" class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4V4.8M12 21.6V19.2M2.4 12H4.8M21.6 12H19.2M5.2 5.2L6.9 6.9M18.8 18.8L17.1 17.1M5.2 18.8L6.9 17.1M18.8 5.2L17.1 6.9"/></svg>
+      <svg aria-hidden="true" class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</div>
+
+<main class="main">
+
+  <div class="head">
+    <div class="eyebrow">OPENING · VERSION 2 · ONE AGAINST MANY</div>
+    <h1 class="title">起手式 · 多方对谈</h1>
+    <div class="v-switch" aria-label="起手式版本（当前 V2 · 多方）">
+      <span>V1 · 双边</span>
+      <span class="on" aria-current="true">V2 · 多方</span>
+      <span>V3 · 观战</span>
+    </div>
+  </div>
+
+  <div class="duo">
+
+    <section class="panel panel-topic">
+      <div class="panel-head">
+        <span class="panel-num">A</span>
+        <h2 class="panel-title">选择议题</h2>
+        <span class="panel-en">Topic</span>
+      </div>
+      <div class="panel-body">
+        <div class="cat-tabs" id="catTabs"></div>
+        <div class="topic-list" id="topicList"></div>
+        <div class="custom-row">
+          <input id="customInput" type="text" maxlength="40" placeholder="或自己写一个议题，回车确认" aria-label="自定义议题">
+          <button id="customAdd">用它</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel panel-side">
+      <div class="panel-head">
+        <span class="panel-num">B</span>
+        <h2 class="panel-title">选择主体</h2>
+        <span class="panel-en" id="sideEn">Sides · 1 v 3</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="size-row" id="sizeRow">
+          <button class="size-btn on" data-size="3">1v3</button>
+          <button class="size-btn" data-size="5">1v5</button>
+          <button class="size-btn" data-size="8">1v8</button>
+        </div>
+
+        <div class="stage">
+          <section class="fighter" id="panelYou">
+            <div class="f-tag">
+              <span class="f-side">Player 01</span>
+              <span class="f-role">你</span>
+            </div>
+            <div class="f-empty" id="emptyYou">
+              <span class="f-empty-icon">?</span>
+              <p>尚未入场</p>
+              <span>从下方席位中选择你的主体</span>
+            </div>
+            <div class="f-card" id="cardYou"></div>
+          </section>
+
+          <div class="vs" id="vsCol">
+            <span class="vs-round">Round 01</span>
+            <span class="vs-mark" id="vsMark">1vN</span>
+            <span class="vs-state" id="vsState">等待入场</span>
+          </div>
+
+          <section class="fighter agent-side" id="panelRival">
+            <div class="f-tag">
+              <span class="f-side">Agent · CPU</span>
+              <span class="f-role" id="rivalRole">对手 0 / 3</span>
+            </div>
+            <div class="f-empty" id="emptyRival">
+              <span class="f-empty-icon">AI</span>
+              <p>待出阵</p>
+              <span>切到「为对手选」，依次点满席位，或点随机</span>
+            </div>
+            <div class="f-card" id="cardRival"></div>
+          </section>
+        </div>
+
+        <div class="roster-head">
+          <div class="rh-left">
+            <span class="rh-title">席 位</span>
+            <span class="rh-count" id="rhCount">0 / 4 已就位</span>
+          </div>
+          <div class="side-tabs">
+            <button class="side-tab on" data-side="you"><i></i><span>你在选</span></button>
+            <button class="side-tab agent-on" data-side="agent"><i></i><span>为对手选</span></button>
+          </div>
+        </div>
+
+        <div class="tiles" id="tiles"></div>
+
+        <div class="side-hint"><i></i><span id="sideHint">先选一个议题，相关的国家会亮起来</span></div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <div class="action-bar">
+    <div class="foot-hint" id="footHint">当前：<b>你在选</b> — 点击席位确定你的主体</div>
+    <div class="foot-actions">
+      <button class="btn-gold ghost" id="randomBtn">随机</button>
+      <button class="btn-gold ghost" id="clearBtn">清空</button>
+      <button class="btn-primary" id="confirmBtn" disabled>
+        进入谈判桌
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <div class="foot-rule"><i></i><b></b><i></i></div>
+    <div class="foot-text">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 返回：优先回上一页；直接打开本页时回到首页 */
+window.goBack = function(){
+  window.location.href = '../index.html';
+};
+(function(){
+  'use strict';
+
+  /* ===== 主题：跟随系统时间自动 + 手动切换（与首页共用 neg-theme-mode / neg-theme） ===== */
+  (function(){
+    'use strict';
+
+    var CFG        = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+    var MODE_KEY   = 'neg-theme-mode';
+    var THEME_KEY  = 'neg-theme';
+    var META_COLOR = { dark: '#070402', light: '#f9f2e3' };
+    var CHECK_MS   = 30000;
+    var LONG_PRESS = 600;
+
+    var html = document.documentElement;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    var btns = Array.prototype.slice.call(document.querySelectorAll('.theme-toggle'));
+
+    var mode = 'auto';
+    var ticker = null, pressTimer = null, swallowClick = false;
+
+    function read(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+    function write(key, value){ try{ localStorage.setItem(key, value); }catch(e){} }
+
+    function isDaytime(date){
+      var mins = date.getHours() * 60 + date.getMinutes();
+      return mins >= CFG.dayStart * 60 && mins < CFG.dayEnd * 60;
+    }
+    function themeForTime(){ return isDaytime(new Date()) ? 'light' : 'dark'; }
+    function currentTheme(){ return html.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; }
+    function themeName(theme){ return theme === 'light' ? '白天 · 亮色' : '夜间 · 深色'; }
+
+    function paint(theme){
+      html.setAttribute('data-theme', theme);
+      if(meta) meta.setAttribute('content', META_COLOR[theme] || META_COLOR.dark);
+      var auto = mode === 'auto';
+      btns.forEach(function(btn){
+        btn.classList.toggle('is-auto', auto);
+        btn.title = auto
+          ? '主题：跟随系统时间（当前 ' + themeName(theme) + '）\n单击手动切换，长按或 Shift+单击恢复自动'
+          : '主题：手动（当前 ' + themeName(theme) + '）\n单击切换，长按或 Shift+单击恢复跟随时间';
+        btn.setAttribute('aria-label', auto ? '主题跟随系统时间，单击手动切换，长按恢复自动' : '切换亮暗主题');
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    function say(message){
+      if(typeof toast === 'function'){ try{ toast(message); }catch(e){} }
+    }
+
+    function syncAuto(announce){
+      if(mode !== 'auto') return;
+      var theme = themeForTime();
+      paint(theme);
+      if(announce) say('已恢复跟随系统时间自动切换（' + themeName(theme) + '）');
+    }
+    function stopTicker(){ if(ticker){ clearInterval(ticker); ticker = null; } }
+    function startTicker(){
+      stopTicker();
+      ticker = setInterval(function(){ if(mode === 'auto') syncAuto(false); }, CHECK_MS);
+    }
+    function useAuto(announce){
+      mode = 'auto';
+      write(MODE_KEY, 'auto');
+      write(THEME_KEY, themeForTime());
+      syncAuto(announce);
+      startTicker();
+    }
+    function useManual(theme){
+      mode = 'manual';
+      write(MODE_KEY, 'manual');
+      write(THEME_KEY, theme);
+      stopTicker();
+      paint(theme);
+    }
+
+    window.toggleTheme = function(event){
+      if(event && event.shiftKey){ useAuto(true); return; }
+      if(swallowClick){ swallowClick = false; return; }
+      var next = currentTheme() === 'light' ? 'dark' : 'light';
+      var fromAuto = mode === 'auto';
+      useManual(next);
+      if(fromAuto) say('已切换为手动模式（' + themeName(next) + '），长按按钮可恢复跟随时间');
+    };
+
+    function onPressStart(e){
+      if(e && e.button !== undefined && e.button !== 0) return;
+      swallowClick = false;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(function(){
+        swallowClick = true;
+        useAuto(true);
+        setTimeout(function(){ swallowClick = false; }, 4000);
+      }, LONG_PRESS);
+    }
+    function onPressEnd(){ clearTimeout(pressTimer); }
+
+    btns.forEach(function(btn){
+      btn.addEventListener('pointerdown', onPressStart);
+      btn.addEventListener('pointerup', onPressEnd);
+      btn.addEventListener('pointercancel', onPressEnd);
+      btn.addEventListener('pointerleave', onPressEnd);
+      btn.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    });
+
+    function restore(){
+      if(read(MODE_KEY) === 'manual'){
+        useManual(read(THEME_KEY) === 'light' ? 'light' : 'dark');
+      }else{
+        useAuto(false);
+      }
+    }
+
+    restore();
+
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') syncAuto(false);
+    });
+    window.addEventListener('focus', function(){ syncAuto(false); });
+    window.addEventListener('storage', function(e){
+      if(e.key !== MODE_KEY && e.key !== THEME_KEY) return;
+      restore();
+    });
+    window.addEventListener('pageshow', restore);
+  })();
+
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1700);
+  }
+
+  /* ===== 国旗：内嵌 SVG，离线可显示 ===== */
+  var FLAG = {
+    cn:'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="900" height="600"><path fill="#EE1C25" d="M0 0h900v600H0"/><g transform="matrix(3 0 0 3 150 150)"><path id="a" fill="#FF0" d="m0-30 17.634 54.27-46.166-33.54h57.064l-46.166 33.54Z"/></g><use xlink:href="#a" transform="rotate(23.036 2.784 766.082)"/><use xlink:href="#a" transform="rotate(45.87 38.201 485.396)"/><use xlink:href="#a" transform="rotate(69.945 29.892 362.328)"/><use xlink:href="#a" transform="rotate(20.66 -590.66 957.955)"/></svg>',
+    us:'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 7410 3900"><path fill="#b22234" d="M0 0h7410v3900H0z"/><path d="M0 450h7410m0 600H0m0 600h7410m0 600H0m0 600h7410m0 600H0" stroke="#fff" stroke-width="300"/><path fill="#3c3b6e" d="M0 0h2964v2100H0z"/><g fill="#fff"><g id="d"><g id="c"><g id="e"><g id="b"><path id="a" d="M247 90l70.534 217.082-184.66-134.164h228.253L176.466 307.082z"/><use xlink:href="#a" y="420"/><use xlink:href="#a" y="840"/><use xlink:href="#a" y="1260"/></g><use xlink:href="#a" y="1680"/></g><use xlink:href="#b" x="247" y="210"/></g><use xlink:href="#c" x="494"/></g><use xlink:href="#d" x="988"/><use xlink:href="#c" x="1976"/><use xlink:href="#e" x="2470"/></g></svg>',
+    eu:'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="810" height="540"><defs><g id="d"><g id="b"><path id="a" d="M0 0v1h.5z" transform="rotate(18 3.157 -.5)"/><use xlink:href="#a" transform="scale(-1 1)"/></g><g id="c"><use xlink:href="#b" transform="rotate(72)"/><use xlink:href="#b" transform="rotate(144)"/></g><use xlink:href="#c" transform="scale(-1 1)"/></g></defs><path fill="#039" d="M0 0h810v540H0z"/><g fill="#fc0" transform="matrix(30 0 0 30 405 270)"><use xlink:href="#d" y="-6"/><use xlink:href="#d" y="6"/><g id="e"><use xlink:href="#d" x="-6"/><use xlink:href="#d" transform="rotate(-144 -2.344 -2.11)"/><use xlink:href="#d" transform="rotate(144 -2.11 -2.344)"/><use xlink:href="#d" transform="rotate(72 -4.663 -2.076)"/><use xlink:href="#d" transform="rotate(72 -5.076 .534)"/></g><use xlink:href="#e" transform="scale(-1 1)"/></g></svg>',
+    in:'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="900" height="600" fill="#07038D" viewBox="-45 -30 90 60"><path fill="#FFF" d="M-45-30h90v60h-90z"/><path fill="#FF6820" d="M-45-30h90v20h-90z"/><path fill="#046A38" d="M-45 10h90v20h-90z"/><circle r="9.25"/><circle r="8" fill="#FFF"/><circle r="1.6"/><g id="d"><g id="c"><g id="b"><g id="a"><path d="m0-8 .3 4.814L0-.802l-.3-2.384z"/><circle cy="-8" r=".35" transform="rotate(7.5)"/></g><use xlink:href="#a" transform="scale(-1)"/></g><use xlink:href="#b" transform="rotate(15)"/></g><use xlink:href="#c" transform="rotate(30)"/></g><use xlink:href="#d" transform="rotate(60)"/><use xlink:href="#d" transform="rotate(120)"/></svg>',
+    br:'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="700" viewBox="-2100 -1470 4200 2940"><defs><path id="j" fill-rule="evenodd" d="M-31.5 0h33a30 30 0 0 0 30-30v-10a30 30 0 0 0-30-30h-33zm13-13h19a19 19 0 0 0 19-19v-6a19 19 0 0 0-19-19h-19z"/><path id="k" d="M0 0h63v-13H12v-18h40v-12H12v-14h48v-13H0z" transform="translate(-31.5)"/><path id="m" d="M-26.25 0h52.5v-12h-40.5v-16h33v-12h-33v-11H25v-12h-51.25z"/><path id="l" d="M-31.5 0h12v-48l14 48h11l14-48V0h12v-70H14L0-22l-14-48h-17.5z"/><path id="b" fill-rule="evenodd" d="M0 0a31.5 35 0 0 0 0-70A31.5 35 0 0 0 0 0m0-13a18.5 22 0 0 0 0-44 18.5 22 0 0 0 0 44"/><path id="c" fill-rule="evenodd" d="M-31.5 0h13v-26h28a22 22 0 0 0 0-44h-40zm13-39h27a9 9 0 0 0 0-18h-27z"/><path id="o" d="M-15.75-22C-15.75-15-9-11.5 1-11.5s14.74-3.25 14.75-7.75c0-14.25-46.75-5.25-46.5-30.25C-30.5-71-6-70 3-70s26 4 25.75 21.25H13.5c0-7.5-7-10.25-15-10.25-7.75 0-13.25 1.25-13.25 8.5-.25 11.75 46.25 4 46.25 28.75C31.5-3.5 13.5 0 0 0c-11.5 0-31.55-4.5-31.5-22z"/><use xlink:href="#f" id="p" transform="scale(31.5)"/><use xlink:href="#f" id="q" transform="scale(26.25)"/><use xlink:href="#f" id="u" transform="scale(21)"/><use xlink:href="#f" id="r" transform="scale(15)"/><use xlink:href="#f" id="v" transform="scale(10.5)"/><g id="n"><clipPath id="a"><path d="M-31.5 0v-70h63V0zM0-47v12h31.5v-12z"/></clipPath><use xlink:href="#b" clip-path="url(#a)"/><path d="M5-35h26.5v10H5z"/><path d="M21.5-35h10V0h-10z"/></g><g id="i"><use xlink:href="#c"/><path d="M28 0c0-10 0-32-15-32H-6c22 0 22 22 22 32"/></g><g id="f" fill="#fff"><g id="e"><path id="d" d="M0-1v1h.5" transform="rotate(18 0 -1)"/><use xlink:href="#d" transform="scale(-1 1)"/></g><use xlink:href="#e" transform="rotate(72)"/><use xlink:href="#e" transform="rotate(-72)"/><use xlink:href="#e" transform="rotate(144)"/><use xlink:href="#e" transform="rotate(216)"/></g></defs><clipPath id="h"><circle r="735"/></clipPath><path fill="#009440" d="M-2100-1470h4200v2940h-4200z"/><path fill="#ffcb00" d="M-1743 0 0 1113 1743 0 0-1113Z"/><circle r="735" fill="#302681"/><path fill="#fff" d="M-2205 1470a1785 1785 0 0 1 3570 0h-105a1680 1680 0 1 0-3360 0z" clip-path="url(#h)"/><g fill="#009440" transform="translate(-420 1470)"><use xlink:href="#b" y="-1697.5" transform="rotate(-7)"/><use xlink:href="#i" y="-1697.5" transform="rotate(-4)"/><use xlink:href="#j" y="-1697.5" transform="rotate(-1)"/><use xlink:href="#k" y="-1697.5" transform="rotate(2)"/><use xlink:href="#l" y="-1697.5" transform="rotate(5)"/><use xlink:href="#m" y="-1697.5" transform="rotate(9.75)"/><use xlink:href="#c" y="-1697.5" transform="rotate(14.5)"/><use xlink:href="#i" y="-1697.5" transform="rotate(17.5)"/><use xlink:href="#b" y="-1697.5" transform="rotate(20.5)"/><use xlink:href="#n" y="-1697.5" transform="rotate(23.5)"/><use xlink:href="#i" y="-1697.5" transform="rotate(26.5)"/><use xlink:href="#k" y="-1697.5" transform="rotate(29.5)"/><use xlink:href="#o" y="-1697.5" transform="rotate(32.5)"/><use xlink:href="#o" y="-1697.5" transform="rotate(35.5)"/><use xlink:href="#b" y="-1697.5" transform="rotate(38.5)"/></g><use xlink:href="#p" x="-600" y="-132"/><use xlink:href="#p" x="-535" y="177"/><use xlink:href="#q" x="-625" y="243"/><use xlink:href="#r" x="-463" y="132"/><use xlink:href="#q" x="-382" y="250"/><use xlink:href="#u" x="-404" y="323"/><use xlink:href="#p" x="228" y="-228"/><use xlink:href="#p" x="515" y="258"/><use xlink:href="#u" x="617" y="265"/><use xlink:href="#q" x="545" y="323"/><use xlink:href="#q" x="368" y="477"/><use xlink:href="#u" x="367" y="551"/><use xlink:href="#u" x="441" y="419"/><use xlink:href="#q" x="500" y="382"/><use xlink:href="#u" x="365" y="405"/><use xlink:href="#q" x="-280" y="30"/><use xlink:href="#u" x="200" y="-37"/><use xlink:href="#p" y="330"/><use xlink:href="#q" x="85" y="184"/><use xlink:href="#q" y="118"/><use xlink:href="#u" x="-74" y="184"/><use xlink:href="#r" x="-37" y="235"/><use xlink:href="#q" x="220" y="495"/><use xlink:href="#u" x="283" y="430"/><use xlink:href="#u" x="162" y="412"/><use xlink:href="#p" x="-295" y="390"/><use xlink:href="#v" y="575"/></svg>',
+    jp:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><rect fill="#fff" height="600" width="900"/><circle fill="#bc002d" cx="450" cy="300" r="180"/></svg>',
+    ru:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 6"><path fill="#fff" d="M0 0h9v3H0z"/><path fill="#DA291C" d="M0 3h9v3H0z"/><path fill="#0032A0" d="M0 2h9v2H0z"/></svg>',
+    uk:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30"><clipPath id="a"><path d="M0 0v30h60V0z"/></clipPath><clipPath id="b"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><g clip-path="url(#a)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#b)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+    kr:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#fff"/><g transform="translate(150 100)"><circle r="48" fill="#0047a0"/><path d="M0-48A48 48 0 0 1 0 48 24 24 0 0 1 0 0 24 24 0 0 0 0-48Z" fill="#cd2e3a"/></g><g fill="#000"><g transform="translate(88 58) rotate(-56)"><rect x="-22" y="-8" width="44" height="4"/><rect x="-22" y="-2" width="44" height="4"/><rect x="-22" y="4" width="44" height="4"/></g><g transform="translate(212 58) rotate(56)"><rect x="-22" y="-8" width="44" height="4"/><rect x="-22" y="-2" width="44" height="4"/><rect x="-22" y="4" width="44" height="4"/></g><g transform="translate(88 142) rotate(56)"><rect x="-22" y="-8" width="44" height="4"/><rect x="-22" y="-2" width="44" height="4"/><rect x="-22" y="4" width="44" height="4"/></g><g transform="translate(212 142) rotate(-56)"><rect x="-22" y="-8" width="44" height="4"/><rect x="-22" y="-2" width="44" height="4"/><rect x="-22" y="4" width="44" height="4"/></g></g></svg>',
+    tr:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="#E30A17" width="1200" height="800"/><circle cx="425" cy="400" r="200" fill="#fff"/><circle cx="475" cy="400" r="160" fill="#E30A17"/><path d="M640 320l22.6 69.6h73.2l-59.2 43 22.6 69.6L640 459.2l-59.2 43 22.6-69.6-59.2-43h73.2z" fill="#fff"/></svg>',
+    id:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><rect width="900" height="300" fill="#CE1126"/><rect y="300" width="900" height="300" fill="#fff"/></svg>',
+    eg:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600"><rect width="900" height="200" fill="#CE1126"/><rect y="200" width="900" height="200" fill="#fff"/><rect y="400" width="900" height="200" fill="#000"/></svg>'
+  };
+  function flagURL(code){
+    return 'data:image/svg+xml;charset=utf-8,' +
+      encodeURIComponent(FLAG[code] || '').replace(/'/g,'%27').replace(/\(/g,'%28').replace(/\)/g,'%29');
+  }
+
+  /* ===== 主体池（12 方） ===== */
+  var DATA = {
+    cn:{ name:'中国', en:'China', code:'CN', style:'以原则定框，用程序换空间' },
+    us:{ name:'美国', en:'United States', code:'US', style:'先设标准，再谈细节' },
+    eu:{ name:'欧盟', en:'European Union', code:'EU', style:'用标准输出影响力' },
+    in:{ name:'印度', en:'India', code:'IN', style:'在两大阵营之间取最大公约数' },
+    br:{ name:'巴西', en:'Brazil', code:'BR', style:'代表南方集团开口' },
+    jp:{ name:'日本', en:'Japan', code:'JP', style:'技术互认先行，政治表态谨慎' },
+    ru:{ name:'俄罗斯', en:'Russia', code:'RU', style:'以否决权换取承认' },
+    uk:{ name:'英国', en:'United Kingdom', code:'UK', style:'做桥梁，也做记录者' },
+    kr:{ name:'韩国', en:'Korea', code:'KR', style:'在同盟与市场之间走细线' },
+    tr:{ name:'土耳其', en:'Türkiye', code:'TR', style:'把地理枢纽换成谈判筹码' },
+    id:{ name:'印度尼西亚', en:'Indonesia', code:'ID', style:'代表东盟开口，坚持不选边' },
+    eg:{ name:'埃及', en:'Egypt', code:'EG', style:'把地区安全与发展资金绑在一起谈' }
+  };
+  var ORDER = ['cn','us','eu','in','br','jp','ru','uk','kr','tr','id','eg'];
+
+  /* ===== 多方议题：sides 决定推荐哪些主体 ===== */
+  var TOPICS = [
+    { id:'ai',      cat:'安全治理',   title:'多边 AI 安全监管机制',           focus:'强制性最低标准 vs 自愿承诺',   scale:'1vN', sides:['cn','us','eu','in','br','kr'] },
+    { id:'arms',    cat:'安全治理',   title:'自主武器系统使用授权与责任归属', focus:'人类控制权 vs 军事效率',       scale:'1vN', sides:['cn','us','ru','eu','in','kr'] },
+    { id:'peace',   cat:'安全治理',   title:'维和行动授权延期与兵力分摊',     focus:'授权范围 vs 出兵意愿',         scale:'1vN', sides:['cn','us','ru','eu','br','id'] },
+    { id:'mineral', cat:'经济与贸易', title:'关键矿产供应链安全联盟',         focus:'排他性联盟 vs 开放供应链',     scale:'1vN', sides:['cn','us','eu','jp','br','id'] },
+    { id:'dst',     cat:'经济与贸易', title:'数字服务税与跨境征税权分配',     focus:'来源地征税 vs 居民国征税',     scale:'1vN', sides:['cn','us','eu','in','uk','tr'] },
+    { id:'chip',    cat:'经济与贸易', title:'半导体出口管制与豁免清单',       focus:'国家安全 vs 产业损失',         scale:'1vN', sides:['cn','us','eu','jp','uk','kr'] },
+    { id:'data',    cat:'技术与标准', title:'跨境数据流动与数据主权边界',     focus:'自由流动 vs 数据本地化',       scale:'1vN', sides:['cn','us','eu','in','uk','id'] },
+    { id:'g6',      cat:'技术与标准', title:'6G 标准必要专利许可规则',       focus:'专利池费率 vs 反垄断审查',     scale:'1vN', sides:['cn','us','eu','jp','uk','kr'] },
+    { id:'nuclear', cat:'技术与标准', title:'民用核技术出口管制与和平利用',   focus:'不扩散 vs 发展权',             scale:'1vN', sides:['cn','us','ru','in','br','tr'] },
+    { id:'climate', cat:'环境与气候', title:'气候资金分摊与损失损害补偿机制', focus:'共同但有区别的责任',           scale:'1vN', sides:['cn','us','eu','in','br','eg'] },
+    { id:'cbam',    cat:'环境与气候', title:'碳边境调节机制的互认与过渡期',   focus:'碳泄漏 vs 贸易壁垒',           scale:'1vN', sides:['cn','us','eu','in','br','tr'] },
+    { id:'ocean',   cat:'环境与气候', title:'公海生物多样性养护与惠益分享',   focus:'公海自由 vs 资源主权',         scale:'1vN', sides:['cn','us','eu','jp','br','id'] },
+    { id:'arctic',  cat:'领土与主权', title:'关键航道通行报备与管辖权划分',   focus:'航行自由 vs 沿岸国管辖',       scale:'1vN', sides:['cn','ru','us','uk','jp'] },
+    { id:'river',   cat:'领土与主权', title:'跨境河流水资源分配与生态流量',   focus:'上游开发 vs 下游用水',         scale:'1vN', sides:['cn','in','br','ru','uk','eg'] }
+  ];
+  var CATS = ['全部','安全治理','经济与贸易','技术与标准','环境与气候','领土与主权','自定义'];
+
+  /* ===== 状态 ===== */
+  var curCat = '全部';
+  var curTopic = null;
+  var pick = { you:null, rivals:[] };
+  var size = 3;
+  var activeSide = 'you';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var eachList = function(list, fn){ for(var i = 0; i < list.length; i++){ fn(list[i], i); } };
+  var catTabs = $('catTabs'), topicList = $('topicList'), tilesEl = $('tiles'), vsCol = $('vsCol');
+
+  function renderCats(){
+    catTabs.innerHTML = CATS.map(function(c){
+      return '<button class="cat-tab' + (c === curCat ? ' on' : '') + '" data-cat="' + c + '">' + c + '</button>';
+    }).join('');
+  }
+
+  /* ===== 议题列表（受已选主体影响） ===== */
+  function renderTopics(){
+    var anchor = pick.you || pick.rivals[0];
+    var pool = null;
+    if(anchor){
+      pool = TOPICS.filter(function(t){ return t.sides.indexOf(anchor) > -1; });
+    }
+    var shown = TOPICS.filter(function(t){ return curCat === '全部' || t.cat === curCat; });
+    if(!shown.length){
+      topicList.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:14px 4px;line-height:1.8;">这个分类下还没有议题，可以在下面自己写一个。</div>';
+      return;
+    }
+    topicList.innerHTML = shown.map(function(t){
+      var hit = !pool || pool.indexOf(t) > -1;
+      var on = curTopic && curTopic.id === t.id;
+      var flags = t.sides.map(function(c){
+        return '<i style="--f:url(\'' + flagURL(c) + '\')"></i>';
+      }).join('');
+      return '<button class="topic-card' + (on ? ' on' : '') + (hit ? '' : ' dim') + '" data-id="' + t.id + '">' +
+               '<span class="tc-top"><span class="tc-title">' + t.title + '</span><span class="tc-tag">1vN</span></span>' +
+               '<span class="tc-focus">' + t.focus + '</span>' +
+               '<span class="tc-flags">' + flags + '</span>' +
+             '</button>';
+    }).join('');
+  }
+
+  /* ===== 对战台 ===== */
+  function renderFighters(){
+    var pYou = $('panelYou'), eYou = $('emptyYou'), cYou = $('cardYou');
+    var pRival = $('panelRival'), eRival = $('emptyRival'), cRival = $('cardRival');
+
+    if(pick.you){
+      pYou.classList.add('filled'); eYou.hidden = true;
+      cYou.innerHTML = '<div class="portrait" style="--flag:url(\'' + flagURL(pick.you) + '\')">' +
+                         '<span class="portrait-glow"></span>' +
+                         '<div class="flag-plate"><b class="plate-bg"></b><i></i></div>' +
+                         '<button class="plate-x" data-drop="you" aria-label="移除我方">×</button>' +
+                       '</div>' +
+                       '<div class="f-name">' + DATA[pick.you].name + ' · ' + DATA[pick.you].code + '</div>' +
+                       '<div class="f-style">' + DATA[pick.you].style + '</div>';
+    } else {
+      pYou.classList.remove('filled'); eYou.hidden = false; cYou.innerHTML = '';
+    }
+
+    if(pick.rivals.length){
+      pRival.classList.add('filled'); eRival.hidden = true;
+      cRival.innerHTML = '<div class="f-multi">' + pick.rivals.map(function(c){
+        return '<div class="f-mini">' +
+                 '<span class="mini-plate" style="--flag:url(\'' + flagURL(c) + '\')"><i></i></span>' +
+                 '<span class="mini-name">' + DATA[c].name + '</span>' +
+                 '<button class="f-mini-x" data-drop="' + c + '" aria-label="移除 ' + DATA[c].name + '">×</button>' +
+               '</div>';
+      }).join('') + '</div>';
+    } else {
+      pRival.classList.remove('filled'); eRival.hidden = false; cRival.innerHTML = '';
+    }
+
+    $('rivalRole').textContent = '对手 ' + pick.rivals.length + ' / ' + size;
+    var ready = !!(curTopic && pick.you && pick.rivals.length);
+    vsCol.classList.toggle('ready', ready);
+    var n = (pick.you ? 1 : 0) + pick.rivals.length;
+    $('vsState').textContent = ready ? 'Ready' : (n ? n + ' / ' + (size + 1) : '等待入场');
+    $('rhCount').textContent = n + ' / ' + (size + 1) + ' 已就位';
+  }
+
+  /* ===== 席位 ===== */
+  function renderTiles(){
+    var rec = curTopic ? curTopic.sides : null;
+    tilesEl.innerHTML = ORDER.map(function(code){
+      var d = DATA[code];
+      var isYou = pick.you === code;
+      var isRival = pick.rivals.indexOf(code) > -1;
+      var isRec = !rec || rec.indexOf(code) > -1;
+      var cls = 'tile' + (isRec ? '' : ' dim') + (isYou ? ' you' : '') + (isRival ? ' agent' : '');
+      var badge = isYou ? '你' : (isRival ? 'AI' : '');
+      return '<button class="' + cls + '" data-code="' + code + '">' +
+               '<span class="tile-flag" style="--f:url(\'' + flagURL(code) + '\')"></span>' +
+               '<span class="tile-names"><span class="tile-name">' + d.name + '</span><span class="tile-code">' + d.code + '</span></span>' +
+               '<span class="tile-badge">' + badge + '</span>' +
+             '</button>';
+    }).join('');
+  }
+
+  /* ===== 提示与按钮 ===== */
+  function renderFoot(){
+    var hint;
+    var full = pick.rivals.length >= size;
+    if(curTopic && pick.you && full){
+      hint = '议题锁定「' + curTopic.title + '」 · ' + DATA[pick.you].name + ' 对 ' + pick.rivals.length + ' 家，可以进桌了';
+    } else if(curTopic && !pick.you){
+      hint = '议题已锁定，从右侧亮起的国家里挑一个当<b>我方</b>';
+    } else if(pick.you && !curTopic){
+      hint = '已选我方 ' + DATA[pick.you].name + '，左侧跟它相关的议题已经浮上来了';
+    } else if(pick.you && !full){
+      hint = '还差 ' + (size - pick.rivals.length) + ' 家对手，切到「为对手选」继续点';
+    } else {
+      hint = '先选一个议题，相关的国家会亮起来';
+    }
+    $('sideHint').innerHTML = hint;
+
+    $('footHint').innerHTML = activeSide === 'you'
+      ? '当前：<b>你在选</b> — 点击席位确定你的主体'
+      : '当前：<b>为对手选</b> — 依次点满 ' + size + ' 个对手席位，或点「随机」';
+
+    $('confirmBtn').disabled = !(curTopic && pick.you && full);
+    $('sideEn').textContent = 'Sides · 1 v ' + size;
+  }
+
+  function renderAll(){
+    renderTopics();
+    renderTiles();
+    renderFighters();
+    renderFoot();
+    eachList(document.querySelectorAll('.side-tab'), function(tab){
+      tab.classList.toggle('on', tab.getAttribute('data-side') === activeSide);
+    });
+    eachList(document.querySelectorAll('.size-btn'), function(b){
+      b.classList.toggle('on', parseInt(b.getAttribute('data-size'), 10) === size);
+    });
+  }
+
+  /* ===== 交互 ===== */
+  catTabs.addEventListener('click', function(e){
+    var b = e.target.closest('.cat-tab');
+    if(!b) return;
+    curCat = b.getAttribute('data-cat');
+    renderCats(); renderTopics();
+  });
+
+  topicList.addEventListener('click', function(e){
+    var b = e.target.closest('.topic-card');
+    if(!b) return;
+    var id = b.getAttribute('data-id');
+    var t = null, i;
+    for(i = 0; i < TOPICS.length; i++){ if(TOPICS[i].id === id) t = TOPICS[i]; }
+    if(!t) return;
+    if(curTopic && curTopic.id === id){
+      curTopic = null;
+    } else {
+      curTopic = t;
+      if(pick.you && t.sides.indexOf(pick.you) === -1){ pick.you = null; }
+      pick.rivals = pick.rivals.filter(function(c){ return t.sides.indexOf(c) > -1; });
+      toast('议题：' + t.title);
+    }
+    renderAll();
+  });
+
+  tilesEl.addEventListener('click', function(e){
+    var t = e.target.closest('.tile');
+    if(!t) return;
+    var code = t.getAttribute('data-code');
+    var at = pick.rivals.indexOf(code);
+
+    if(activeSide === 'you'){
+      if(pick.you === code){
+        pick.you = null;
+        toast('已取消我方选择');
+      } else if(at > -1){
+        toast('该主体已在对手席上');
+        return;
+      } else {
+        pick.you = code;
+        toast('你代表：' + DATA[code].name);
+        activeSide = 'agent';
+      }
+    } else {
+      if(at > -1){
+        pick.rivals.splice(at, 1);
+        toast('已移出 ' + DATA[code].name);
+      } else if(pick.you === code){
+        toast('该主体已被你占用');
+        return;
+      } else if(pick.rivals.length >= size){
+        toast('对手方已满 ' + size + ' 席，先撤一个');
+        return;
+      } else {
+        pick.rivals.push(code);
+        toast('对手出阵：' + DATA[code].name);
+      }
+    }
+    renderAll();
+  });
+
+  document.querySelector('.panel-side').addEventListener('click', function(e){
+    var x = e.target.closest('[data-drop]');
+    if(!x) return;
+    var k = x.getAttribute('data-drop');
+    if(k === 'you'){ pick.you = null; toast('已取消我方选择'); }
+    else{
+      pick.rivals = pick.rivals.filter(function(c){ return c !== k; });
+      toast('已移出 ' + DATA[k].name);
+    }
+    renderAll();
+  });
+
+  eachList(document.querySelectorAll('.side-tab'), function(tab){
+    tab.addEventListener('click', function(){
+      activeSide = tab.getAttribute('data-side');
+      renderAll();
+    });
+  });
+
+  $('sizeRow').addEventListener('click', function(e){
+    var b = e.target.closest('.size-btn');
+    if(!b) return;
+    var n = parseInt(b.getAttribute('data-size'), 10);
+    size = n;
+    if(pick.rivals.length > size){
+      pick.rivals = pick.rivals.slice(0, size);
+      toast('对手方缩减到 ' + size + ' 家');
+    } else {
+      toast('规模：1 对 ' + size);
+    }
+    renderAll();
+  });
+
+  $('randomBtn').addEventListener('click', function(){
+    var pool = curTopic ? curTopic.sides.slice() : ORDER.slice();
+    if(!pool.length) pool = ORDER.slice();
+    var i, j, tmp;
+    for(i = pool.length - 1; i > 0; i--){
+      j = Math.floor(Math.random() * (i + 1));
+      tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    if(pool.length < size + 1){
+      var extra = ORDER.filter(function(c){ return pool.indexOf(c) === -1; });
+      for(i = extra.length - 1; i > 0; i--){
+        j = Math.floor(Math.random() * (i + 1));
+        tmp = extra[i]; extra[i] = extra[j]; extra[j] = tmp;
+      }
+      pool = pool.concat(extra);
+    }
+    if(pool.length < size + 1){ toast('可上场的主体不足，先减小规模'); return; }
+    pick.you = pool[0];
+    pick.rivals = pool.slice(1, size + 1);
+    activeSide = 'agent';
+    toast('随机对阵：' + DATA[pick.you].name + ' 对 ' + pick.rivals.length + ' 家');
+    renderAll();
+  });
+
+  $('clearBtn').addEventListener('click', function(){
+    pick.you = null; pick.rivals = []; activeSide = 'you';
+    renderAll();
+    toast('席位已清空');
+  });
+
+  $('customAdd').addEventListener('click', function(){
+    var input = $('customInput');
+    var v = input.value.trim();
+    if(v.length < 4){ toast('至少写 4 个字'); input.focus(); return; }
+    var t = { id:'custom_' + Date.now(), cat:'自定义', title:v, focus:'自拟议题 · 由你界定争议焦点', scale:'1vN', sides:[] };
+    TOPICS.push(t);
+    curTopic = t;
+    curCat = '全部';
+    input.value = '';
+    renderCats(); renderAll();
+    toast('已加入议题列表');
+  });
+  $('customInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') $('customAdd').click();
+  });
+
+  $('confirmBtn').addEventListener('click', function(){
+    if(!(curTopic && pick.you && pick.rivals.length)) return;
+    try{
+      localStorage.setItem('neg-pick', JSON.stringify({ mode:'multi', you:pick.you, agents:pick.rivals.slice() }));
+      localStorage.setItem('neg-scene', JSON.stringify({
+        version:'1vn', topic:curTopic.title, topicId:curTopic.id,
+        you:pick.you, rivals:pick.rivals.slice(), size:size
+      }));
+    }catch(e){}
+        var _pk = null, _tp = null;
+    try {
+      var _pick = JSON.parse(localStorage.getItem('neg-pick') || '{}');
+      var _scene = JSON.parse(localStorage.getItem('neg-scene') || '{}');
+      _pk = _pick.you || _scene.you || null;
+      _tp = _scene.topicId || null;
+    } catch (e) {}
+    var _qs = [];
+    var _rv = [];
+    try {
+      var _pk2 = JSON.parse(localStorage.getItem('neg-pick') || '{}');
+      _rv = (_pk2.agents || []).filter(function (x) { return x && x !== _pk; });
+    } catch (e) {}
+    if (_pk) _qs.push('player=' + encodeURIComponent(_pk));
+    if (_tp) _qs.push('topic=' + encodeURIComponent(_tp));
+    if (_rv.length) _qs.push('rivals=' + encodeURIComponent(_rv.join(',')));
+    location.href = '../multi.html' + (_qs.length ? ('?' + _qs.join('&')) : '');
+  });
+
+  renderCats();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>

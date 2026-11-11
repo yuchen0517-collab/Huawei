@@ -1,0 +1,260 @@
+{
+  "scenario_id": "cn-us-chip-export-2026",
+  "title": "中美先进制程出口许可磋商",
+  "scenario_type": "documented",
+  "background": "2026 年初，中美双方在日内瓦举行司局级技术磋商，议题围绕先进制程半导体制造设备的出口许可范围、许可有效期与争端解决渠道展开。此前多轮管制措施使双边设备贸易与维护服务持续承压，双方均表示愿意在国家安全关切与产业利益之间寻找可管理的安排。本轮磋商为闭门会议，谈成结果将作为后续部长级会谈的基础。",
+  "assumptions": [
+    {
+      "assumption_id": "A1",
+      "text": "双方均把先进制程管制视为国家安全议题，而不是纯商业谈判。",
+      "reason": "现有公开表态均以国家安全框架表述，未出现以关税或贸易逆差交换管制的口径。",
+      "affects": [
+        "export_license_scope",
+        "dispute_forum"
+      ]
+    },
+    {
+      "assumption_id": "A2",
+      "text": "许可有效期可以通过技术性安排延长，且不会立即触发国会审查程序。",
+      "reason": "行政部门在逐案许可上保留裁量空间，但需避开已写入法律的硬性限制。",
+      "affects": [
+        "license_validity_months"
+      ]
+    }
+  ],
+  "parties": [
+    {
+      "party_id": "cn",
+      "name": "中华人民共和国",
+      "role_label": "中国代表团团长",
+      "public_position": "反对滥用出口管制，主张在相互尊重基础上通过对话解决分歧，维护全球产业链稳定。"
+    },
+    {
+      "party_id": "us",
+      "name": "美利坚合众国",
+      "role_label": "美国代表团团长",
+      "public_position": "以国家安全为由维持先进技术管制，愿在盟友协调框架下讨论有限的许可便利化。"
+    }
+  ],
+  "issues": [
+    {
+      "issue_id": "export_license_scope",
+      "name": "受管制先进制程门槛",
+      "type": "numeric",
+      "unit": "nm",
+      "range": {
+        "min": 7,
+        "max": 28,
+        "step": 1
+      }
+    },
+    {
+      "issue_id": "license_validity_months",
+      "name": "逐案许可有效期",
+      "type": "numeric",
+      "unit": "月",
+      "range": {
+        "min": 6,
+        "max": 36,
+        "step": 6
+      }
+    },
+    {
+      "issue_id": "dispute_forum",
+      "name": "争端解决渠道",
+      "type": "enumerated",
+      "unit": "",
+      "options": [
+        {
+          "option_id": "wto",
+          "label": "世贸组织争端解决机制",
+          "order": 1
+        },
+        {
+          "option_id": "bilateral",
+          "label": "双边磋商机制",
+          "order": 2
+        },
+        {
+          "option_id": "unilateral",
+          "label": "单边国内法程序",
+          "order": 3
+        }
+      ]
+    }
+  ],
+  "public_facts": [
+    {
+      "fact_id": "CN-01",
+      "text": "中国商务部表示，美方泛化国家安全概念、滥用出口管制措施，严重损害中国企业正当权益，中方坚决反对。",
+      "type": "立场",
+      "source": {
+        "name": "中国政府网",
+        "url": "https://www.gov.cn/yaowen/liebiao/202504/content_7021072.htm",
+        "published_at": "2025-04-25",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "export_license_scope"
+      ]
+    },
+    {
+      "fact_id": "CN-02",
+      "text": "外交部发言人表示，中方一贯反对将经贸科技问题政治化、武器化，愿同各方共同维护全球产供链稳定。",
+      "type": "引用",
+      "source": {
+        "name": "人民日报",
+        "url": "http://paper.people.com.cn/zgnyb/pc/content/202412/09/content_30046238.html",
+        "published_at": "2024-12-09",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "export_license_scope",
+        "dispute_forum"
+      ]
+    },
+    {
+      "fact_id": "US-01",
+      "text": "美国商务部工业与安全局将先进计算芯片与半导体制造设备纳入新一轮出口管制，对相关对华出口实行逐案许可审查。",
+      "type": "行动",
+      "source": {
+        "name": "Covington & Burling 法律解读",
+        "url": "https://www.cov.com/en/news-and-insights/insights/2022/10/us-imposes-additional-export-controls-restrictions-on-advanced-computing-and-semiconductor-manufacturing-items",
+        "published_at": "2022-10-07",
+        "confidence": "B"
+      },
+      "applies_to": [
+        "export_license_scope",
+        "license_validity_months"
+      ]
+    },
+    {
+      "fact_id": "US-02",
+      "text": "英伟达预计因对华先进芯片出口限制在 2025 财年第一季度计提约 55 亿美元费用。",
+      "type": "数字",
+      "source": {
+        "name": "路透社",
+        "url": "https://www.reuters.com/technology/nvidia-expects-up-55-billion-charge-first-quarter-2025-04-15/",
+        "published_at": "2025-04-15",
+        "confidence": "B"
+      },
+      "applies_to": [
+        "license_validity_months"
+      ]
+    }
+  ],
+  "private_state_by_party": {
+    "cn": {
+      "goals": [
+        {
+          "issue_id": "export_license_scope",
+          "target": 28,
+          "weight": 0.5,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "target": 24,
+          "weight": 0.3,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "target": "wto",
+          "weight": 0.2,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "export_license_scope",
+          "op": "min",
+          "value": 14,
+          "hard": true,
+          "reason": "低于 14nm 的全面封锁将直接冲击国内先进制程产线，触及产业安全底线。"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "op": "in",
+          "value": [
+            "wto",
+            "bilateral"
+          ],
+          "hard": false,
+          "reason": "不接受纯粹的单边国内法程序，但多边与双边渠道均可讨论。"
+        }
+      ],
+      "batna": {
+        "utility": 40,
+        "description": "维持现有国产替代与多元化采购渠道，放缓双边磋商节奏。",
+        "basis": "国内先进制程产能爬坡与替代供应评估。"
+      },
+      "hidden_task": "在不公开承诺放弃反制的前提下，争取许可有效期不低于 24 个月。",
+      "priority_ranking": [
+        "export_license_scope",
+        "license_validity_months",
+        "dispute_forum"
+      ]
+    },
+    "us": {
+      "goals": [
+        {
+          "issue_id": "export_license_scope",
+          "target": 14,
+          "weight": 0.45,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "target": 12,
+          "weight": 0.2,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "target": "bilateral",
+          "weight": 0.35,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "export_license_scope",
+          "op": "max",
+          "value": 21,
+          "hard": true,
+          "reason": "国会审查要求先进制程管制不得放宽至 21nm 以上。"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "op": "max",
+          "value": 24,
+          "hard": false,
+          "reason": "许可有效期过长会削弱逐案审查的实际效果。"
+        }
+      ],
+      "batna": {
+        "utility": 55,
+        "description": "维持现行逐案许可，并联合盟友收紧设备维护与零部件服务。",
+        "basis": "现行出口管制规则与盟友协调机制。"
+      },
+      "hidden_task": "把争端解决渠道锁定在双边磋商，避免进入世贸组织多边程序。",
+      "priority_ranking": [
+        "export_license_scope",
+        "dispute_forum",
+        "license_validity_months"
+      ]
+    }
+  },
+  "max_rounds": 8,
+  "terminal_rules": {
+    "allow_walk_away": false,
+    "accept_requires_no_open_issue": true,
+    "partial_agreement_allowed": true
+  },
+  "negotiability": {
+    "verdict": "needs_narrowing",
+    "zopa_exists": true,
+    "notes": "export_license_scope 存在 14 至 21nm 的重叠区间；dispute_forum 的 wto 与 bilateral 亦有交集。需先收窄 license_validity_months 的 12 至 24 个月区间，并确认硬红线是否可被技术性安排绕开。"
+  }
+}
