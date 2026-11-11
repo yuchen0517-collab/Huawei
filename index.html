@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DIPLOMAT · 外交谈判战情室</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0c0a; --panel:#13110e; --panel2:#191612; --panel3:#1f1b15;
+  --line:#2b251c; --line2:#3a3225;
+  --gold:#c9a227; --gold-dim:#8a6f1a; --gold-glow:rgba(201,162,39,.14);
+  --ink:#ede6d6; --ink-dim:#9a9184; --ink-mute:#6d6659;
+  --danger:#b3413a; --ok:#4f8a5f; --warn:#c98a27;
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+  --sans:"Segoe UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;
+  --serif:Georgia,"Times New Roman","Songti SC",STSong,serif;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1200px 600px at 50% -10%,rgba(201,162,39,.06),transparent 70%);
+}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+button:disabled{cursor:not-allowed}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#332c22;border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+#app{height:100%;display:flex;flex-direction:column;min-width:0}
+
+/* ============ 顶栏 ============ */
+#topbar{
+  flex:0 0 56px;display:flex;align-items:center;gap:18px;padding:0 18px;
+  background:linear-gradient(180deg,#16130f,#100e0b);
+  border-bottom:1px solid var(--line2);position:relative;z-index:40;
+}
+#topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,162,39,.55),transparent)}
+.brand{display:flex;align-items:baseline;gap:10px;flex:0 0 auto}
+.brand b{font-family:var(--serif);font-size:17px;letter-spacing:.22em;color:var(--gold)}
+.brand span{font-size:10px;letter-spacing:.3em;color:var(--ink-mute)}
+.tb-sep{width:1px;height:26px;background:var(--line2);flex:0 0 auto}
+.tb-id{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-dim)}
+.tb-id .side{display:flex;align-items:center;gap:6px}
+.tb-id .dot{width:6px;height:6px;border-radius:50%}
+.tb-id .us .dot{background:var(--gold)}
+.tb-id .them .dot{background:#7a5c3a}
+.tb-id .vs{color:var(--ink-mute);font-size:10px;letter-spacing:.2em}
+.tb-spacer{flex:1 1 auto;min-width:0}
+.tb-metric{display:flex;flex-direction:column;gap:1px;min-width:0}
+.tb-metric .k{font-size:9px;letter-spacing:.22em;color:var(--ink-mute)}
+.tb-metric .v{font-family:var(--mono);font-size:14px;color:var(--ink);letter-spacing:.04em}
+.tb-metric .v.gold{color:var(--gold)}
+.tb-metric.ver{background:var(--gold-glow);border:1px solid rgba(201,162,39,.3);
+  border-radius:6px;padding:4px 12px}
+#conn{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-dim);
+  border:1px solid var(--line2);border-radius:6px;padding:5px 10px}
+#conn .led{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(79,138,95,.9)}
+#conn.busy .led{background:var(--warn);box-shadow:0 0 8px rgba(201,138,39,.9);animation:blink 1s infinite}
+#conn.down .led{background:var(--danger);box-shadow:0 0 8px rgba(179,65,58,.9)}
+@keyframes blink{50%{opacity:.35}}
+.btn{border:1px solid var(--line2);border-radius:6px;padding:6px 13px;font-size:12px;
+  color:var(--ink-dim);transition:.15s;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--gold-dim);color:var(--gold)}
+.btn.gold{border-color:rgba(201,162,39,.55);color:var(--gold);background:var(--gold-glow)}
+.btn.gold:hover:not(:disabled){background:rgba(201,162,39,.22)}
+.btn:disabled{opacity:.4}
+.btn.sm{padding:3px 9px;font-size:11px}
+
+/* ============ 议题条 ============ */
+#topicbar{
+  flex:0 0 40px;display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:var(--panel2);border-bottom:1px solid var(--line);position:relative;z-index:30;
+}
+#topicbar .tag{font-size:9px;letter-spacing:.24em;color:var(--gold);border:1px solid rgba(201,162,39,.35);
+  border-radius:3px;padding:2px 7px;flex:0 0 auto}
+#topicbar .name{font-family:var(--serif);font-size:15px;letter-spacing:.04em;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topicbar .idx{font-family:var(--mono);font-size:11px;color:var(--ink-mute);flex:0 0 auto}
+#topicbar .fill{flex:1 1 auto;min-width:8px}
+.chk{display:flex;align-items:center;gap:6px;font-size:11px;border-radius:5px;padding:3px 9px;
+  border:1px solid var(--line2);flex:0 0 auto}
+.chk.pass{color:var(--ok);border-color:rgba(79,138,95,.4);background:rgba(79,138,95,.08)}
+.chk.warn{color:var(--warn);border-color:rgba(201,138,39,.4);background:rgba(201,138,39,.08)}
+.chk.idle{color:var(--ink-mute)}
+.chk i{font-style:normal;font-size:10px}
+
+/* ============ 主体三栏 ============ */
+#body{flex:1 1 auto;display:grid;grid-template-columns:280px minmax(0,1fr) 300px;
+  gap:10px;padding:10px 12px;min-height:0}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;overflow-x:hidden}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  display:flex;flex-direction:column;min-height:0;flex:0 0 auto;position:relative}
+.panel.grow{flex:1 1 auto;min-height:120px}
+.ph{display:flex;align-items:center;gap:8px;padding:9px 12px 8px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.ph::before{content:"";width:2px;height:11px;background:var(--gold);flex:0 0 auto}
+.ph h3{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--gold);flex:1 1 auto;min-width:0}
+.ph .meta{font-size:9px;letter-spacing:.1em;color:var(--ink-mute);flex:0 0 auto}
+.pb{padding:10px 12px;overflow-y:auto;min-height:0;font-size:12px;color:var(--ink-dim)}
+
+/* 左栏 */
+#narration{font-size:12.5px;line-height:1.72;color:#d8d0be}
+#narration .src{margin-top:8px;font-size:9.5px;letter-spacing:.12em;color:var(--ink-mute);
+  border-top:1px dashed var(--line2);padding-top:6px}
+.sum-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.sum-list li{display:flex;gap:8px;line-height:1.6}
+.sum-list li b{color:var(--gold);font-family:var(--mono);font-size:11px;flex:0 0 auto;padding-top:1px}
+.ev{display:flex;flex-direction:column;gap:9px}
+.ev-item{border-left:2px solid var(--line2);padding-left:9px}
+.ev-item .t{font-size:10px;color:var(--ink-mute);font-family:var(--mono);letter-spacing:.04em}
+.ev-item .c{font-size:12px;color:#d4ccbb;margin-top:1px}
+.ev-item .s{font-size:10px;color:var(--gold-dim);margin-top:1px}
+.tl{display:flex;flex-direction:column;gap:0}
+.tl-item{display:grid;grid-template-columns:52px 1fr;gap:8px;padding:7px 0;
+  border-bottom:1px dotted rgba(58,50,37,.7)}
+.tl-item:last-child{border-bottom:none}
+.tl-item .rt{font-family:var(--mono);font-size:10.5px;color:var(--gold-dim);padding-top:1px}
+.tl-item .tx{font-size:11.5px;color:var(--ink-dim);line-height:1.5}
+.tl-item .tx em{font-style:normal;color:var(--ink)}
+
+/* ============ 中央主舞台 ============ */
+#stage{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+#tabs{flex:0 0 42px;display:flex;align-items:stretch;gap:2px;padding:0 8px;
+  border-bottom:1px solid var(--line);background:var(--panel2)}
+.tab{padding:0 16px;font-size:12.5px;color:var(--ink-mute);display:flex;align-items:center;gap:7px;
+  border-bottom:2px solid transparent;transition:.15s;position:relative}
+.tab:hover{color:var(--ink-dim)}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab .badge{font-size:9px;font-family:var(--mono);background:var(--gold);color:#12100c;
+  border-radius:8px;padding:0 5px;line-height:14px;height:14px}
+#tabs .sp{flex:1 1 auto}
+#tabs .hint{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--ink-mute);padding-right:6px}
+.chip{font-size:10px;border-radius:4px;padding:2px 7px;border:1px solid var(--line2);color:var(--ink-dim);white-space:nowrap}
+.chip.dirty{color:var(--warn);border-color:rgba(201,138,39,.45);background:rgba(201,138,39,.1)}
+.chip.ok{color:var(--ok);border-color:rgba(79,138,95,.4);background:rgba(79,138,95,.08)}
+.chip.bad{color:var(--danger);border-color:rgba(179,65,58,.45);background:rgba(179,65,58,.1)}
+
+.views{flex:1 1 auto;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column;min-height:0;min-width:0}
+.view.on{display:flex}
+
+/* --- 报价板 --- */
+#conflictBar{display:none;align-items:center;gap:10px;padding:8px 14px;background:rgba(179,65,58,.12);
+  border-bottom:1px solid rgba(179,65,58,.4);font-size:11.5px;color:#e3a49f;flex:0 0 auto}
+#conflictBar.on{display:flex}
+#conflictBar .fill{flex:1 1 auto}
+#inlineErr{display:none;align-items:flex-start;gap:8px;padding:7px 14px;background:rgba(179,65,58,.1);
+  border-bottom:1px solid rgba(179,65,58,.3);font-size:11.5px;color:#e0a09b;flex:0 0 auto}
+#inlineErr.on{display:flex}
+#inlineErr .code{font-family:var(--mono);font-size:10px;color:#f0b8b2;border:1px solid rgba(179,65,58,.5);
+  border-radius:3px;padding:0 5px;flex:0 0 auto;margin-top:1px}
+
+.bd-head,.bd-row{display:grid;grid-template-columns:190px minmax(0,1fr) minmax(0,1fr) 86px;
+  gap:10px;align-items:center;padding:0 14px}
+.bd-head{flex:0 0 auto;height:34px;background:var(--panel2);border-bottom:1px solid var(--line);
+  font-size:9.5px;letter-spacing:.16em;color:var(--ink-mute)}
+.bd-head .est{color:var(--gold-dim)}
+.bd-scroll{overflow-y:auto;min-height:0;flex:1 1 auto}
+.bd-row{height:52px;border-bottom:1px solid rgba(43,37,28,.7);position:relative}
+.bd-row:hover{background:rgba(201,162,39,.035)}
+.bd-row .cl{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink);min-width:0}
+.bd-row .cl .no{font-family:var(--mono);font-size:10px;color:var(--ink-mute);flex:0 0 auto}
+.bd-row .cl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-row select{width:100%;background:var(--panel3);border:1px solid var(--line2);border-radius:5px;
+  color:var(--ink);font-family:inherit;font-size:12px;padding:5px 7px;outline:none;min-width:0}
+.bd-row select:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px var(--gold-glow)}
+.bd-row select.changed{border-color:var(--warn);background:rgba(201,138,39,.08)}
+.bd-row .opp{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-dim);min-width:0}
+.bd-row .opp .val{display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-row .opp .val .est-tag{font-size:8.5px;letter-spacing:.06em;color:var(--gold-dim);
+  border:1px solid rgba(201,162,39,.3);border-radius:2px;padding:0 4px;flex:0 0 auto}
+.bd-row .opp .conf{font-size:9.5px;color:var(--ink-mute);display:flex;align-items:center;gap:6px}
+.bd-row .opp .conf .bar{width:44px;height:3px;background:#2a251d;border-radius:2px;overflow:hidden}
+.bd-row .opp .conf .bar i{display:block;height:100%;background:var(--gold-dim)}
+.bd-row .st{display:flex;justify-content:flex-end}
+.st-tag{font-size:10px;border-radius:3px;padding:2px 6px;white-space:nowrap}
+.st-tag.agreed{color:var(--ok);background:rgba(79,138,95,.12);border:1px solid rgba(79,138,95,.35)}
+.st-tag.open{color:var(--warn);background:rgba(201,138,39,.12);border:1px solid rgba(201,138,39,.35)}
+.st-tag.pending{color:var(--danger);background:rgba(179,65,58,.12);border:1px solid rgba(179,65,58,.4)}
+.bd-foot{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);
+  background:var(--panel2)}
+.bd-foot .note{font-size:10.5px;color:var(--ink-mute);flex:1 1 auto;min-width:0}
+.bd-foot .note b{color:var(--ink-dim);font-family:var(--mono)}
+
+/* --- 预演条 --- */
+#rehearsal{flex:0 0 120px;border-top:1px solid var(--line2);background:
+  linear-gradient(180deg,#17140f,#12100c);display:flex;flex-direction:column;min-height:0;position:relative}
+#rehearsal::before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,162,39,.4),transparent)}
+.rh-head{display:flex;align-items:center;gap:8px;padding:7px 14px 5px;flex:0 0 auto}
+.rh-head h4{font-size:10px;letter-spacing:.2em;color:var(--gold);font-weight:600}
+.rh-head .tag{font-size:9px;letter-spacing:.1em;color:var(--ink-mute);border:1px solid var(--line2);
+  border-radius:3px;padding:0 5px}
+.rh-body{flex:1 1 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;
+  padding:0 6px 8px;min-height:0}
+.rh-cell{padding:2px 10px;border-right:1px solid rgba(43,37,28,.8);display:flex;flex-direction:column;
+  gap:3px;justify-content:center;min-width:0}
+.rh-cell:last-child{border-right:none}
+.rh-cell .k{font-size:9.5px;letter-spacing:.1em;color:var(--ink-mute);display:flex;align-items:center;gap:4px}
+.rh-cell .v{font-size:12.5px;color:var(--ink);line-height:1.35;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.rh-cell .v.sm{font-size:11.5px;color:var(--ink-dim)}
+.rh-cell .v.warn{color:var(--warn)}
+.rh-cell .v.ok{color:var(--ok)}
+.rh-cell .v.bad{color:var(--danger)}
+.est-tag{font-size:8.5px;letter-spacing:.06em;color:var(--gold-dim);border:1px solid rgba(201,162,39,.3);
+  border-radius:2px;padding:0 4px}
+
+/* --- 对话视图 --- */
+#dlg{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+#dlgScroll{flex:1 1 auto;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.msg{max-width:76%;display:flex;flex-direction:column;gap:4px}
+.msg.us{align-self:flex-end;align-items:flex-end}
+.msg.them{align-self:flex-start}
+.msg .who{font-size:9.5px;letter-spacing:.12em;color:var(--ink-mute)}
+.msg .bub{padding:8px 12px;border-radius:8px;font-size:12.5px;line-height:1.65}
+.msg.us .bub{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);color:#e8dfc8}
+.msg.them .bub{background:var(--panel2);border:1px solid var(--line2);color:var(--ink-dim)}
+.msg .bub .est-tag{margin-left:6px}
+#dlgIn{flex:0 0 auto;display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--panel2)}
+#dlgIn input{flex:1 1 auto;background:var(--panel3);border:1px solid var(--line2);border-radius:6px;
+  padding:7px 11px;color:var(--ink);font-family:inherit;font-size:12.5px;outline:none;min-width:0}
+#dlgIn input:focus{border-color:var(--gold-dim)}
+#dlgIn .tip{font-size:10px;color:var(--ink-mute);align-self:center;white-space:nowrap}
+
+/* --- 情报视图 --- */
+#intelScroll{flex:1 1 auto;overflow-y:auto;padding:14px;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;min-height:0}
+.icard{background:var(--panel2);border:1px solid var(--line2);border-radius:7px;padding:11px 13px;
+  display:flex;flex-direction:column;gap:7px;min-width:0}
+.icard .ih{display:flex;align-items:center;gap:7px}
+.icard .ih h5{font-size:12px;color:var(--ink);font-weight:600;flex:1 1 auto;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard .ib{font-size:11.5px;color:var(--ink-dim);line-height:1.6}
+.icard .if{display:flex;align-items:center;gap:7px;font-size:9.5px;color:var(--ink-mute);
+  border-top:1px dashed var(--line2);padding-top:6px}
+.icard .if .bar{flex:1 1 auto;height:3px;background:#2a251d;border-radius:2px;overflow:hidden}
+.icard .if .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold))}
+
+/* ============ 右栏 ============ */
+.kv{display:flex;flex-direction:column;gap:7px}
+.kv-row{display:flex;align-items:center;gap:8px;font-size:11.5px}
+.kv-row .k{color:var(--ink-mute);flex:0 0 auto;min-width:56px}
+.kv-row .v{color:var(--ink-dim);flex:1 1 auto;text-align:right;font-family:var(--mono);font-size:11.5px}
+.kv-row .v.big{font-size:14px;color:var(--ink)}
+.meter{display:flex;flex-direction:column;gap:5px}
+.meter .lab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-mute)}
+.meter .lab b{color:var(--ink-dim);font-family:var(--mono)}
+.meter .track{height:5px;background:#241f18;border-radius:3px;overflow:hidden}
+.meter .track i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8a6f1a,var(--gold))}
+.meter .track i.warn{background:linear-gradient(90deg,#8a5a1a,var(--warn))}
+.est-banner{display:flex;align-items:center;gap:6px;font-size:9.5px;color:var(--gold-dim);
+  border:1px dashed rgba(201,162,39,.32);border-radius:4px;padding:3px 7px;margin-bottom:9px;
+  letter-spacing:.05em;line-height:1.4}
+.est-banner i{font-style:normal;flex:0 0 auto}
+.chan{display:flex;flex-direction:column;gap:7px}
+.chan-row{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:5px 8px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+.chan-row .n{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-dim)}
+.chip.mini{font-size:9px;padding:1px 5px}
+.task{display:flex;flex-direction:column;gap:7px}
+.task-row{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;color:var(--ink-dim);line-height:1.5}
+.task-row .box{width:12px;height:12px;border:1px solid var(--line2);border-radius:2px;flex:0 0 auto;
+  margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#12100c}
+.task-row .box.done{background:var(--gold);border-color:var(--gold)}
+.task-row.done{color:var(--ink-mute);text-decoration:line-through;text-decoration-color:rgba(154,145,132,.4)}
+.batna{display:flex;flex-direction:column;gap:8px}
+.batna-row{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.batna-row .k{font-size:9.5px;letter-spacing:.14em;color:var(--ink-mute)}
+.batna-row .v{font-size:12px;color:var(--ink-dim);margin-top:2px;line-height:1.45}
+.batna-row.unknown .v{color:var(--ink-mute);font-style:italic}
+
+/* ============ 底部手牌 ============ */
+#hand{flex:0 0 96px;display:flex;align-items:stretch;gap:12px;padding:6px 12px 10px;
+  background:linear-gradient(0deg,#16130f,#100e0b);border-top:1px solid var(--line2);position:relative;z-index:20}
+#hand::before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,162,39,.4),transparent)}
+.cards{flex:1 1 auto;display:flex;gap:9px;min-width:0;overflow-x:auto;padding-bottom:1px}
+.card{flex:0 0 176px;background:linear-gradient(160deg,#201c15,#15120e);border:1px solid var(--line2);
+  border-radius:7px;padding:8px 11px;display:flex;flex-direction:column;gap:3px;text-align:left;
+  transition:.15s;min-width:0;position:relative;overflow:hidden}
+.card:hover:not(:disabled){border-color:var(--gold-dim);transform:translateY(-1px)}
+.card.sel{border-color:var(--gold);background:linear-gradient(160deg,#2a2418,#1a1610);
+  box-shadow:0 0 0 1px rgba(201,162,39,.3),0 4px 14px rgba(0,0,0,.4)}
+.card:disabled{opacity:.38}
+.card .ct{font-size:11.5px;color:var(--ink);line-height:1.35;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .cd{font-size:9.5px;color:var(--ink-mute);line-height:1.35;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.card .cc{font-size:9px;font-family:var(--mono);color:var(--gold-dim);letter-spacing:.05em;
+  display:flex;align-items:center;gap:5px;margin-top:auto}
+.card .cc .ap{color:var(--gold)}
+.hand-side{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding-left:12px;border-left:1px solid var(--line2)}
+.ap-box{display:flex;flex-direction:column;gap:4px;min-width:96px}
+.ap-box .k{font-size:9px;letter-spacing:.2em;color:var(--ink-mute)}
+.pips{display:flex;gap:4px;align-items:center}
+.pip{width:11px;height:11px;border-radius:2px;transform:rotate(45deg);background:var(--gold);
+  box-shadow:0 0 6px rgba(201,162,39,.5)}
+.pip.off{background:transparent;border:1px solid var(--line2);box-shadow:none}
+.pips .n{font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-left:5px}
+#endRound{flex:0 0 auto;align-self:center;padding:10px 20px;border-radius:7px;
+  border:1px solid rgba(201,162,39,.5);color:var(--gold);background:var(--gold-glow);font-size:13px;
+  letter-spacing:.06em;transition:.15s}
+#endRound:hover:not(:disabled){background:rgba(201,162,39,.22)}
+#endRound:disabled{opacity:.35;border-color:var(--line2);color:var(--ink-mute);background:none}
+
+/* ============ 协议抽屉 ============ */
+#mask{position:fixed;inset:0;background:rgba(5,4,3,.62);backdrop-filter:blur(2px);
+  opacity:0;pointer-events:none;transition:.22s;z-index:60}
+#mask.on{opacity:1;pointer-events:auto}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,64vw);background:linear-gradient(180deg,#171410,#12100c);
+  border-left:1px solid var(--line2);z-index:61;transform:translateX(101%);transition:transform .26s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;box-shadow:-18px 0 46px rgba(0,0,0,.55)}
+#drawer.on{transform:translateX(0)}
+.dh{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line2)}
+.dh h2{font-family:var(--serif);font-size:16px;letter-spacing:.1em;color:var(--gold);flex:1 1 auto}
+.dh .ver{font-family:var(--mono);font-size:12px;color:var(--gold);background:var(--gold-glow);
+  border:1px solid rgba(201,162,39,.35);border-radius:5px;padding:3px 9px}
+.dh .x{width:26px;height:26px;border:1px solid var(--line2);border-radius:5px;color:var(--ink-dim);
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.dh .x:hover{border-color:var(--gold-dim);color:var(--gold)}
+.dsub{flex:0 0 auto;padding:8px 18px;font-size:10.5px;color:var(--ink-mute);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;background:var(--panel2)}
+.dsub .same{color:var(--ok)}
+.dlist{flex:1 1 auto;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.drow{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:9px 12px;
+  display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:9px;align-items:start}
+.drow .no{font-family:var(--mono);font-size:10px;color:var(--ink-mute);padding-top:1px}
+.drow .body{min-width:0}
+.drow .nm{font-size:12.5px;color:var(--ink);line-height:1.4}
+.drow .tx{font-size:11px;color:var(--ink-dim);margin-top:3px;line-height:1.5}
+.drow.pending{border-color:rgba(179,65,58,.4);background:rgba(179,65,58,.07)}
+.drow.pending .nm{color:#e8b6b1}
+.dfoot{flex:0 0 auto;border-top:1px solid var(--line2);padding:12px 18px;display:flex;flex-direction:column;gap:9px;
+  background:var(--panel2)}
+#acceptWhy{display:none;font-size:11px;color:#dda9a4;line-height:1.55;background:rgba(179,65,58,.1);
+  border:1px solid rgba(179,65,58,.35);border-radius:5px;padding:7px 10px}
+#acceptWhy.on{display:block}
+#acceptWhy b{color:#f0b8b2;font-family:var(--mono)}
+.dfoot .btns{display:flex;gap:9px;justify-content:flex-end;align-items:center}
+.dfoot .btns .why-inline{flex:1 1 auto;font-size:10px;color:var(--ink-mute);min-width:0}
+
+/* ============ 终局 ============ */
+#finale{position:fixed;inset:0;z-index:80;background:rgba(5,4,3,.9);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:24px}
+#finale.on{display:flex}
+.fbox{width:min(880px,94vw);max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,#171410,#100e0b);
+  border:1px solid rgba(201,162,39,.4);border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.7)}
+.fhead{padding:22px 26px 16px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:14px}
+.fhead .txt{flex:1 1 auto}
+.fhead .k{font-size:9.5px;letter-spacing:.28em;color:var(--gold-dim)}
+.fhead h2{font-family:var(--serif);font-size:24px;letter-spacing:.1em;color:var(--gold);margin-top:4px}
+.fbody{padding:18px 26px 22px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:13px 15px;min-width:0}
+.fcard.wide{grid-column:1/-1}
+.fscore-wrap{display:flex;gap:18px;align-items:center}
+.fgrade{width:64px;height:64px;border:2px solid var(--gold);border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-family:var(--serif);font-size:34px;
+  color:var(--gold);background:var(--gold-glow);flex:0 0 auto}
+.fgrade.null{border-color:var(--line2);color:var(--ink-mute);background:none;font-size:26px}
+.fscore-main{flex:1 1 auto;min-width:0}
+.fdims{display:grid;grid-template-columns:1fr 1fr;gap:7px 20px;margin-top:10px}
+.fdim{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:var(--ink-mute);min-width:0}
+.fdim .dl{display:flex;justify-content:space-between;gap:8px}
+.fdim .dl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fdim .dl b{font-family:var(--mono);color:var(--ink-dim);font-size:11px;flex:0 0 auto}
+.fdim .track{height:3px;background:#241f18;border-radius:2px;overflow:hidden}
+.fdim .track i{display:block;height:100%;background:linear-gradient(90deg,#8a6f1a,var(--gold))}
+.ffeedback{margin-top:13px;padding:9px 12px;border-left:2px solid var(--gold);background:var(--panel3);
+  font-size:12px;color:#d8d0be;line-height:1.6}
+.ffeedback.null{border-left-color:var(--warn);color:#d9c9a6}
+.fnote{margin-top:8px;font-size:10.5px;color:var(--ink-mute);line-height:1.5}
+.fcard h4{font-size:10px;letter-spacing:.2em;color:var(--gold);margin-bottom:9px}
+.fcard p,.fcard li{font-size:12px;color:var(--ink-dim);line-height:1.7}
+.fcard ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.fcard li{display:flex;gap:8px}
+.fcard li b{color:var(--gold);font-family:var(--mono);font-size:10.5px;flex:0 0 auto;padding-top:2px}
+.score{display:flex;align-items:baseline;gap:8px}
+.score .n{font-family:var(--serif);font-size:40px;color:var(--gold);line-height:1}
+.score .d{font-size:11px;color:var(--ink-mute)}
+.ffoot{padding:0 26px 22px;display:flex;gap:10px;justify-content:flex-end}
+
+/* ============ 全局覆盖层 ============ */
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-14px);z-index:100;
+  background:#211c15;border:1px solid rgba(201,162,39,.4);border-radius:8px;padding:10px 16px;
+  font-size:12px;color:var(--ink);box-shadow:0 10px 34px rgba(0,0,0,.6);opacity:0;pointer-events:none;
+  transition:.2s;max-width:min(680px,90vw);display:flex;align-items:flex-start;gap:10px}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast .code{font-family:var(--mono);font-size:10px;color:#f0b8b2;border:1px solid rgba(179,65,58,.5);
+  border-radius:3px;padding:0 5px;flex:0 0 auto;margin-top:1px}
+#toast .js{display:block;font-family:var(--mono);font-size:9.5px;color:var(--ink-mute);margin-top:3px;
+  word-break:break-all;line-height:1.4}
+
+.skel{background:linear-gradient(90deg,#1b1712 25%,#221d16 37%,#1b1712 63%);
+  background-size:400% 100%;animation:sk 1.35s ease-in-out infinite;border-radius:4px}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+.sk-l{height:9px;margin-bottom:7px}
+.sk-l.s{width:62%}
+.sk-l.m{width:84%}
+.sk-block{height:52px;margin-bottom:7px}
+
+#demoBtn{position:relative}
+#demoPanel{position:fixed;top:56px;right:16px;z-index:95;width:284px;background:#1a1611;
+  border:1px solid rgba(201,162,39,.35);border-radius:8px;box-shadow:0 16px 46px rgba(0,0,0,.65);
+  padding:12px;display:none}
+#demoPanel.on{display:block}
+#demoPanel h4{font-size:9.5px;letter-spacing:.22em;color:var(--gold);margin-bottom:4px}
+#demoPanel .ds{font-size:10px;color:var(--ink-mute);line-height:1.5;margin-bottom:9px}
+#demoPanel .dg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#demoPanel .dg button{font-family:var(--mono);font-size:9.5px;padding:5px 6px;border:1px solid var(--line2);
+  border-radius:4px;color:var(--ink-dim);text-align:left;transition:.13s}
+#demoPanel .dg button:hover{border-color:var(--gold-dim);color:var(--gold)}
+#demoPanel .dg button.on{border-color:var(--danger);color:#f0b8b2;background:rgba(179,65,58,.14)}
+#demoPanel .dr{margin-top:8px;width:100%;font-size:10.5px;padding:6px;border:1px solid var(--line2);
+  border-radius:4px;color:var(--ink-dim)}
+#demoPanel .dr:hover{border-color:var(--gold-dim);color:var(--gold)}
+
+@media (max-width:1500px){
+  #body{grid-template-columns:252px minmax(0,1fr) 272px}
+  .bd-head,.bd-row{grid-template-columns:160px minmax(0,1fr) minmax(0,1fr) 78px;padding:0 12px}
+  .card{flex:0 0 158px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== 顶栏 ========== -->
+  <header id="topbar">
+    <div class="brand"><b>DIPLOMAT</b><span>战情室</span></div>
+    <div class="tb-sep"></div>
+    <div class="tb-id">
+      <div class="side us"><span class="dot"></span>我方 · 澜江代表团</div>
+      <span class="vs">VS</span>
+      <div class="side them"><span class="dot"></span>对方 · 北岸联合体</div>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-metric">
+      <span class="k">ROUND</span>
+      <span class="v" id="mRound">R3 / 6</span>
+    </div>
+    <div class="tb-metric ver" title="全局版本号：与报价板、协议抽屉同源">
+      <span class="k">SESSION VERSION</span>
+      <span class="v gold" id="mVer">v12</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <div id="conn"><span class="led"></span><span id="connTxt">已连接</span></div>
+    <button class="btn sm" id="demoBtn">DEMO</button>
+    <button class="btn gold" id="finaleBtn">终局 / 复盘</button>
+  </header>
+
+  <!-- ========== 议题条 ========== -->
+  <div id="topicbar">
+    <span class="tag">议题</span>
+    <span class="name" id="topicName">跨境水资源联合监测机制</span>
+    <span class="idx" id="topicIdx">03 / 06</span>
+    <span class="fill"></span>
+    <div class="chk pass" id="randChk"><i>✓</i><span>随机议题检查：已通过</span></div>
+    <button class="btn sm" id="nextTopic">切换议题</button>
+  </div>
+
+  <!-- ========== 主体 ========== -->
+  <main id="body">
+
+    <!-- ---------- 左栏 ---------- -->
+    <aside class="col" id="left">
+      <section class="panel grow" style="flex:0 0 auto">
+        <div class="ph"><h3>战情解说</h3><span class="meta" id="narrMeta">AI 生成</span></div>
+        <div class="pb" id="narrBox"><div id="narration">对方在上一轮将监测站点数由 5 降至 4，属于试探性让步；其真实约束在于国内预算审批窗口只剩两周，因此对「费用分摊」的敏感度高于「站点数量」。</div><div class="src">模型生成 · 仅供参考，不作为事实依据</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>局势摘要</h3><span class="meta">结构化</span></div>
+        <div class="pb"><ul class="sum-list">
+          <li><b>01</b><span>已决 2 条，未决 2 条，1 条待确认。</span></li>
+          <li><b>02</b><span>对方对我方「中立国仲裁」提案未表态，沉默超过 1 轮。</span></li>
+          <li><b>03</b><span>本轮剩余行动点 3，距回合锁定 2 轮。</span></li>
+        </ul></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>事实依据</h3><span class="meta">带来源</span></div>
+        <div class="pb"><div class="ev">
+          <div class="ev-item"><div class="t">2026-11-04 · 澜江水文年鉴</div><div class="c">A 城站点年径流量高于 B 城 18%。</div><div class="s">来源：公开年鉴 · 可核验</div></div>
+          <div class="ev-item"><div class="t">2026-11-06 · 北岸联合体预算公开稿</div><div class="c">北岸年度监测预算削减 12%。</div><div class="s">来源：公开稿 · 可核验</div></div>
+          <div class="ev-item"><div class="t">2026-11-08 · 会场记录</div><div class="c">对方代表两次提及「审批窗口」。 </div><div class="s">来源：本方纪要 · 单方记录</div></div>
+        </div></div>
+      </section>
+
+      <section class="panel grow">
+        <div class="ph"><h3>会场纪要与事件</h3><span class="meta">R1 → R3</span></div>
+        <div class="pb"><div class="tl">
+          <div class="tl-item"><div class="rt">R1</div><div class="tx">双方确认<em>议题边界</em>，排除第三方仲裁前置条件。</div></div>
+          <div class="tl-item"><div class="rt">R2</div><div class="tx">对方就<em>站点数量</em>由 5 降至 4，我方维持 6。</div></div>
+          <div class="tl-item"><div class="rt">R2</div><div class="tx">我方提出<em>中立国仲裁</em>，对方未回应。</div></div>
+          <div class="tl-item"><div class="rt">R3</div><div class="tx">对方申请<em>延长本轮</em>，被议题条随机检查拦下后撤回。</div></div>
+        </div></div>
+      </section>
+    </aside>
+
+    <!-- ---------- 中央主舞台 ---------- -->
+    <section id="stage">
+      <div id="tabs">
+        <button class="tab on" data-view="board">报价板<span class="badge" id="bdBadge">2</span></button>
+        <button class="tab" data-view="dlg">对话</button>
+        <button class="tab" data-view="intel">情报</button>
+        <span class="sp"></span>
+        <div class="hint">
+          <span class="chip dirty" id="draftChip" style="display:none">草稿已保留</span>
+          <span class="chip" id="actChip">已记账行动 0 笔</span>
+        </div>
+      </div>
+
+      <div class="views">
+        <!-- 报价板 -->
+        <div class="view on" id="view-board">
+          <div id="conflictBar">
+            <span>⚠</span>
+            <span id="conflictTxt">服务端版本冲突</span>
+            <span class="fill"></span>
+            <button class="btn sm gold" id="mergeBtn">拉取最新并合并</button>
+          </div>
+          <div id="inlineErr"><span class="code" id="ieCode">INVALID_ACTION</span><span id="ieDetail">说明</span></div>
+
+          <div class="bd-head">
+            <span>条款</span><span>我方立场</span><span class="est">对方立场 · 估计值</span><span style="text-align:right">状态</span>
+          </div>
+          <div class="bd-scroll" id="bdScroll"></div>
+
+          <div class="bd-foot">
+            <span class="note">数据源：服务端会话状态 · 只读派生，前端不计算金额 · 版本 <b id="bdVer">v12</b></span>
+            <button class="btn" id="openDrawerBtn">查看协议</button>
+            <button class="btn gold" id="submitBtn">提交本轮报价</button>
+          </div>
+        </div>
+
+        <!-- 对话 -->
+        <div class="view" id="view-dlg">
+          <div id="dlg">
+            <div id="dlgScroll">
+              <div class="msg them"><span class="who">对方 · 北岸联合体</span><div class="bub">我们可以接受把监测站点数压到 4，但费用分摊必须按 60/40，我方承担 60 已经是上限。</div></div>
+              <div class="msg us"><span class="who">我方 · 澜江代表团</span><div class="bub">4 个站点可以谈，但必须包含 A 城。费用分摊我们提 40/60，差额用技术援助抵。</div></div>
+              <div class="msg them"><span class="who">对方 · 北岸联合体 <span class="est-tag">意图为估计</span></span><div class="bub">技术援助的折算口径需要写进附件，否则无法过审。仲裁归属我们暂不表态。</div></div>
+            </div>
+            <div id="dlgIn">
+              <input id="dlgInput" placeholder="自由表达会进入对话记录，不会进入报价板条款" disabled>
+              <span class="tip">对话为复盘素材，不改变结构化报价</span>
+              <button class="btn" disabled>发送</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 情报 -->
+        <div class="view" id="view-intel">
+          <div id="intelScroll">
+            <div class="icard"><div class="ih"><h5>对方决策链长度</h5><span class="est-tag">估计值</span></div><div class="ib">线索显示对方表态需经 3 层审批，现场代表无最终签字权。</div><div class="if"><span>可信度</span><span class="bar"><i style="width:51%"></i></span><span>51%</span></div></div>
+            <div class="icard"><div class="ih"><h5>预算审批窗口</h5><span class="est-tag">估计值</span></div><div class="ib">对方内部预算窗口预计两周内关闭，时间压力高于我方。</div><div class="if"><span>可信度</span><span class="bar"><i style="width:64%"></i></span><span>64%</span></div></div>
+            <div class="icard"><div class="ih"><h5>让步意愿指数</h5><span class="est-tag">估计值</span></div><div class="ib">近 2 轮出现 1 次单向让步，趋势偏软，但幅度收窄。</div><div class="if"><span>可信度</span><span class="bar"><i style="width:58%"></i></span><span>58%</span></div></div>
+            <div class="icard"><div class="ih"><h5>对方 BATNA</h5><span class="est-tag">未知</span></div><div class="ib">未获得任何可核验线索。不作为推演输入，仅记录为「未知」。</div><div class="if"><span>可信度</span><span class="bar"><i style="width:0%"></i></span><span>无</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 矮版行动预演 -->
+      <div id="rehearsal">
+        <div class="rh-head">
+          <h4>行动预演</h4>
+          <span class="tag">轻量 · 非承诺</span>
+        </div>
+        <div class="rh-body">
+          <div class="rh-cell"><span class="k">预计对方反应</span><span class="v sm" id="rhReact">倾向要求附件折算口径</span></div>
+          <div class="rh-cell"><span class="k">行动点消耗</span><span class="v" id="rhAp">2 / 剩余 3</span></div>
+          <div class="rh-cell"><span class="k">风险等级</span><span class="v warn" id="rhRisk">中 · 审批链卡点</span></div>
+          <div class="rh-cell"><span class="k">依据</span><span class="v sm" id="rhBasis">估计值 · 可信度 58%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 右栏 ---------- -->
+    <aside class="col" id="right">
+      <section class="panel">
+        <div class="ph"><h3>我方态势</h3><span class="meta">真实值</span></div>
+        <div class="pb"><div class="kv">
+          <div class="meter"><div class="lab"><span>谈判筹码</span><b>72 / 100</b></div><div class="track"><i style="width:72%"></i></div></div>
+          <div class="meter"><div class="lab"><span>时间压力</span><b>低</b></div><div class="track"><i class="warn" style="width:28%"></i></div></div>
+          <div class="kv-row"><span class="k">已获让步</span><span class="v">2 项</span></div>
+          <div class="kv-row"><span class="k">本轮行动点</span><span class="v big" id="rvAp">3 / 5</span></div>
+        </div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>对方态势</h3><span class="meta">估计值</span></div>
+        <div class="pb">
+          <div class="est-banner"><i>◈</i><span>以下全部为估计值与可信度，非对方真实底牌</span></div>
+          <div class="kv">
+            <div class="meter"><div class="lab"><span>让步意愿 <span class="est-tag">估计</span></span><b>58%</b></div><div class="track"><i style="width:58%"></i></div></div>
+            <div class="meter"><div class="lab"><span>决策链长度 <span class="est-tag">估计</span></span><b>3 层</b></div><div class="track"><i style="width:45%"></i></div></div>
+            <div class="kv-row"><span class="k">数据可信度</span><span class="v">64%</span></div>
+            <div class="kv-row"><span class="k">最近动作</span><span class="v">R2 单向让步</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>外交渠道</h3><span class="meta">2 / 3 可用</span></div>
+        <div class="pb"><div class="chan">
+          <div class="chan-row"><span class="n">技术工作组直联</span><span class="chip mini ok">可用</span></div>
+          <div class="chan-row"><span class="n">第三方观察员</span><span class="chip mini ok">可用</span></div>
+          <div class="chan-row"><span class="n">高层热线</span><span class="chip mini bad">冷却中</span></div>
+        </div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>隐藏任务</h3><span class="meta">1 / 2 完成</span></div>
+        <div class="pb"><div class="task">
+          <div class="task-row done"><span class="box done">✓</span><span>在第 2 轮前引入至少 1 条可核验事实依据</span></div>
+          <div class="task-row"><span class="box"></span><span>在协议达成前，保留至少 1 条未决条款作为回撤空间</span></div>
+        </div></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h3>BATNA</h3><span class="meta">最佳替代方案</span></div>
+        <div class="pb"><div class="batna">
+          <div class="batna-row"><div class="k">我方</div><div class="v">单边监测框架 · 可接受度 中 · 成本可控</div></div>
+          <div class="batna-row unknown"><div class="k">对方</div><div class="v">未知 · 无任何可核验线索，不参与推演</div></div>
+        </div></div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ========== 底部手牌 ========== -->
+  <footer id="hand">
+    <div class="cards" id="cards"></div>
+    <div class="hand-side">
+      <div class="ap-box">
+        <span class="k">行动点</span>
+        <div class="pips" id="pips"></div>
+      </div>
+    </div>
+    <button id="endRound">结束本轮</button>
+  </footer>
+</div>
+
+<!-- ========== 协议抽屉 ========== -->
+<div id="mask"></div>
+<aside id="drawer">
+  <div class="dh">
+    <h2>协议</h2>
+    <span class="ver" id="drVer">v12</span>
+    <button class="x" id="drawerClose">✕</button>
+  </div>
+  <div class="dsub">
+    <span>版本号与顶栏、报价板同源</span>
+    <span class="same" id="drSame">✓ 三处一致</span>
+  </div>
+  <div class="dlist" id="dlist"></div>
+  <div class="dfoot">
+    <div id="acceptWhy"></div>
+    <div class="btns">
+      <span class="why-inline" id="whyInline"></span>
+      <button class="btn" id="rejectBtn">拒绝</button>
+      <button class="btn gold" id="acceptBtn" disabled>接受协议</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ========== 终局 / 复盘 ========== -->
+<div id="finale">
+  <div class="fbox">
+    <div class="fhead">
+      <div class="txt">
+        <div class="k">终局 · 基础复盘</div>
+        <h2>协议达成 · 有限共识</h2>
+      </div>
+      <button class="btn" id="finaleClose">返回会场</button>
+    </div>
+    <div class="fbody">
+      <div class="fcard wide">
+        <h4>结局判定 · 发言评分 speaker_score</h4>
+        <div class="fscore-wrap">
+          <div class="fgrade" id="fGrade">A</div>
+          <div class="fscore-main">
+            <div class="score"><span class="n" id="fScore">75</span><span class="d">/ 100 · 四维加权：立场 30% / 策略 30% / 情绪 20% / 内容 20%</span></div>
+            <div class="fdims" id="fDims"></div>
+          </div>
+        </div>
+        <div class="ffeedback" id="fFeedback"></div>
+        <div class="fnote" id="fScoreNote"></div>
+      </div>
+      <div class="fcard"><h4>关键转折</h4><ul>
+        <li><b>R2</b><span>对方站点数 5→4，首次单向让步。</span></li>
+        <li><b>R3</b><span>我方以技术援助换费用分摊口径，避免议题搁置。</span></li>
+        <li><b>R3</b><span>随机议题检查拦下对方延长本轮申请。</span></li>
+      </ul></div>
+      <div class="fcard"><h4>未决条款处理</h4><ul>
+        <li><b>04</b><span>争议仲裁归属：保留为未决，写入附件二。</span></li>
+        <li><b>05</b><span>费用分摊比例：保留为未决，绑定技术援助折算表。</span></li>
+      </ul></div>
+      <div class="fcard"><h4>复盘要点</h4><ul>
+        <li><b>01</b><span>对方时间压力被低估，R2 可更早施压。</span></li>
+        <li><b>02</b><span>隐藏任务 2 未完成：回撤空间保留过晚。</span></li>
+      </ul></div>
+      <div class="fcard"><h4>数据来源声明</h4><p>本轮所有数字来自同一份服务端会话状态，版本 <span id="fv">v12</span>。模型生成内容已在左栏单独标注，未计入任何收益数据。</p></div>
+    </div>
+    <div class="ffoot">
+      <button class="btn" id="toStory">导出复盘记录</button>
+      <button class="btn gold" id="toNew">开始新一场</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 全局提示 ========== -->
+<div id="toast"></div>
+
+<!-- ========== 演示控制台 ========== -->
+<div id="demoPanel">
+  <h4>DEMO 控制台</h4>
+  <div class="ds">选择下一笔提交要注入的后端错误，用于演示异常态。字段严格遵循 {"error","detail"}。</div>
+  <div class="dg" id="dg"></div>
+  <button class="dr" id="demoReset">复位场景</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= 状态（唯一数据源） ================= */
+var S = {
+  version: 12,
+  round: 3, maxRound: 6,
+  ap: 3, apMax: 5,
+  phase: "ready",
+  modelDown: false,
+  roundLocked: false,
+  conflict: false,
+  serverVersion: null,
+  inlineError: null,
+  inflight: null,
+  retryKey: null,
+  demoError: null,
+  selectedCard: null,
+  draft: {},
+  clauses: [
+    {id:"c1",no:"01",name:"监测站点数量",mine:"6 站点",opts:["6 站点","5 站点","4 站点"],theirs:"4 站点",conf:72,status:"agreed"},
+    {id:"c2",no:"02",name:"数据共享频率",mine:"每月",opts:["每月","每双月","每季"],theirs:"每季",conf:64,status:"agreed"},
+    {id:"c3",no:"03",name:"联合实验室选址",mine:"A 城",opts:["A 城","A/B 双址","B 城"],theirs:"B 城",conf:58,status:"open"},
+    {id:"c4",no:"04",name:"争议仲裁归属",mine:"中立国仲裁",opts:["中立国仲裁","区域组织仲裁","暂不写入"],theirs:"未表态",conf:41,status:"pending"},
+    {id:"c5",no:"05",name:"费用分摊比例",mine:"40 / 60",opts:["40 / 60","45 / 55","50 / 50"],theirs:"未表态",conf:33,status:"pending"}
+  ],
+  cards: [
+    {id:"k1",title:"技术援助换取数据权",desc:"以折算表换共享频率",cost:2},
+    {id:"k2",title:"引入第三方观察员",desc:"提升条款可核验性",cost:1},
+    {id:"k3",title:"延迟表态",desc:"等待对方先出价",cost:0}
+  ],
+  actions: {},        // idempotencyKey -> ledger entry
+  submittedKeys: {},
+  // 服务端返回的 speaker_score，字段名与《发言评分标准》一致，前端不重算加权
+  speakerScore: {
+    total: 75,
+    position_clarity: 78,
+    diplomatic_tact: 72,
+    emotional_control: 85,
+    substance_quality: 66,
+    feedback: "情绪控制与立场表达稳定，但实质论据偏弱，费用分摊缺少可核验数据支撑。"
+  }
+};
+
+var ERR_MSG = {
+  INVALID_ACTION:{detail:"该行动不满足当前条款约束，未生效。"},
+  SESSION_BUSY:{detail:"会话正被另一笔行动占用，请求排队中。"},
+  MODEL_UNAVAILABLE:{detail:"解说与情报模型暂不可用，报价板不受影响。"},
+  ROUND_LOCKED:{detail:"本轮已锁定，无法再提交行动。"},
+  VERSION_CONFLICT:{detail:"客户端版本落后于服务端，需合并后重提。"},
+  TIMEOUT:{detail:"上游未在时限内返回，草稿已保留。"}
+};
+
+/* ================= 工具 ================= */
+function $(id){return document.getElementById(id);}
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+var toastTimer=null;
+function toast(code,detail,raw){
+  var t=$("toast");
+  t.innerHTML=(code?'<span class="code">'+esc(code)+'</span>':'')+
+    '<div><div>'+esc(detail)+'</div>'+(raw?'<span class="js">'+esc(raw)+'</span>':'')+'</div>';
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove("on");},4200);
+}
+function errorJson(code,detail){return JSON.stringify({error:code,detail:detail});}
+
+/* ================= 渲染 ================= */
+function render(){
+  renderTop();
+  renderBoard();
+  renderHand();
+  renderDrawer();
+  renderMeta();
+}
+
+function renderTop(){
+  $("mRound").textContent = "R"+S.round+" / "+S.maxRound;
+  $("mVer").textContent = "v"+S.version;
+  $("bdVer").textContent = "v"+S.version;
+  $("drVer").textContent = "v"+S.version;
+  $("fv").textContent = "v"+S.version;
+  var c=$("conn"), tx=$("connTxt");
+  c.className="";
+  if(S.inflight){c.classList.add("busy");tx.textContent="处理中";}
+  else if(S.roundLocked){c.classList.add("down");tx.textContent="本轮锁定";}
+  else {tx.textContent="已连接";}
+}
+
+function renderMeta(){
+  var pending=0;
+  S.clauses.forEach(function(c){ if(c.status==="pending") pending++; });
+  $("bdBadge").textContent = pending;
+  $("bdBadge").style.display = (pending && S.phase!=="loading")? "inline-block":"none";
+
+  var draftCount=Object.keys(S.draft).length;
+  var dc=$("draftChip");
+  dc.style.display = draftCount? "inline-block":"none";
+  dc.textContent = "草稿已保留 · "+draftCount+" 处改动";
+
+  var n=Object.keys(S.actions).length;
+  var ac=$("actChip");
+  ac.textContent = "已记账行动 "+n+" 笔";
+  ac.className = "chip"+(n?" ok":"");
+}
+
+function renderBoard(){
+  var box=$("bdScroll");
+  box.innerHTML="";
+  if(S.phase==="loading"){
+    for(var i=0;i<5;i++){
+      box.appendChild(el("div","bd-row",'<div><div class="skel sk-l m"></div></div><div><div class="skel sk-l"></div></div><div><div class="skel sk-l s"></div></div><div></div>'));
+    }
+    return;
+  }
+  S.clauses.forEach(function(c){
+    var row=el("div","bd-row");
+    var changed = S.draft[c.id] !== undefined;
+    var cur = changed? S.draft[c.id] : c.mine;
+
+    var cl=el("div","cl",'<span class="no">'+c.no+'</span><span class="nm">'+esc(c.name)+'</span>');
+
+    var mine=el("div");
+    var sel=el("select");
+    if(changed) sel.className="changed";
+    c.opts.forEach(function(o){
+      var op=el("option"); op.value=o; op.textContent=o; if(o===cur) op.selected=true; sel.appendChild(op);
+    });
+    sel.disabled = !!S.inflight || S.roundLocked;
+    sel.addEventListener("change",function(){
+      if(sel.value===c.mine) delete S.draft[c.id]; else S.draft[c.id]=sel.value;
+      render();
+    });
+    mine.appendChild(sel);
+
+    var opp=el("div","opp");
+    opp.innerHTML='<div class="val"><span class="est-tag">估计</span>'+esc(c.theirs)+'</div>'+
+      '<div class="conf"><span class="bar"><i style="width:'+c.conf+'%"></i></span>'+c.conf+'% 可信</div>';
+
+    var st=el("div","st");
+    var label = c.status==="agreed"?"已决":(c.status==="open"?"待确认":"未决");
+    st.innerHTML='<span class="st-tag '+c.status+'">'+label+'</span>';
+
+    row.appendChild(cl); row.appendChild(mine); row.appendChild(opp); row.appendChild(st);
+    box.appendChild(row);
+  });
+
+  var cf=$("conflictBar");
+  if(S.conflict){
+    cf.classList.add("on");
+    $("conflictTxt").innerHTML = "版本冲突：本地 <b>v"+S.version+"</b>，服务端 <b>v"+S.serverVersion+"</b>。"+
+      (Object.keys(S.draft).length? "草稿 "+Object.keys(S.draft).length+" 处改动已保留。":"");
+  } else cf.classList.remove("on");
+
+  var ie=$("inlineErr");
+  if(S.inlineError){
+    ie.classList.add("on");
+    $("ieCode").textContent=S.inlineError.error;
+    $("ieDetail").textContent=S.inlineError.detail;
+  } else ie.classList.remove("on");
+
+  var sb=$("submitBtn");
+  sb.disabled = !!S.inflight || S.roundLocked || S.conflict || S.phase==="loading";
+  sb.textContent = S.inflight? "提交中…" : (S.retryKey? "重试提交（同一笔）":"提交本轮报价");
+}
+
+function renderHand(){
+  var w=$("cards"); w.innerHTML="";
+  S.cards.forEach(function(k){
+    var b=el("button","card"+(S.selectedCard===k.id?" sel":""));
+    b.innerHTML='<div class="ct">'+esc(k.title)+'</div><div class="cd">'+esc(k.desc)+'</div>'+
+      '<div class="cc"><span class="ap">◆</span>'+k.cost+' 行动点</div>';
+    b.disabled = S.roundLocked || S.phase==="loading" || k.cost>S.ap;
+    b.addEventListener("click",function(){
+      S.selectedCard = S.selectedCard===k.id? null : k.id;
+      renderHand(); renderRehearsal();
+    });
+    w.appendChild(b);
+  });
+  var pips=$("pips"); pips.innerHTML="";
+  for(var i=0;i<S.apMax;i++){
+    pips.appendChild(el("span","pip"+(i<S.ap?"":" off")));
+  }
+  pips.appendChild(el("span","n",S.ap+" / "+S.apMax));
+  $("rvAp").textContent=S.ap+" / "+S.apMax;
+  $("endRound").disabled = S.roundLocked || !!S.inflight || S.phase==="loading";
+}
+
+function renderRehearsal(){
+  var k = S.cards.filter(function(x){return x.id===S.selectedCard;})[0];
+  if(!k){ 
+    $("rhReact").textContent="未选择策略卡，按当前报价推演";
+    $("rhAp").textContent="1 / 剩余 "+S.ap;
+    $("rhRisk").textContent="低 · 常规推进"; $("rhRisk").className="v ok";
+    $("rhBasis").textContent="估计值 · 可信度 64%";
+    return;
+  }
+  var map={
+    k1:{r:"倾向接受，但要求折算表附件",ap:"2 / 剩余 "+S.ap,risk:"中 · 审批链卡点",cls:"warn",b:"估计值 · 可信度 58%"},
+    k2:{r:"可能引入程序性异议",ap:"1 / 剩余 "+S.ap,risk:"低 · 可核验性提升",cls:"ok",b:"估计值 · 可信度 64%"},
+    k3:{r:"对方大概率先出价",ap:"0 / 剩余 "+S.ap,risk:"中 · 时间成本上升",cls:"warn",b:"历史模式 · 可信度 47%"}
+  }[k.id];
+  $("rhReact").textContent=map.r;
+  $("rhAp").textContent=map.ap;
+  $("rhRisk").textContent=map.risk; $("rhRisk").className="v "+map.cls;
+  $("rhBasis").textContent=map.b;
+}
+
+function renderDrawer(){
+  var list=$("dlist"); list.innerHTML="";
+  var pendingIds=[];
+  S.clauses.forEach(function(c){
+    var row=el("div","drow"+(c.status==="pending"?" pending":""));
+    var label = c.status==="agreed"?"已决":(c.status==="open"?"待确认":"未决");
+    row.innerHTML='<div class="no">'+c.no+'</div>'+
+      '<div class="body"><div class="nm">'+esc(c.name)+'</div>'+
+      '<div class="tx">我方：'+esc(S.draft[c.id]||c.mine)+' · 对方（估计）：'+esc(c.theirs)+'</div></div>'+
+      '<span class="st-tag '+c.status+'">'+label+'</span>';
+    list.appendChild(row);
+    if(c.status==="pending") pendingIds.push(c.no);
+  });
+
+  var acc=$("acceptBtn"), why=$("acceptWhy"), wi=$("whyInline");
+  if(pendingIds.length){
+    acc.disabled=true;
+    why.classList.add("on");
+    why.innerHTML='无法接受：存在 <b>'+pendingIds.length+'</b> 条未决条款（第 '+pendingIds.join("、")+' 条）。'+
+      '需先决出或明确写入附件保留，才可签署。';
+    wi.textContent="未决条款未清零";
+  } else {
+    acc.disabled=false;
+    why.classList.remove("on");
+    wi.textContent="";
+  }
+  if(S.roundLocked){ acc.disabled=true; wi.textContent="本轮已锁定"; }
+}
+
+/* ================= 提交流程（幂等） ================= */
+function newKey(){ return "act-"+Date.now()+"-"+Math.random().toString(36).slice(2,7); }
+
+function submit(){
+  if(S.inflight) return;
+  if(S.roundLocked) return hardError("ROUND_LOCKED");
+  if(S.conflict) return;
+  var key = S.retryKey || newKey();
+  doSubmit(key);
+}
+
+function doSubmit(key){
+  if(S.submittedKeys[key]){ 
+    toast(null,"该行动已记账，未重复提交（幂等键 "+key+"）");
+    return; 
+  }
+  S.inflight=key; S.retryKey=null; S.inlineError=null; render();
+
+  var injected = S.demoError;
+  setTimeout(function(){
+    if(injected==="SESSION_BUSY"){
+      S.inflight=null;
+      toast("SESSION_BUSY",ERR_MSG.SESSION_BUSY.detail,errorJson("SESSION_BUSY",ERR_MSG.SESSION_BUSY.detail));
+      $("conn").className="busy"; $("connTxt").textContent="排队中";
+      setTimeout(function(){ S.demoError=null; doSubmit(key); },700);
+      return;
+    }
+    handleResult(key,injected);
+  },900);
+}
+
+function handleResult(key,code){
+  S.inflight=null;
+  if(code==="TIMEOUT"){
+    S.retryKey=key;
+    toast("TIMEOUT",ERR_MSG.TIMEOUT.detail,errorJson("TIMEOUT",ERR_MSG.TIMEOUT.detail));
+  } else if(code==="VERSION_CONFLICT"){
+    S.serverVersion=S.version+1;
+    S.conflict=true;
+    S.retryKey=key;
+    toast("VERSION_CONFLICT",ERR_MSG.VERSION_CONFLICT.detail,errorJson("VERSION_CONFLICT",ERR_MSG.VERSION_CONFLICT.detail));
+  } else if(code==="INVALID_ACTION"){
+    S.inlineError={error:"INVALID_ACTION",detail:ERR_MSG.INVALID_ACTION.detail};
+    toast(null,"行动未生效，草稿已保留");
+  } else if(code==="MODEL_UNAVAILABLE"){
+    S.modelDown=true;
+    renderModelDown();
+    toast("MODEL_UNAVAILABLE",ERR_MSG.MODEL_UNAVAILABLE.detail,errorJson("MODEL_UNAVAILABLE",ERR_MSG.MODEL_UNAVAILABLE.detail));
+  } else if(code==="ROUND_LOCKED"){
+    S.roundLocked=true;
+    toast("ROUND_LOCKED",ERR_MSG.ROUND_LOCKED.detail,errorJson("ROUND_LOCKED",ERR_MSG.ROUND_LOCKED.detail));
+  } else {
+    // 成功：写入账本，幂等键登记
+    S.submittedKeys[key]=true;
+    S.actions[key]={key:key,round:S.round,at:new Date().toISOString(),ap:2};
+    S.version++;
+    S.ap=Math.max(0,S.ap-2);
+    S.draft={};
+    S.selectedCard=null;
+    S.demoError=null;
+    S.retryKey=null;
+    toast(null,"本轮报价已入账 · 版本推进到 v"+S.version);
+  }
+  render(); renderRehearsal();
+}
+
+function hardError(code){
+  toast(code,ERR_MSG[code].detail,errorJson(code,ERR_MSG[code].detail));
+}
+
+function renderModelDown(){
+  $("narrBox").innerHTML='<div style="color:var(--ink-mute);font-size:12px;line-height:1.7">'+
+    '<b style="color:var(--warn)">模型不可用</b> · 战情解说暂无内容。<br>'+
+    '这不影响报价板与行动预演：两项数据来自会话状态，不依赖模型生成。</div>'+
+    '<div class="src">MODEL_UNAVAILABLE · 已降级为空态</div>';
+  $("narrMeta").textContent="已降级";
+  $("intelScroll").innerHTML='<div style="grid-column:1/-1;color:var(--ink-mute);font-size:12px;line-height:1.7;padding:8px">'+
+    '<b style="color:var(--warn)">情报视图不可用</b> · 模型未返回内容，未生成任何替代性结论。</div>';
+}
+
+/* ================= 交互绑定 ================= */
+document.querySelectorAll(".tab").forEach(function(t){
+  t.addEventListener("click",function(){
+    document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("on");});
+    t.classList.add("on");
+    var v=t.getAttribute("data-view");
+    document.querySelectorAll(".view").forEach(function(x){x.classList.remove("on");});
+    $("view-"+v).classList.add("on");
+  });
+});
+
+$("submitBtn").addEventListener("click",submit);
+$("endRound").addEventListener("click",function(){
+  if(S.roundLocked) return hardError("ROUND_LOCKED");
+  if(S.round<S.maxRound){
+    S.round++; S.ap=S.apMax;
+    toast(null,"进入第 "+S.round+" 轮 · 行动点已重置");
+    render();
+  } else {
+    openFinale();
+  }
+});
+
+function openDrawer(){ $("mask").classList.add("on"); $("drawer").classList.add("on"); }
+function closeDrawer(){ $("mask").classList.remove("on"); $("drawer").classList.remove("on"); }
+$("openDrawerBtn").addEventListener("click",openDrawer);
+$("drawerClose").addEventListener("click",closeDrawer);
+$("mask").addEventListener("click",closeDrawer);
+
+$("mergeBtn").addEventListener("click",function(){
+  S.version=S.serverVersion;
+  S.conflict=false; S.serverVersion=null;
+  toast(null,"已拉取服务端 v"+S.version+"，草稿保留，请确认后重提");
+  render();
+});
+
+$("acceptBtn").addEventListener("click",function(){
+  if(this.disabled) return;
+  openFinale();
+});
+$("rejectBtn").addEventListener("click",function(){
+  toast(null,"已记录拒绝 · 对方将收到正式回复");
+});
+
+var SCORE_DEF = [
+  {k:"position_clarity",  label:"立场清晰度", w:30},
+  {k:"diplomatic_tact",   label:"外交策略运用", w:30},
+  {k:"emotional_control", label:"情绪控制力", w:20},
+  {k:"substance_quality", label:"实质内容质量", w:20}
+];
+function gradeOf(n){ return n>=90?"S":n>=70?"A":n>=50?"B":n>=30?"C":"D"; }
+
+function renderFinale(){
+  var s=S.speakerScore;
+  var isNull = (S.round===1) || !s;
+  var g=$("fGrade"), sc=$("fScore"), fb=$("fFeedback"), dims=$("fDims"), note=$("fScoreNote");
+  if(isNull){
+    g.textContent="—"; g.className="fgrade null";
+    sc.textContent="—";
+    fb.className="ffeedback null";
+    fb.textContent="首轮不计分：第 1 轮对方尚未发言，speaker_score 返回 null，不填零分，也不生成替代分数。";
+    dims.innerHTML="";
+    note.textContent="四维评分自对方首次发言后开始计算。";
+    return;
+  }
+  g.textContent=gradeOf(s.total); g.className="fgrade";
+  sc.textContent=s.total;
+  fb.className="ffeedback";
+  fb.textContent=s.feedback;
+  dims.innerHTML=SCORE_DEF.map(function(d){
+    var v=s[d.k];
+    return '<div class="fdim"><div class="dl"><span>'+d.label+' · '+d.w+'%</span><b>'+v+'</b></div>'+
+      '<div class="track"><i style="width:'+v+'%"></i></div></div>';
+  }).join("");
+  note.textContent="5 条条款中 3 条已决、2 条保留为未决并写入附件。总分与四维分均由服务端 speaker_score 返回，前端只做展示。";
+}
+
+function openFinale(){ renderFinale(); $("finale").classList.add("on"); }
+$("finaleBtn").addEventListener("click",openFinale);
+$("finaleClose").addEventListener("click",function(){$("finale").classList.remove("on");});
+$("toNew").addEventListener("click",function(){
+  $("finale").classList.remove("on");
+  S.version++; S.round=1; S.ap=S.apMax; S.draft={}; S.actions={}; S.submittedKeys={};
+  S.roundLocked=false; S.conflict=false; S.inlineError=null;
+  render(); toast(null,"新一场会话已初始化 · 版本 v"+S.version);
+});
+$("toStory").addEventListener("click",function(){ toast(null,"复盘记录已导出到会话归档（演示态）"); });
+
+$("nextTopic").addEventListener("click",function(){
+  var names=["跨境数据流动规则","联合科研基金分配","边境外溢补偿机制"];
+  var n=names[Math.floor(Math.random()*names.length)];
+  $("topicName").textContent=n;
+  var idx=Math.floor(Math.random()*6)+1;
+  $("topicIdx").textContent=("0"+idx).slice(-2)+" / 06";
+  toast(null,"已切换议题："+n);
+});
+
+$("randChk").addEventListener("click",function(){
+  var c=$("randChk");
+  if(c.classList.contains("pass")){
+    c.className="chk warn"; c.innerHTML="<i>!</i><span>随机议题检查：发现 1 处冲突</span>";
+    toast(null,"随机检查发现条款 04 与议题边界冲突，已标记待确认");
+  } else {
+    c.className="chk pass"; c.innerHTML="<i>✓</i><span>随机议题检查：已通过</span>";
+  }
+});
+
+/* 演示控制台 */
+var DEMOS=["TIMEOUT","SESSION_BUSY","VERSION_CONFLICT","INVALID_ACTION","MODEL_UNAVAILABLE","ROUND_LOCKED"];
+var dg=$("dg");
+DEMOS.forEach(function(c){
+  var b=el("button",null,c);
+  b.addEventListener("click",function(){
+    S.demoError = (S.demoError===c? null : c);
+    Array.prototype.forEach.call(dg.children,function(x){x.classList.remove("on");});
+    if(S.demoError) b.classList.add("on");
+    toast(null, S.demoError? "下一次提交将注入 "+c : "已关闭错误注入");
+  });
+  dg.appendChild(b);
+});
+$("demoReset").addEventListener("click",function(){
+  S.demoError=null; S.modelDown=false; S.roundLocked=false; S.conflict=false;
+  S.inlineError=null; S.retryKey=null; S.conflict=false; S.serverVersion=null;
+  S.draft={};
+  Array.prototype.forEach.call(dg.children,function(x){x.classList.remove("on");});
+  location.reload();
+});
+$("demoBtn").addEventListener("click",function(e){
+  e.stopPropagation();
+  $("demoPanel").classList.toggle("on");
+});
+document.addEventListener("click",function(e){
+  var p=$("demoPanel");
+  if(p.classList.contains("on") && !p.contains(e.target) && e.target.id!=="demoBtn"){
+    p.classList.remove("on");
+  }
+});
+
+/* 骨架加载 */
+(function boot(){
+  S.phase="loading";
+  render();
+  $("narrBox").innerHTML='<div class="skel sk-l"></div><div class="skel sk-l m"></div><div class="skel sk-l"></div><div class="skel sk-l s"></div>';
+  setTimeout(function(){
+    S.phase="ready";
+    $("narrBox").innerHTML='<div id="narration">对方在上一轮将监测站点数由 5 降至 4，属于试探性让步；其真实约束在于国内预算审批窗口只剩两周，因此对「费用分摊」的敏感度高于「站点数量」。</div><div class="src">模型生成 · 仅供参考，不作为事实依据</div>';
+    render(); renderRehearsal();
+  },1100);
+})();
+
+})();
+</script>
+</body>
+</html>
