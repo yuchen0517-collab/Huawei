@@ -1,3 +1,0 @@
-对C任务：final_offer 出现了 2 次——手册规则是"声明最后报价后不得无限撤销"。模型先喊了一次"最后报价"，后来又喊了一次，严格说有点出尔反尔，在规则引擎里让 C 做拦截。
-
-对D任务：我的 API 错误格式定了：{"error": "错误码", "detail": "说明"}，错误码有 INVALID_ACTION / SESSION_BUSY / MODEL_UNAVAILABLE / ROUND_LOCKED 等。模型失败会诚实报错不会给假数据，前端的加载中、失败提示、重试按钮要覆盖这些情况。D：我的 API 会返回这些错误码（MODEL_UNAVAILABLE、SESSION_BUSY、INVALID_ACTION、ROUND_LOCKED……），你的网页要为每一种错误做好界面提示，而且要满足手册的 UI 验收标准：失败时保留用户已填的草稿，别让人重填；有重试按钮；重试不会重复提交同一行动
