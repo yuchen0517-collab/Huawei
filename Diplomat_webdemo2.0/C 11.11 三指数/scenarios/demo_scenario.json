@@ -1,0 +1,90 @@
+{
+  "scenario_id": "unclos_third_conference",
+  "title": "联合国海洋法公约·第三次海洋法会议",
+  "background": "1973—1982 年，第三次联合国海洋法会议围绕领海宽度、专属经济区与国际海峡过境制度展开谈判。本场景为教学演示，条款数值经过简化。",
+  "max_rounds": 12,
+  "parties": {
+    "CN": {
+      "name": "中华人民共和国",
+      "public_stance": "支持 12 海里领海与 200 海里专属经济区，强调沿海国对资源的主权权利。"
+    },
+    "US": {
+      "name": "美利坚合众国",
+      "public_stance": "接受 12 海里领海，但坚持国际海峡的过境通行自由，反对沿海国过度限制。"
+    }
+  },
+  "clauses": [
+    {
+      "id": "territorial_sea",
+      "name": "领海宽度",
+      "unit": "海里",
+      "lo": 3,
+      "hi": 12,
+      "default": 12,
+      "positions": {
+        "CN": {"ideal": 12, "weight": 0.5, "redline": 6},
+        "US": {"ideal": 12, "weight": 0.4, "redline": 6}
+      }
+    },
+    {
+      "id": "eez",
+      "name": "专属经济区宽度",
+      "unit": "海里",
+      "lo": 12,
+      "hi": 200,
+      "default": 50,
+      "positions": {
+        "CN": {"ideal": 200, "weight": 0.3, "redline": 100},
+        "US": {"ideal": 50, "weight": 0.3, "redline": 100}
+      }
+    },
+    {
+      "id": "straits_transit",
+      "name": "国际海峡过境制度",
+      "unit": "海里",
+      "lo": 3,
+      "hi": 24,
+      "default": 12,
+      "positions": {
+        "CN": {"ideal": 12, "weight": 0.2, "redline": 6},
+        "US": {"ideal": 24, "weight": 0.3, "redline": 12}
+      }
+    }
+  ],
+  "index_rules": {
+    "scale": [0, 100],
+    "initial": {
+      "CN": {"interest": 50, "image": 60, "trust": 45},
+      "US": {"interest": 50, "image": 55, "trust": 40}
+    },
+    "sensitivity": {
+      "CN": {"image": 0.9, "trust": 1.2},
+      "US": {"image": 1.1, "trust": 0.9}
+    },
+    "interest_scale": 20,
+    "image_actions": {
+      "constructive_proposal": {"slight": 2, "moderate": 3, "major": 5},
+      "cite_rules": {"slight": 1, "moderate": 2, "major": 3},
+      "hardline_stance": {"slight": -1, "moderate": -2, "major": -3},
+      "broken_promise": {"slight": -5, "moderate": -6, "major": -8},
+      "personal_attack": {"slight": -5, "moderate": -7, "major": -10},
+      "redline_provoke": {"slight": -3, "moderate": -4, "major": -5},
+      "procedural": {"slight": 0, "moderate": 0, "major": 1},
+      "diplomatic_reframe": {"slight": 3, "moderate": 4, "major": 5}
+    },
+    "trust_actions": {
+      "protect_ally": {"slight": 3, "moderate": 4, "major": 6},
+      "keep_promise": {"slight": 2, "moderate": 3, "major": 4},
+      "betray_ally": {"slight": -5, "moderate": -7, "major": -10},
+      "vague_stance": {"slight": -2, "moderate": -3, "major": -4},
+      "hardline_stance": {"slight": 2, "moderate": 3, "major": 4},
+      "conditional_concession": {"slight": 0, "moderate": 0, "major": 1},
+      "redline_provoke": {"slight": -1, "moderate": -2, "major": -2},
+      "procedural": {"slight": 0, "moderate": 0, "major": 1}
+    }
+  },
+  "assumptions": [
+    "场景条款数值与各方权重为教学演示假设，不代表现实谈判文本。",
+    "三指数初值与敏感度为教学假设，不代表现实评估。"
+  ]
+}

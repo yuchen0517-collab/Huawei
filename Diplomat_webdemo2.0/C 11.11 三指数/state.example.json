@@ -1,0 +1,219 @@
+{
+  "session_id": "example-session",
+  "round": 5,
+  "phase": "debate",
+  "current_version": 0,
+  "offers": {
+    "territorial_sea": 10,
+    "eez": 80,
+    "straits_transit": 12
+  },
+  "agreement": null,
+  "open_issues": [],
+  "action_points": [],
+  "public_events": [
+    {
+      "event_id": "evt-0001",
+      "type": "index_change",
+      "round": 4,
+      "party": "CN",
+      "index": "interest",
+      "delta": -1,
+      "applied_delta": -1,
+      "before": 50,
+      "after": 49,
+      "clamped": false,
+      "reason": "条款变更：专属经济区宽度 50→80；领海宽度 12→10"
+    },
+    {
+      "event_id": "evt-0002",
+      "type": "index_change",
+      "round": 4,
+      "party": "US",
+      "index": "interest",
+      "delta": -3,
+      "applied_delta": -3,
+      "before": 50,
+      "after": 47,
+      "clamped": false,
+      "reason": "条款变更：专属经济区宽度 50→80；领海宽度 12→10"
+    },
+    {
+      "event_id": "evt-0003",
+      "type": "index_change",
+      "round": 4,
+      "party": "CN",
+      "index": "image",
+      "delta": 5,
+      "applied_delta": 5,
+      "before": 60,
+      "after": 65,
+      "clamped": false,
+      "reason": "提出专属经济区折中方案",
+      "actor": "CN",
+      "action_type": "constructive_proposal",
+      "magnitude": "major"
+    },
+    {
+      "event_id": "evt-0004",
+      "type": "index_change",
+      "round": 4,
+      "party": "US",
+      "index": "image",
+      "delta": -2,
+      "applied_delta": -2,
+      "before": 55,
+      "after": 53,
+      "clamped": false,
+      "reason": "强调海峡过境自由不容限制",
+      "actor": "US",
+      "action_type": "hardline_stance",
+      "magnitude": "moderate"
+    },
+    {
+      "event_id": "evt-0005",
+      "type": "index_change",
+      "round": 4,
+      "party": "US",
+      "index": "trust",
+      "delta": 3,
+      "applied_delta": 3,
+      "before": 40,
+      "after": 43,
+      "clamped": false,
+      "reason": "强调海峡过境自由不容限制",
+      "actor": "US",
+      "action_type": "hardline_stance",
+      "magnitude": "moderate"
+    },
+    {
+      "event_id": "evt-0006",
+      "type": "index_change",
+      "round": 4,
+      "party": "CN",
+      "index": "trust",
+      "delta": 5,
+      "applied_delta": 5,
+      "before": 45,
+      "after": 50,
+      "clamped": false,
+      "reason": "为发展中沿海国发声",
+      "actor": "CN",
+      "action_type": "protect_ally",
+      "magnitude": "moderate"
+    },
+    {
+      "event_id": "evt-0007",
+      "type": "index_change",
+      "round": 4,
+      "party": "US",
+      "index": "image",
+      "delta": -6,
+      "applied_delta": -6,
+      "before": 53,
+      "after": 47,
+      "clamped": false,
+      "reason": "指责对方立场前后矛盾",
+      "actor": "US",
+      "action_type": "personal_attack",
+      "magnitude": "slight"
+    }
+  ],
+  "private_state_by_party": {},
+  "status": "active",
+  "indices": {
+    "CN": {
+      "interest": 49,
+      "image": 65,
+      "trust": 50
+    },
+    "US": {
+      "interest": 47,
+      "image": 47,
+      "trust": 43
+    }
+  },
+  "behavior_log": [
+    {
+      "round": 4,
+      "actor": "CN",
+      "action_type": "constructive_proposal",
+      "normalized_action_type": "constructive_proposal",
+      "magnitude": "major",
+      "clause": "专属经济区宽度",
+      "reason": "提出专属经济区折中方案",
+      "clause_changes": [
+        {
+          "clause_id": "eez",
+          "clause": "专属经济区宽度",
+          "before": 50,
+          "after": 80,
+          "raw_value": 80
+        }
+      ],
+      "deltas": {
+        "image": 5
+      }
+    },
+    {
+      "round": 4,
+      "actor": "US",
+      "action_type": "hardline_stance",
+      "normalized_action_type": "hardline_stance",
+      "magnitude": "moderate",
+      "clause": null,
+      "reason": "强调海峡过境自由不容限制",
+      "clause_changes": [],
+      "deltas": {
+        "image": -2,
+        "trust": 3
+      }
+    },
+    {
+      "round": 4,
+      "actor": "CN",
+      "action_type": "protect_ally",
+      "normalized_action_type": "protect_ally",
+      "magnitude": "moderate",
+      "clause": null,
+      "reason": "为发展中沿海国发声",
+      "clause_changes": [],
+      "deltas": {
+        "trust": 5
+      }
+    },
+    {
+      "round": 4,
+      "actor": "US",
+      "action_type": "personal_attack",
+      "normalized_action_type": "personal_attack",
+      "magnitude": "slight",
+      "clause": null,
+      "reason": "指责对方立场前后矛盾",
+      "clause_changes": [],
+      "deltas": {
+        "image": -6
+      }
+    },
+    {
+      "round": 4,
+      "actor": "US",
+      "action_type": "conditional_concession",
+      "normalized_action_type": "conditional_concession",
+      "magnitude": "slight",
+      "clause": "领海宽度",
+      "reason": "有条件接受较窄领海",
+      "clause_changes": [
+        {
+          "clause_id": "territorial_sea",
+          "clause": "领海宽度",
+          "before": 12,
+          "after": 10,
+          "raw_value": 10
+        }
+      ],
+      "deltas": {}
+    }
+  ],
+  "scenario_id": "unclos_third_conference"
+}
