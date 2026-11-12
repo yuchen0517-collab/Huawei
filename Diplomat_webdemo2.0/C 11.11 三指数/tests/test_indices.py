@@ -1,177 +1,214 @@
-import json
 import unittest
 from copy import deepcopy
-from pathlib import Path
 
+from engine import load_scenario
 from engine.indices import (
-    EffectRejected,
-    apply_effects,
+    closeness,
+    derive_magnitude,
+    initial_indices,
+    initial_plan,
+    interest_value,
     replay_indices,
-    resolve_behavior_delta,
-    round_half_away,
+    score,
+    utility,
 )
-from engine.state import NegotiationState
-from engine.validator import ERRORS, validate_effect
-
-ROOT = Path(__file__).resolve().parents[1]
-SCENARIO_PATH = ROOT / "scenarios" / "demo_scenario.json"
-EXAMPLE_STATE_PATH = ROOT / "state.example.json"
+from engine.validator import apply_patch
+from tests import full_engine, make_engine, make_action, submit
 
 
-def load_scenario():
-    return json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
+class IndicesTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.scenario = load_scenario("scenarios/demo_scenario.json")
+        cls.plan = initial_plan(cls.scenario)
+        cls.assignment = cls.scenario["clauses"][0]
+        cls.threshold = cls.scenario["clauses"][1]
 
+    def test_closeness_at_ideal(self):
+        self.assertEqual(closeness(100, 100, 10, 100), 1.0)
+        self.assertEqual(closeness(10, 10, 10, 100), 1.0)
 
-def new_state(session_id="indices-test"):
-    return NegotiationState(session_id=session_id, scenario=load_scenario())
+    def test_closeness_at_endpoints(self):
+        self.assertEqual(closeness(10, 100, 10, 100), 0.0)
+        self.assertEqual(closeness(100, 10, 10, 100), 0.0)
 
+    def test_closeness_at_midpoint(self):
+        self.assertAlmostEqual(closeness(55, 100, 10, 100), 0.5, places=6)
 
-class ThreeIndicesTests(unittest.TestCase):
-    def test_delta_matches_table(self):
-        scenario = load_scenario()
-        delta = resolve_behavior_delta("CN", "concession", "major", scenario)
-        self.assertEqual(delta["trust"], round_half_away(1 * 1.2))
-        self.assertEqual(delta["trust"], 1)
+    def test_enum_score_lookup(self):
+        self.assertEqual(score(self.assignment, "附带可核查机制", "cn"), 0.45)
+        self.assertEqual(score(self.assignment, "市场主导", "us"), 0.95)
 
-    def test_clamp_at_bounds(self):
-        state = new_state()
-        effect = {
-            "actor": "CN",
-            "action_type": "constructive_proposal",
-            "magnitude": "major",
-        }
-        for _ in range(30):
-            apply_effects(state, state.scenario, [effect])
+    def test_enum_unknown_option_returns_zero(self):
+        self.assertEqual(score(self.assignment, "联合管理", "cn"), 0.0)
 
-        self.assertEqual(state.indices["CN"]["image"], 100)
-        image_events = [
-            event for event in state.public_events if event["index"] == "image"
-        ]
-        self.assertTrue(any(event["clamped"] for event in image_events))
-        self.assertEqual(image_events[-1]["after"], 100)
+    def test_initial_utility(self):
+        self.assertAlmostEqual(utility(self.plan, "cn", self.scenario), 0.6817, places=4)
+        self.assertAlmostEqual(utility(self.plan, "us", self.scenario), 0.3547, places=4)
 
-    def test_replay_same_events_same_state(self):
-        scenario = load_scenario()
-        source = NegotiationState(session_id="replay-source", scenario=scenario)
-        apply_effects(
-            source,
-            scenario,
-            [
-                {
-                    "actor": "CN",
-                    "action_type": "constructive_proposal",
-                    "magnitude": "major",
-                    "clause": "专属经济区宽度",
-                    "value": 80,
-                },
-                {"actor": "US", "action_type": "personal_attack", "magnitude": "major"},
-                {"actor": "CN", "action_type": "protect_ally", "magnitude": "moderate"},
-            ],
+    def test_initial_interest(self):
+        indices = initial_indices(self.scenario)
+        self.assertEqual(indices["cn"]["interest"], 68)
+        self.assertEqual(indices["us"]["interest"], 35)
+        self.assertEqual(interest_value(self.plan, "cn", self.scenario), 68)
+
+    def test_interest_is_bidirectional(self):
+        engine = make_engine()
+        submit(
+            engine,
+            action_id="shift-1",
+            patch={"全球算力资源分配": "附带可核查机制"},
+        )
+        self.assertEqual(engine.state.indices["cn"]["interest"], 50)
+        self.assertEqual(engine.state.indices["us"]["interest"], 60)
+        self.assertLess(engine.state.indices["cn"]["interest"], 68)
+        self.assertGreater(engine.state.indices["us"]["interest"], 35)
+
+    def test_sensitivity_applies_to_trust(self):
+        engine = make_engine()
+        ok, code, message, _ = submit(
+            engine,
+            action_id="protect-1",
+            action_type="statement",
+            labels=[{"label": "protect_ally", "magnitude": "major"}],
+        )
+        self.assertTrue(ok, f"{code}: {message}")
+        self.assertEqual(engine.state.indices["cn"]["trust"], 52)
+
+    def test_same_label_different_party(self):
+        cn_engine = make_engine()
+        submit(
+            cn_engine,
+            action_id="attack-cn",
+            actor="cn",
+            action_type="statement",
+            labels=[{"label": "personal_attack", "magnitude": "major"}],
+        )
+        self.assertEqual(cn_engine.state.indices["cn"]["image"], 51)
+
+        us_engine = make_engine()
+        submit(
+            us_engine,
+            action_id="attack-us",
+            actor="us",
+            action_type="statement",
+            labels=[{"label": "personal_attack", "magnitude": "major"}],
+        )
+        self.assertEqual(us_engine.state.indices["us"]["image"], 44)
+
+    def test_path_one_uses_effect_labels(self):
+        engine = make_engine()
+        submit(
+            engine,
+            action_id="label-1",
+            labels=[{"label": "diplomatic_reframe", "magnitude": "moderate"}],
+        )
+        entry = engine.state.behavior_log[-1]
+        self.assertEqual(entry["label_mode"], "effect_labels")
+        self.assertEqual(entry["labels"][0]["label"], "diplomatic_reframe")
+
+    def test_path_two_falls_back_to_action_type(self):
+        engine = make_engine()
+        submit(
+            engine,
+            action_id="fallback-1",
+            patch={"全球算力资源分配": "附带可核查机制"},
+        )
+        entry = engine.state.behavior_log[-1]
+        self.assertEqual(entry["label_mode"], "fallback")
+        self.assertEqual(
+            [item["label"] for item in entry["labels"]],
+            ["constructive_proposal", "conditional_concession"],
         )
 
-        first = replay_indices(source.public_events, scenario)
-        second = replay_indices(source.public_events, scenario)
+    def test_path_two_magnitude_buckets(self):
+        for value, expected in ((32, "slight"), (50, "moderate"), (80, "major")):
+            with self.subTest(value=value):
+                action = make_action(
+                    action_type="offer",
+                    patch={"前沿模型评测门槛": value},
+                )
+                new_plan = apply_patch(self.plan, action["offer_patch"])
+                self.assertEqual(
+                    derive_magnitude(action, self.plan, new_plan, self.scenario),
+                    expected,
+                )
 
-        self.assertEqual(first.indices, source.indices)
-        self.assertEqual(second.indices, source.indices)
-        self.assertEqual(first.public_events, source.public_events)
-        self.assertEqual(second.public_events, source.public_events)
-        self.assertEqual(first.public_events, second.public_events)
+    def test_empty_patch_is_slight(self):
+        for action_type in ("probe", "statement"):
+            with self.subTest(action_type=action_type):
+                action = make_action(action_type=action_type)
+                self.assertEqual(
+                    derive_magnitude(action, self.plan, self.plan, self.scenario),
+                    "slight",
+                )
 
-    def test_replay_from_log(self):
-        scenario = load_scenario()
-        saved = json.loads(EXAMPLE_STATE_PATH.read_text(encoding="utf-8"))
-        replay = replay_indices(saved["public_events"], scenario)
-
-        self.assertEqual(replay.indices, saved["indices"])
-        self.assertEqual(replay.public_events, saved["public_events"])
-        self.assertTrue(saved["public_events"])
-
-    def test_unknown_label_rejected(self):
-        effect = {"actor": "CN", "action_type": "concession", "magnitude": "huge"}
-        ok, code, message = validate_effect(effect, load_scenario())
+    def test_illegal_label_batch_rejected_atomically(self):
+        engine = make_engine()
+        indices = {k: dict(v) for k, v in engine.state.indices.items()}
+        behavior_len = len(engine.state.behavior_log)
+        ok, code, _, events = submit(
+            engine,
+            action_id="bad-label",
+            labels=[
+                {"label": "constructive_proposal", "magnitude": "moderate"},
+                {"label": "bribe", "magnitude": "major"},
+            ],
+        )
         self.assertFalse(ok)
-        self.assertEqual(code, "UNKNOWN_EFFECT_LABEL")
-        self.assertIn(ERRORS["UNKNOWN_EFFECT_LABEL"], message)
-
-    def test_interest_only_from_clauses(self):
-        state = new_state()
-        before = deepcopy(state.indices)
-
-        events = apply_effects(
-            state,
-            state.scenario,
-            [
-                {
-                    "actor": "CN",
-                    "action_type": "concession",
-                    "magnitude": "moderate",
-                    "clause": "领海宽度",
-                    "reason": "接受12海里",
-                }
-            ],
-        )
-
-        self.assertEqual(state.indices, before)
+        self.assertEqual(code, "SCHEMA_VIOLATION")
         self.assertEqual(events, [])
-        self.assertEqual(state.offers["territorial_sea"], 12)
-        self.assertEqual(len(state.behavior_log), 1)
+        self.assertEqual(engine.state.indices, indices)
+        self.assertEqual(len(engine.state.behavior_log), behavior_len)
 
-    def test_image_not_reversed(self):
-        state = new_state()
-        us_before = state.indices["US"]["image"]
-
-        apply_effects(
-            state,
-            state.scenario,
-            [
-                {
-                    "actor": "CN",
-                    "action_type": "personal_attack",
-                    "magnitude": "major",
-                    "reason": "人身攻击",
-                }
-            ],
+    def test_clamp_upper_bound_leaves_trace(self):
+        engine = make_engine()
+        engine.state.indices["cn"]["image"] = 98
+        events = engine.state.apply_index_changes(
+            [("cn", "image", 10)], "测试上限", "test-source"
         )
+        event = events[0]
+        self.assertEqual(event["before"], 98)
+        self.assertEqual(event["after"], 100)
+        self.assertEqual(event["delta"], 2)
+        self.assertEqual(event["requested_delta"], 10)
+        self.assertTrue(event["clamped"])
+        self.assertEqual(event["source"], "test-source")
 
-        self.assertEqual(state.indices["CN"]["image"], 60 + round_half_away(-10 * 0.9))
-        self.assertEqual(state.indices["US"]["image"], us_before)
+    def test_clamp_lower_bound_leaves_trace(self):
+        engine = make_engine()
+        engine.state.indices["cn"]["image"] = 3
+        events = engine.state.apply_index_changes(
+            [("cn", "image", -10)], "测试下限", "test-source"
+        )
+        event = events[0]
+        self.assertEqual(event["before"], 3)
+        self.assertEqual(event["after"], 0)
+        self.assertEqual(event["delta"], -3)
+        self.assertEqual(event["requested_delta"], -10)
+        self.assertTrue(event["clamped"])
 
-    def test_sensitivity_applied(self):
-        scenario = load_scenario()
-        cn = resolve_behavior_delta("CN", "constructive_proposal", "major", scenario)
-        us = resolve_behavior_delta("US", "constructive_proposal", "major", scenario)
+    def test_replay_matches_current(self):
+        engine = full_engine()
+        result = engine.replay()
+        self.assertTrue(result["consistent"])
+        self.assertEqual(result["replayed"], result["current"])
 
-        self.assertEqual(cn["image"], round_half_away(5 * 0.9))
-        self.assertEqual(us["image"], round_half_away(5 * 1.1))
-        self.assertNotEqual(cn["image"], us["image"])
-        self.assertLess(abs(cn["image"] / us["image"] - 0.9 / 1.1), 0.05)
-
-    def test_batch_rejected_atomically(self):
-        state = new_state()
-        indices_before = deepcopy(state.indices)
-        offers_before = deepcopy(state.offers)
-
-        effects = [
-            {
-                "actor": "CN",
-                "action_type": "constructive_proposal",
-                "magnitude": "major",
-                "clause": "专属经济区宽度",
-                "value": 120,
-            },
-            {"actor": "US", "action_type": "concession", "magnitude": "huge"},
+    def test_replay_is_pure(self):
+        events = [
+            {"type": "index_change", "party": "cn", "index": "image", "requested_delta": 10},
+            {"type": "index_change", "party": "cn", "index": "image", "requested_delta": -20},
+            {"type": "other", "party": "us", "index": "trust", "requested_delta": 50},
         ]
-
-        with self.assertRaises(EffectRejected) as raised:
-            apply_effects(state, state.scenario, effects)
-
-        self.assertEqual(raised.exception.code, "UNKNOWN_EFFECT_LABEL")
-        self.assertEqual(raised.exception.index, 1)
-        self.assertEqual(state.indices, indices_before)
-        self.assertEqual(state.offers, offers_before)
-        self.assertEqual(state.public_events, [])
-        self.assertEqual(state.behavior_log, [])
+        indices = {"cn": {"interest": 0, "image": 0, "trust": 0}}
+        snapshot_events = deepcopy(events)
+        snapshot_indices = deepcopy(indices)
+        first = replay_indices(events, indices)
+        second = replay_indices(events, indices)
+        self.assertEqual(first, second)
+        self.assertEqual(events, snapshot_events)
+        self.assertEqual(indices, snapshot_indices)
+        self.assertEqual(first["cn"]["image"], 0)
 
 
 if __name__ == "__main__":

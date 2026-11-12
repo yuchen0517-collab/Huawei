@@ -1,153 +1,145 @@
 """对局状态：全局唯一事实来源。
 
-增量说明：新增 indices 与 behavior_log 两个字段，其余字段名保持不变。
+设计约束：
+- indices 只能通过 NegotiationState.apply_index_changes() 修改；
+- 每次指数变化写一条 index_change 事件，clamp 必须留痕；
+- 非法行动在进入本模块前就被拒绝，不存在“先改再回滚”。
 """
 
 from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 INDEX_NAMES = ("interest", "image", "trust")
-DEFAULT_INDICES = {"interest": 50, "image": 50, "trust": 50}
+INDEX_MIN = 0
+INDEX_MAX = 100
+
+
+@dataclass
+class Offer:
+    """一版报价。clauses 存该版本明确表态的条款全量，形如 {议题名: {option, note}}。"""
+
+    action_id: str
+    actor: str
+    version: int
+    clauses: Dict[str, dict]
+    created_round: int
+    kind: str
+    conditions: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "action_id": self.action_id,
+            "actor": self.actor,
+            "version": self.version,
+            "clauses": deepcopy(self.clauses),
+            "created_round": self.created_round,
+            "kind": self.kind,
+            "conditions": deepcopy(self.conditions),
+        }
 
 
 @dataclass
 class NegotiationState:
     session_id: str
-    scenario: dict = field(default_factory=dict)
+    scenario_id: str
     round: int = 1
     phase: str = "opening"
     current_version: int = 0
-    offers: dict = field(default_factory=dict)
-    agreement: dict | None = None
-    open_issues: list = field(default_factory=list)
-    action_points: list = field(default_factory=list)
-    public_events: list = field(default_factory=list)
-    private_state_by_party: dict = field(default_factory=dict)
+    offers: List[Offer] = field(default_factory=list)
+    agreement: Optional[Offer] = None
+    open_issues: List[str] = field(default_factory=list)
+    action_points: int = 3
+    public_events: List[dict] = field(default_factory=list)
+    private_state_by_party: Dict[str, dict] = field(default_factory=dict)
     status: str = "active"
-    indices: dict[str, dict[str, int]] = field(default_factory=dict)
-    behavior_log: list[dict] = field(default_factory=list)
+    terminal: Optional[dict] = None
+    indices: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    behavior_log: List[dict] = field(default_factory=list)
+    seen_action_ids: List[str] = field(default_factory=list)
+    rounds_without_offer: int = 0
+    final_offer_declared_by: Dict[str, Optional[int]] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        rules = self.scenario.get("index_rules", {}) if self.scenario else {}
+    def init_indices(self, values: Dict[str, Dict[str, int]]) -> None:
+        """仅在构造时写入初始指数；运行期一律走 apply_index_changes。"""
+        self.indices = deepcopy(values)
 
-        if not self.offers and self.scenario.get("clauses"):
-            self.offers = {
-                clause["id"]: clause.get("default", clause["lo"])
-                for clause in self.scenario["clauses"]
-            }
+    def apply_index_changes(
+        self,
+        changes: List[Tuple[str, str, int]],
+        reason: str,
+        source: str,
+        round_no: Optional[int] = None,
+    ) -> List[dict]:
+        """指数唯一写入口。
 
-        if not self.indices:
-            initial = rules.get("initial", {})
-            self.indices = deepcopy(initial)
-        else:
-            self.indices = deepcopy(self.indices)
-
-        for party in self.scenario.get("parties", {}):
-            if party not in self.indices:
-                self.indices[party] = dict(DEFAULT_INDICES)
-            else:
-                for name in INDEX_NAMES:
-                    self.indices[party].setdefault(name, DEFAULT_INDICES[name])
-
-    def index_scale(self) -> tuple[int, int]:
-        scale = (self.scenario.get("index_rules", {}) or {}).get("scale", [0, 100])
-        return int(scale[0]), int(scale[1])
-
-    def _ensure_party(self, party: str) -> dict[str, int]:
-        if party not in self.indices:
-            initial = (self.scenario.get("index_rules", {}) or {}).get("initial", {})
-            self.indices[party] = dict(initial.get(party, DEFAULT_INDICES))
-        for name in INDEX_NAMES:
-            self.indices[party].setdefault(name, DEFAULT_INDICES[name])
-        return self.indices[party]
-
-    def apply_indices(
-        self, deltas, reason: str, round_no: int, meta: dict | None = None
-    ) -> list[dict]:
-        """结算一批指数变化。
-
-        deltas 形如 {"CN": {"image": -3}, "US": {"interest": 2}}。
-        每个 (party, index) 是一条 delta，对应 public_events 里的一条事件。
-        越界一律 clamp，并在事件中留下 clamped=True。
-        meta 用于把发言标签（actor / action_type / magnitude）一并写进事件。
+        changes 为 [(party, index_name, requested_delta), ...]。
+        返回写入 public_events 的事件列表。clamp 时同时记录
+        requested_delta 与实际 delta，复盘时能解释“为什么只涨了 2 分”。
         """
-        if not deltas:
-            return []
+        events: List[dict] = []
+        for party, index, requested_delta in changes:
+            if party not in self.indices:
+                raise KeyError(f"未知参与方：{party}")
+            if index not in INDEX_NAMES:
+                raise ValueError(f"未知指数：{index}")
 
-        low, high = self.index_scale()
-        events: list[dict] = []
+            requested = int(requested_delta)
+            before = int(self.indices[party].get(index, INDEX_MIN))
+            raw_after = before + requested
+            after = max(INDEX_MIN, min(INDEX_MAX, raw_after))
+            self.indices[party][index] = after
 
-        for party, changes in deltas.items():
-            if not isinstance(changes, dict):
-                continue
-            party_indices = self._ensure_party(party)
-            for index in INDEX_NAMES:
-                if index not in changes:
-                    continue
-                delta = int(changes[index])
-                before = int(party_indices[index])
-                raw_after = before + delta
-                after = max(low, min(high, raw_after))
-                party_indices[index] = after
-
-                event = {
-                    "event_id": f"evt-{len(self.public_events) + 1:04d}",
-                    "type": "index_change",
-                    "round": int(round_no),
-                    "party": party,
-                    "index": index,
-                    "delta": delta,
-                    "applied_delta": after - before,
-                    "before": before,
-                    "after": after,
-                    "clamped": after != raw_after,
-                    "reason": reason,
-                }
-                if meta:
-                    event.update(meta)
-                self.public_events.append(event)
-                events.append(event)
-
+            event = {
+                "event_id": f"evt-{len(self.public_events) + 1:04d}",
+                "type": "index_change",
+                "round": int(self.round if round_no is None else round_no),
+                "party": party,
+                "index": index,
+                "before": before,
+                "after": after,
+                "delta": after - before,
+                "requested_delta": requested,
+                "clamped": after != raw_after,
+                "reason": reason,
+                "source": source,
+            }
+            self.public_events.append(event)
+            events.append(event)
         return events
 
-    def to_public_dict(self, viewer: str | None = None) -> dict[str, Any]:
-        """公开视图：indices 是公开信息，不涉及私有底牌。"""
-        data: dict[str, Any] = {
-            "session_id": self.session_id,
-            "round": self.round,
-            "phase": self.phase,
-            "current_version": self.current_version,
-            "offers": deepcopy(self.offers),
-            "agreement": deepcopy(self.agreement),
-            "open_issues": deepcopy(self.open_issues),
-            "action_points": deepcopy(self.action_points),
-            "public_events": deepcopy(self.public_events),
-            "indices": deepcopy(self.indices),
-            "status": self.status,
-        }
-        if viewer is not None:
-            data["private_state"] = deepcopy(
-                self.private_state_by_party.get(viewer)
-            )
-        return data
+    def next_event_id(self) -> str:
+        return f"evt-{len(self.public_events) + 1:04d}"
 
-    def to_archive_dict(self) -> dict[str, Any]:
-        """存档视图：包含 behavior_log，用于回放与审计。"""
+    def to_public_dict(self, viewer: str = "") -> dict:
+        private = {}
+        if viewer and viewer in self.private_state_by_party:
+            private = {viewer: deepcopy(self.private_state_by_party[viewer])}
+
         return {
             "session_id": self.session_id,
+            "scenario_id": self.scenario_id,
             "round": self.round,
             "phase": self.phase,
             "current_version": self.current_version,
-            "offers": deepcopy(self.offers),
-            "agreement": deepcopy(self.agreement),
+            "offers": [offer.to_dict() for offer in self.offers],
+            "agreement": self.agreement.to_dict() if self.agreement else None,
             "open_issues": deepcopy(self.open_issues),
-            "action_points": deepcopy(self.action_points),
+            "action_points": self.action_points,
             "public_events": deepcopy(self.public_events),
-            "private_state_by_party": deepcopy(self.private_state_by_party),
+            "private_state_by_party": private,
             "status": self.status,
+            "terminal": deepcopy(self.terminal),
             "indices": deepcopy(self.indices),
             "behavior_log": deepcopy(self.behavior_log),
+            "rounds_without_offer": self.rounds_without_offer,
+            "final_offer_declared_by": deepcopy(self.final_offer_declared_by),
         }
+
+    def to_archive_dict(self) -> dict:
+        data = self.to_public_dict("")
+        data["private_state_by_party"] = deepcopy(self.private_state_by_party)
+        data["seen_action_ids"] = deepcopy(self.seen_action_ids)
+        return data

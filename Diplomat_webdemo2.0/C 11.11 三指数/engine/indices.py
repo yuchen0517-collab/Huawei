@@ -1,258 +1,351 @@
-"""三指数结算模块。
+"""三指数结算。
 
-核心分工：
-- Interest：由条款效用差计算，双方各自算，只有条款数值真的变化才可能变化。
-- Image / Trust：只由说话方自己的行为标签决定，单向，不做反向。
-- 所有数值由引擎计算；模型只提供 action_type + magnitude 标签。
+Interest：由条款效用计算，不由发言查表。
+Image / Trust：只影响发言方，查表后乘该方敏感度。
+模型只提供离散标签；数值由本模块算出并交给 state.apply_index_changes 写入。
 """
 
 from __future__ import annotations
 
 import math
 from copy import deepcopy
-
+from typing import Dict, List, Tuple
 
 from .state import NegotiationState
-from .validator import clause_lookup, normalize_action_type, validate_effect
+from .validator import (
+    MAGNITUDES,
+    clause_map,
+    is_number,
+    option_value,
+    party_ids,
+)
 
-INDEX_NAME_MAP = {"image": "image_actions", "trust": "trust_actions"}
+FALLBACK_LABELS = {
+    "offer": ("constructive_proposal", "conditional_concession"),
+    "counter_offer": ("constructive_proposal", "conditional_concession"),
+    "conditional_exchange": ("constructive_proposal", "conditional_concession"),
+    "final_offer": ("hardline_stance", "hardline_stance"),
+    "accept": ("diplomatic_reframe", "keep_promise"),
+    "reject": ("hardline_stance", "vague_stance"),
+    "walk_away": ("hardline_stance", "betray_ally"),
+    "probe": ("procedural", "procedural"),
+    "statement": ("procedural", "procedural"),
+}
+
+INDEX_NAMES = ("interest", "image", "trust")
 
 
-class EffectRejected(ValueError):
-    """整批效果被拒绝时抛出，携带可直接展示给 UI 的错误码。"""
-
-    def __init__(self, code: str, message: str, index: int | None = None):
-        self.code = code
-        self.message = message
-        self.index = index
-        super().__init__(f"{code}: {message}")
-
-
-def round_half_away(value: float) -> int:
-    """四舍五入（0.5 远离 0），避免 Python 银行家舍入带来的歧义。"""
+def round_half_up(value: float) -> int:
+    """四舍五入（0.5 远离零），避免 Python 银行家舍入在结算边界产生歧义。"""
     if value >= 0:
         return int(math.floor(value + 0.5))
     return int(math.ceil(value - 0.5))
 
 
-def closeness(value: float, clause: dict) -> float:
-    """单条款贴近度，0~1。clause 必须带有 lo / hi / ideal。"""
-    lo = float(clause["lo"])
-    hi = float(clause["hi"])
-    ideal = float(clause["ideal"])
-    span = hi - lo
+def closeness(value: float, ideal: float, low: float, high: float) -> float:
+    span = float(high) - float(low)
     if span <= 0:
-        return 1.0 if float(value) == ideal else 0.0
-    score = 1.0 - abs(float(value) - ideal) / span
+        return 1.0 if float(value) == float(ideal) else 0.0
+    score = 1.0 - abs(float(value) - float(ideal)) / span
     return max(0.0, min(1.0, score))
 
 
-def _clause_for_party(clause: dict, party: str) -> dict:
-    position = (clause.get("positions", {}) or {}).get(party, {})
-    resolved = dict(clause)
-    resolved["ideal"] = position.get("ideal", clause.get("default", clause["lo"]))
-    resolved["weight"] = position.get("weight", 0.0)
-    resolved["redline"] = position.get("redline")
-    return resolved
+def score(clause: dict, option, party: str) -> float:
+    """统一打分接口，返回 0~1。未知 option 返回 0.0（由校验层报 UNKNOWN_OPTION）。"""
+    if clause.get("type") == "numeric":
+        position = (clause.get("positions") or {}).get(party, {})
+        ideal = position.get("ideal", clause.get("initial"))
+        low, high = clause.get("range", [0, 0])
+        try:
+            numeric = float(option)
+        except (TypeError, ValueError):
+            return 0.0
+        return closeness(numeric, float(ideal), float(low), float(high))
+
+    for item in clause.get("options", []):
+        if item.get("id") == option:
+            return float((item.get("score") or {}).get(party, 0.0))
+    return 0.0
 
 
-def utility(offer_clauses: dict, party: str, scenario: dict) -> float:
-    """方案对某一方的总效用：Σ weight_c * closeness_c。"""
+def initial_plan(scenario: dict) -> Dict[str, dict]:
+    return {
+        clause["name"]: {
+            "option": clause.get("initial"),
+            "note": "场景初始方案",
+        }
+        for clause in scenario.get("clauses", [])
+    }
+
+
+def _plan_option(plan: Dict[str, dict], clause: dict) -> object:
+    entry = plan.get(clause["name"])
+    if entry is None:
+        return clause.get("initial")
+    return option_value(entry)
+
+
+def utility(plan: Dict[str, dict], party: str, scenario: dict) -> float:
     total = 0.0
     for clause in scenario.get("clauses", []):
-        resolved = _clause_for_party(clause, party)
-        value = offer_clauses.get(clause["id"], clause.get("default", clause["lo"]))
-        total += float(resolved["weight"]) * closeness(value, resolved)
+        weight = float((clause.get("weights") or {}).get(party, 0.0))
+        option = _plan_option(plan, clause)
+        total += weight * score(clause, option, party)
     return total
 
 
-def compute_interest_delta(
-    old_offer: dict, new_offer: dict, party: str, scenario: dict
-) -> int:
-    """Interest 只由条款效用差产生，不看发言类型。"""
-    scale = float(
-        (scenario.get("index_rules", {}) or {}).get("interest_scale", 20)
-    )
-    diff = utility(new_offer, party, scenario) - utility(old_offer, party, scenario)
-    return round_half_away(diff * scale)
+def interest_value(plan: Dict[str, dict], party: str, scenario: dict) -> int:
+    return round_half_up(utility(plan, party, scenario) * 100.0)
 
 
-def resolve_behavior_delta(
-    actor: str, action_type: str, magnitude: str, scenario: dict
-) -> dict[str, int]:
-    """把发言标签翻译成 Image / Trust 增量，只落在 actor 身上。
-
-    Image / Trust 不做反向：对方不因 actor 的失态而加分。
-    """
+def initial_indices(scenario: dict) -> Dict[str, Dict[str, int]]:
+    plan = initial_plan(scenario)
     rules = scenario.get("index_rules", {}) or {}
-    normalized = normalize_action_type(action_type)
-    sensitivity = (rules.get("sensitivity", {}) or {}).get(actor, {})
-    deltas: dict[str, int] = {}
+    initial = rules.get("initial", {}) or {}
+    result: Dict[str, Dict[str, int]] = {}
+    for party in party_ids(scenario):
+        values = initial.get(party, {}) or {}
+        result[party] = {
+            "interest": interest_value(plan, party, scenario),
+            "image": int(values.get("image", 50)),
+            "trust": int(values.get("trust", 50)),
+        }
+    return result
 
-    for index, table_key in INDEX_NAME_MAP.items():
-        table = rules.get(table_key, {}) or {}
-        if normalized not in table:
-            continue
-        base = table[normalized].get(magnitude)
-        if base is None:
-            continue
-        factor = float(sensitivity.get(index, 1.0))
-        deltas[index] = round_half_away(float(base) * factor)
 
+def derive_magnitude(
+    action: dict, base_plan: Dict[str, dict], new_plan: Dict[str, dict], scenario: dict
+) -> str:
+    """路径2：由 action_type 映射标签，由条款实际变动幅度决定档位。"""
+    patch = action.get("offer_patch") or {}
+    if not patch:
+        return "slight"
+
+    clauses = clause_map(scenario)
+    action_type = action.get("action_type")
+    actor = action.get("actor")
+    ratios: List[float] = []
+
+    for name, entry in patch.items():
+        clause = clauses.get(name)
+        if clause is None:
+            continue
+        old_entry = base_plan.get(name, {"option": clause.get("initial")})
+        old = option_value(old_entry)
+        new = entry.get("option")
+
+        if clause.get("type") == "numeric":
+            low, high = clause.get("range", [0, 0])
+            span = float(high) - float(low)
+            try:
+                ratio = abs(float(new) - float(old)) / span if span > 0 else 0.0
+            except (TypeError, ValueError):
+                ratio = 0.0
+            if action_type == "final_offer":
+                position = (clause.get("positions") or {}).get(actor, {})
+                ideal = position.get("ideal", clause.get("initial"))
+                far_endpoint = low if abs(float(ideal) - float(high)) >= abs(
+                    float(ideal) - float(low)
+                ) else high
+                if float(new) == float(far_endpoint):
+                    ratio = 1.0
+        else:
+            options = [item["id"] for item in clause.get("options", [])]
+            span = len(options) - 1
+            if span > 0 and old in options and new in options:
+                ratio = abs(options.index(new) - options.index(old)) / span
+            else:
+                ratio = 0.0
+            if action_type == "final_offer" and options:
+                lowest = min(
+                    options,
+                    key=lambda item: score(clause, item, actor),
+                )
+                if new == lowest:
+                    ratio = 1.0
+
+        ratios.append(min(1.0, max(0.0, ratio)))
+
+    ratio = max(ratios) if ratios else 0.0
+    if ratio < 0.15:
+        return "slight"
+    if ratio < 0.45:
+        return "moderate"
+    return "major"
+
+
+def resolve_labels(
+    action: dict, base_plan: Dict[str, dict], new_plan: Dict[str, dict], scenario: dict
+) -> Tuple[List[dict], str]:
+    """路径1 优先；没有 effect_labels 时走路径2 兜底。"""
+    raw = action.get("effect_labels")
+    if raw:
+        labels = []
+        for item in raw:
+            labels.append(
+                {
+                    "label": item["label"],
+                    "magnitude": item["magnitude"],
+                    "clause": item.get("clause"),
+                    "reason": item.get("reason", ""),
+                    "target": "both",
+                }
+            )
+        return labels, "effect_labels"
+
+    action_type = action.get("action_type")
+    image_label, trust_label = FALLBACK_LABELS[action_type]
+    magnitude = derive_magnitude(action, base_plan, new_plan, scenario)
+    return (
+        [
+            {
+                "label": image_label,
+                "magnitude": magnitude,
+                "clause": None,
+                "reason": "由 action_type 与条款变动幅度推导",
+                "target": "image",
+            },
+            {
+                "label": trust_label,
+                "magnitude": magnitude,
+                "clause": None,
+                "reason": "由 action_type 与条款变动幅度推导",
+                "target": "trust",
+            },
+        ],
+        "fallback",
+    )
+
+
+def _table_delta(
+    table: dict, sensitivity: dict, index: str, label: str, magnitude: str
+) -> int:
+    base = (table.get(label) or {}).get(magnitude)
+    if base is None:
+        return 0
+    factor = float((sensitivity or {}).get(index, 1.0))
+    return round_half_up(float(base) * factor)
+
+
+def behaviour_delta(actor: str, item: dict, scenario: dict) -> Dict[str, int]:
+    rules = scenario.get("index_rules", {}) or {}
+    sensitivity = (rules.get("sensitivity") or {}).get(actor, {}) or {}
+    image_table = rules.get("image_actions", {}) or {}
+    trust_table = rules.get("trust_actions", {}) or {}
+
+    label = item["label"]
+    magnitude = item["magnitude"]
+    target = item.get("target", "both")
+    deltas = {"image": 0, "trust": 0}
+
+    if target in ("image", "both"):
+        deltas["image"] = _table_delta(
+            image_table, sensitivity, "image", label, magnitude
+        )
+    if target in ("trust", "both"):
+        deltas["trust"] = _table_delta(
+            trust_table, sensitivity, "trust", label, magnitude
+        )
     return deltas
 
 
-def _clause_values(effect: dict, lookup: dict[str, dict]) -> list[tuple[dict, object]]:
-    targets: list[tuple[dict, object]] = []
-    clause_ref = effect.get("clause")
-    if clause_ref is not None and "value" in effect:
-        clause = lookup.get(clause_ref)
-        if clause is not None:
-            targets.append((clause, effect["value"]))
-    for key in ("clause_values", "proposal"):
-        mapping = effect.get(key)
-        if isinstance(mapping, dict):
-            for ref, value in mapping.items():
-                clause = lookup.get(ref)
-                if clause is not None:
-                    targets.append((clause, value))
-    return targets
+def apply_effects(
+    state: NegotiationState,
+    scenario: dict,
+    action: dict,
+    base_plan: Dict[str, dict],
+    new_plan: Dict[str, dict],
+) -> Tuple[List[dict], dict]:
+    """整批标签先算后写；任何异常都发生在写状态之前。"""
+    labels, mode = resolve_labels(action, base_plan, new_plan, scenario)
+    actor = action["actor"]
 
+    new_interest = {
+        party: interest_value(new_plan, party, scenario)
+        for party in party_ids(scenario)
+    }
 
-def _is_number(value) -> bool:
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-    )
-
-
-def apply_effects(state, scenario: dict, effects: list[dict]) -> list[dict]:
-    """对外唯一入口：整批校验通过后才结算，任何一条非法则整批拒绝。"""
-    if not isinstance(effects, list):
-        raise EffectRejected("UNKNOWN_EFFECT_LABEL", "effects 必须是数组")
-
-    for position, effect in enumerate(effects):
-        ok, code, message = validate_effect(effect, scenario)
-        if not ok:
-            raise EffectRejected(code, message, position)
-
-    lookup = clause_lookup(scenario)
-    old_offer = deepcopy(state.offers)
-    new_offer = deepcopy(state.offers)
-
-    behavior_entries: list[dict] = []
-    clause_changes: list[dict] = []
-
-    for effect in effects:
-        actor = effect.get("actor")
-        action_type = effect.get("action_type")
-        magnitude = effect.get("magnitude")
-        normalized = normalize_action_type(action_type)
-
-        entry_changes: list[dict] = []
-        for clause, raw_value in _clause_values(effect, lookup):
-            if not _is_number(raw_value):
-                raise EffectRejected(
-                    "UNKNOWN_EFFECT_LABEL", "条款数值必须是有限数字"
-                )
-            before = new_offer.get(
-                clause["id"], clause.get("default", clause["lo"])
-            )
-            applied = min(float(clause["hi"]), max(float(clause["lo"]), float(raw_value)))
-            if isinstance(raw_value, int):
-                applied = int(applied)
-            new_offer[clause["id"]] = applied
-            change = {
-                "clause_id": clause["id"],
-                "clause": clause["name"],
-                "before": before,
-                "after": applied,
-                "raw_value": raw_value,
-            }
-            entry_changes.append(change)
-            clause_changes.append(change)
-
-        behavior_entries.append(
-            {
-                "round": int(state.round),
-                "actor": actor,
-                "action_type": action_type,
-                "normalized_action_type": normalized,
-                "magnitude": magnitude,
-                "clause": effect.get("clause"),
-                "reason": effect.get("reason", ""),
-                "clause_changes": entry_changes,
-                "deltas": {},
-            }
-        )
-
-    events: list[dict] = []
-
-    interest_deltas: dict[str, dict[str, int]] = {}
-    for party in scenario.get("parties", {}):
-        delta = compute_interest_delta(old_offer, new_offer, party, scenario)
+    interest_changes: List[Tuple[str, str, int]] = []
+    for party in party_ids(scenario):
+        before = int(state.indices[party]["interest"])
+        delta = new_interest[party] - before
         if delta != 0:
-            interest_deltas.setdefault(party, {})["interest"] = delta
+            interest_changes.append((party, "interest", delta))
 
-    if interest_deltas:
-        if clause_changes:
-            reason = "条款变更：" + "；".join(
-                f"{c['clause']} {c['before']}→{c['after']}" for c in clause_changes
+    behaviour_total = {"image": 0, "trust": 0}
+    for item in labels:
+        deltas = behaviour_delta(actor, item, scenario)
+        behaviour_total["image"] += deltas["image"]
+        behaviour_total["trust"] += deltas["trust"]
+
+    events: List[dict] = []
+    action_id = action["action_id"]
+
+    if interest_changes:
+        events.extend(
+            state.apply_index_changes(
+                interest_changes,
+                reason="条款效用重算",
+                source=action_id,
             )
-        else:
-            reason = "条款未变，interest 变化为 0"
-        events.extend(state.apply_indices(interest_deltas, reason, state.round))
-
-    for entry in behavior_entries:
-        actor = entry["actor"]
-        if not actor:
-            continue
-        deltas = resolve_behavior_delta(
-            actor, entry["action_type"], entry["magnitude"], scenario
         )
-        deltas = {k: v for k, v in deltas.items() if v != 0}
-        entry["deltas"] = deltas
-        if deltas:
-            reason = entry["reason"] or (
-                f"{entry['normalized_action_type']}/{entry['magnitude']}"
+
+    if behaviour_total["image"] != 0:
+        events.extend(
+            state.apply_index_changes(
+                [(actor, "image", behaviour_total["image"])],
+                reason="发言标签：" + "/".join(
+                    f"{item['label']}:{item['magnitude']}" for item in labels
+                ),
+                source=action_id,
             )
-            events.extend(
-                state.apply_indices(
-                    {actor: deltas},
-                    reason,
-                    state.round,
-                    meta={
-                        "actor": actor,
-                        "action_type": entry["normalized_action_type"],
-                        "magnitude": entry["magnitude"],
-                    },
-                )
+        )
+    if behaviour_total["trust"] != 0:
+        events.extend(
+            state.apply_index_changes(
+                [(actor, "trust", behaviour_total["trust"])],
+                reason="发言标签：" + "/".join(
+                    f"{item['label']}:{item['magnitude']}" for item in labels
+                ),
+                source=action_id,
             )
+        )
 
-    state.offers = new_offer
-    state.behavior_log.extend(behavior_entries)
-    return events
+    entry = {
+        "action_id": action_id,
+        "actor": actor,
+        "round": int(state.round),
+        "action_type": action.get("action_type"),
+        "label_mode": mode,
+        "labels": deepcopy(labels),
+        "deltas": deepcopy(behaviour_total),
+        "clause_changes": [
+            {
+                "clause": name,
+                "before": option_value(base_plan.get(name, {})),
+                "after": option_value(new_plan.get(name, {})),
+            }
+            for name in (action.get("offer_patch") or {})
+        ],
+    }
+    state.behavior_log.append(entry)
+    return events, entry
 
 
-def replay_indices(events: list[dict], scenario: dict) -> NegotiationState:
-    """重放事件流重建指数，不调用模型，不使用随机/时间。
-
-    只消费 type=index_change 的事件；返回一个新的 NegotiationState。
-    """
-    state = NegotiationState(session_id="replay", scenario=scenario)
+def replay_indices(events: List[dict], indices: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, int]]:
+    """纯函数：只消费 index_change 事件，不修改入参。"""
+    result = deepcopy(indices)
     for event in events:
         if event.get("type") != "index_change":
             continue
-        meta = {
-            key: event[key]
-            for key in ("actor", "action_type", "magnitude")
-            if key in event
-        }
-        state.apply_indices(
-            {event["party"]: {event["index"]: event["delta"]}},
-            event.get("reason", ""),
-            event.get("round", 1),
-            meta=meta or None,
-        )
-    return state
+        party = event["party"]
+        index = event["index"]
+        requested = int(event.get("requested_delta", event.get("delta", 0)))
+        bucket = result.setdefault(party, {})
+        before = int(bucket.get(index, 0))
+        bucket[index] = max(0, min(100, before + requested))
+    return result
+
+
+def clamp_delta(before: int, requested_delta: int) -> int:
+    return max(0, min(100, int(before) + int(requested_delta))) - int(before)

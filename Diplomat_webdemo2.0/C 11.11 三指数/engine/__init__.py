@@ -1,32 +1,14 @@
-"""外交谈判模拟器引擎包。"""
+"""外交谈判规则引擎。
 
-from .state import NegotiationState
-from .validator import ERRORS, EFFECT_LABELS, validate_action, validate_effect
-from .indices import (
-    EffectRejected,
-    apply_effects,
-    closeness,
-    compute_interest_delta,
-    replay_indices,
-    resolve_behavior_delta,
-    utility,
-)
-from .terminal import check_terminal, evaluate, evaluate_agreement
+只对外暴露 RulesEngine / load_scenario / TERMINAL_TYPES / TERMINAL_LABELS。
+"""
+
+from .core import RulesEngine, load_scenario
+from .terminal import TERMINAL_LABELS, TERMINAL_TYPES
 
 __all__ = [
-    "NegotiationState",
-    "ERRORS",
-    "EFFECT_LABELS",
-    "validate_action",
-    "validate_effect",
-    "EffectRejected",
-    "apply_effects",
-    "closeness",
-    "compute_interest_delta",
-    "replay_indices",
-    "resolve_behavior_delta",
-    "utility",
-    "check_terminal",
-    "evaluate",
-    "evaluate_agreement",
+    "RulesEngine",
+    "load_scenario",
+    "TERMINAL_TYPES",
+    "TERMINAL_LABELS",
 ]
