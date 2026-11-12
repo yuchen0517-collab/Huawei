@@ -1,2 +1,2 @@
 11.11 A写
-引擎收到了，20 条测试我跑过全绿，👍。发现行动类型命名有冲突：契约里是 conditional_exchange / walk_away / probe / statement，你引擎里是 conditional_swap / withdraw。请按照 action_schema.json 文件中的各类项目为准，不改名，麻烦你在引擎入口加个别名映射（walk_away→withdraw 等），probe/statement 按普通行动放行。action_schema.json已在分支中
+我的 API 错误格式定了：{"error": "错误码", "detail": "说明"}，错误码有 INVALID_ACTION / SESSION_BUSY / MODEL_UNAVAILABLE / ROUND_LOCKED 等。模型失败会诚实报错不会给假数据，前端的加载中、失败提示、重试按钮要覆盖这些情况。D：我的 API 会返回这些错误码（MODEL_UNAVAILABLE、SESSION_BUSY、INVALID_ACTION、ROUND_LOCKED……），你的网页要为每一种错误做好界面提示，而且要满足手册的 UI 验收标准：失败时保留用户已填的草稿，别让人重填；有重试按钮；重试不会重复提交同一行动
