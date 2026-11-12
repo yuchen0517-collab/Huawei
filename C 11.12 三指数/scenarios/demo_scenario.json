@@ -1,0 +1,116 @@
+{
+  "scenario_id": "ai-governance-2026",
+  "title": "全球人工智能治理框架谈判",
+  "scenario_type": "assumption",
+  "background": "双方就全球算力资源分配、前沿模型评测门槛与数据跨境流动三项议题展开双边谈判。",
+  "assumptions": [
+    "所有条款范围、权重、红线与 BATNA 均为教学假设，不代表任何国家的真实立场",
+    "参与方仅取两个，用于双边训练",
+    "初始方案是谈判起点，不代表任何现实中的既定安排"
+  ],
+  "max_rounds": 6,
+  "deadlock_rounds": 2,
+  "action_points_per_round": 3,
+  "parties": [
+    {
+      "id": "cn",
+      "name": "中国",
+      "role": "算力与数据治理主张方",
+      "batna": 45,
+      "private": {
+        "bottom_line": "可接受附带可核查机制的算力分配安排",
+        "notes": "不接受完全市场主导的分配方式。"
+      }
+    },
+    {
+      "id": "us",
+      "name": "美国",
+      "role": "技术领先与市场开放主张方",
+      "batna": 25,
+      "private": {
+        "bottom_line": "可接受附带可核查机制，但不接受完全自愿分享。",
+        "notes": "要求前沿模型评测门槛不高于 70。"
+      }
+    }
+  ],
+  "clauses": [
+    {
+      "name": "全球算力资源分配",
+      "type": "enum",
+      "options": [
+        {"id": "自愿分享", "score": {"cn": 0.90, "us": 0.15}},
+        {"id": "附带可核查机制", "score": {"cn": 0.45, "us": 0.85}},
+        {"id": "市场主导", "score": {"cn": 0.10, "us": 0.95}}
+      ],
+      "initial": "自愿分享",
+      "weights": {"cn": 0.40, "us": 0.35},
+      "redlines": {"cn": ["市场主导"], "us": ["自愿分享"]}
+    },
+    {
+      "name": "前沿模型评测门槛",
+      "type": "numeric",
+      "unit": "10^24 FLOP",
+      "range": [10, 100],
+      "initial": 30,
+      "weights": {"cn": 0.30, "us": 0.35},
+      "positions": {
+        "cn": {"ideal": 100, "redline": 20},
+        "us": {"ideal": 10, "redline": 70}
+      }
+    },
+    {
+      "name": "数据跨境流动",
+      "type": "enum",
+      "options": [
+        {"id": "自由流动", "score": {"cn": 0.05, "us": 0.95}},
+        {"id": "白名单互认", "score": {"cn": 0.85, "us": 0.10}},
+        {"id": "本地化存储", "score": {"cn": 0.95, "us": 0.05}}
+      ],
+      "initial": "白名单互认",
+      "weights": {"cn": 0.30, "us": 0.30},
+      "redlines": {"cn": ["自由流动"], "us": ["本地化存储"]}
+    }
+  ],
+  "index_rules": {
+    "scale": [0, 100],
+    "initial": {
+      "cn": {"image": 60, "trust": 45},
+      "us": {"image": 55, "trust": 40}
+    },
+    "sensitivity": {
+      "cn": {"image": 0.9, "trust": 1.2},
+      "us": {"image": 1.1, "trust": 0.9}
+    },
+    "image_actions": {
+      "constructive_proposal": {"slight": 2, "moderate": 3, "major": 5},
+      "cite_rules": {"slight": 1, "moderate": 2, "major": 3},
+      "hardline_stance": {"slight": -1, "moderate": -2, "major": -3},
+      "broken_promise": {"slight": -5, "moderate": -6, "major": -8},
+      "personal_attack": {"slight": -5, "moderate": -7, "major": -10},
+      "redline_provoke": {"slight": -3, "moderate": -4, "major": -5},
+      "procedural": {"slight": 0, "moderate": 0, "major": 1},
+      "diplomatic_reframe": {"slight": 3, "moderate": 4, "major": 5},
+      "protect_ally": {"slight": 1, "moderate": 2, "major": 3},
+      "keep_promise": {"slight": 1, "moderate": 2, "major": 3},
+      "betray_ally": {"slight": -4, "moderate": -5, "major": -7},
+      "vague_stance": {"slight": -1, "moderate": -2, "major": -3},
+      "conditional_concession": {"slight": 0, "moderate": 1, "major": 2}
+    },
+    "trust_actions": {
+      "constructive_proposal": {"slight": 1, "moderate": 2, "major": 3},
+      "cite_rules": {"slight": 1, "moderate": 2, "major": 3},
+      "hardline_stance": {"slight": 2, "moderate": 3, "major": 4},
+      "broken_promise": {"slight": -5, "moderate": -6, "major": -8},
+      "personal_attack": {"slight": -4, "moderate": -6, "major": -8},
+      "redline_provoke": {"slight": -1, "moderate": -2, "major": -2},
+      "procedural": {"slight": 0, "moderate": 0, "major": 1},
+      "diplomatic_reframe": {"slight": 2, "moderate": 3, "major": 4},
+      "protect_ally": {"slight": 3, "moderate": 4, "major": 6},
+      "keep_promise": {"slight": 2, "moderate": 3, "major": 4},
+      "betray_ally": {"slight": -5, "moderate": -7, "major": -10},
+      "vague_stance": {"slight": -2, "moderate": -3, "major": -4},
+      "conditional_concession": {"slight": 0, "moderate": 0, "major": 1}
+    }
+  },
+  "terminal_rules": {"accept_requires_no_open_issues": true}
+}
