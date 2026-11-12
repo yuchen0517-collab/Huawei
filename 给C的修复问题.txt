@@ -1,3 +1,52 @@
 11.11 A写
 引擎收到了，20 条测试我跑过全绿，👍。发现行动类型命名有冲突：契约里是 conditional_exchange / walk_away / probe / statement，你引擎里是 conditional_swap / withdraw。请按照 action_schema.json 文件中的各类项目为准，不改名，麻烦你在引擎入口加个别名映射（walk_away→withdraw 等），probe/statement 按普通行动放行。action_schema.json已在分支中
 对C任务：final_offer 出现了 2 次——手册规则是"声明最后报价后不得无限撤销"。模型先喊了一次"最后报价"，后来又喊了一次，严格说有点出尔反尔，在规则引擎里让 C 做拦截。
+
+11.12 A写 以下内容你可以直接当提示词复制给AI
+C，你交的三指数模块我跑过了，21 条测试全绿，状态契约、公开视图、
+回放审计都做得很好，这部分直接用，不用改。
+但有一个理解偏差需要对齐：你交的这份是"三指数结算模块"，
+不是分工手册第五章里的"规则引擎"本体。
+先说最重要的一件事：命名。
+【0. 命名以冻结契约为准，不要自己起名字】
+行动契约 action_schema.json 已经冻结，全项目只认这一套命名。
+你之前用的 conditional_swap、withdraw 请改掉，正确的是：
+  offer              报价
+  counter_offer      反报价
+  conditional_exchange  条件交换（不是 conditional_swap）
+  final_offer        最终报价
+  accept             接受
+  reject             拒绝
+  walk_away          退出谈判（不是 withdraw）
+  probe              试探
+  statement          立场声明
+条款修改的字段叫 offer_patch，只在 offer / counter_offer /
+conditional_exchange / final_offer 时出现，其他行动给空对象 {}。
+写代码前先对照契约文件，字段名一个字母都别自己改——
+契约改了要群里通知 A、C、D 并附迁移示例（手册 2.3）。
+
+然后是目前缺的部分（规则引擎要管"谈判桌上的事"）：
+
+【1. 报价流转】
+- 认识上面 9 种行动类型
+- 每次有效报价 current_version +1，形成版本链
+- 行动带 base_version 字段（乐观锁），和当前版本不一致就拒绝
+
+【2. 四个错误码】（手册 5.3 点名的，A 和 D 都在等这套码）
+- TERM_LOCKED：条款已锁定还想改 → 拒绝
+- VERSION_CONFLICT：base_version 对不上 → 拒绝
+- REDLINE_VIOLATION：报价越过场景里某方的 redline → 拒绝
+  （场景 JSON 里有 redline 字段，但现在引擎不检查它）
+- ACTION_POINT不足：行动点不够 → 拒绝
+【3. 评价对象补全】（手册契约 D）
+终局评价里加上：terminal_type、batna_comparison、redline_check，
+现在只有三指数输赢判定。
+【交付要求】
+- 目录放成 c/engine/，附一份 README.md 说明怎么调用，
+  docs/offer_version.md 说明报价版本规则
+- 保留你现在的三指数功能（state.py 的 indices、indices.py 整个、
+  terminal.py 的评价），在上面加报价规则，不要推倒重写
+- 测试继续全绿，新增的规则也要有测试
+- 附一个能跑的 demo_scenario.json（你现在这份就挺好，继续用）
+
+今天下午能给我吗？A 今天要把 api.py 对接上来，就等这个。
