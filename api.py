@@ -23,19 +23,30 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 BASE_DIR = Path(__file__).resolve().parent
-ENGINE_ROOT = BASE_DIR / "C 11.12 三指数"
+
+from load_scenario import ENGINE_ROOT, load_scenario, make_scenario
+
 if str(ENGINE_ROOT) not in sys.path:
     sys.path.insert(0, str(ENGINE_ROOT))
 
 from engine.core import RulesEngine
 from engine.state import NegotiationState, Offer
 from engine.validator import ERRORS as ENGINE_ERRORS
-from load_scenario import make_scenario
 
 SCENARIO_ID = "ai_governance"
 MY_ACTOR = "cn"
 IDENTITY_FIELDS = ("action_id", "actor", "card_id")
 ACTION_FIELDS = ("action_type", "offer_patch", "conditions", "expected_effect")
+OPTIONAL_ACTION_FIELDS = ("effect_labels",)
+
+
+def pick_action_fields(source: dict) -> dict:
+    """提取行动字段：必填字段必取，可选字段（effect_labels）有才带。"""
+    picked = {k: source[k] for k in ACTION_FIELDS}
+    for key in OPTIONAL_ACTION_FIELDS:
+        if source.get(key) is not None:
+            picked[key] = source[key]
+    return picked
 PUBLIC_STATE_KEYS = (
     "session_id", "round", "phase", "my_offer", "opponent_offer",
     "open_issues", "action_history", "status", "mode",
@@ -174,8 +185,16 @@ def project_state(rec: SessionRecord) -> dict:
 
 
 def create_session(req: "CreateSessionRequest") -> dict:
-    if req.scenario_id != SCENARIO_ID:
-        raise ApiError(400, "INVALID_SCENARIO", "scenario_id 仅支持 ai_governance。")
+    try:
+        scenario = load_scenario(req.scenario_path)
+    except (OSError, ValueError) as exc:
+        raise ApiError(400, "INVALID_SCENARIO", f"场景文件加载失败：{exc}")
+    scenario_id = scenario.get("scenario_id", SCENARIO_ID)
+    if req.scenario_id != scenario_id:
+        raise ApiError(
+            400, "INVALID_SCENARIO",
+            f"scenario_id 应为 {scenario_id!r}，收到 {req.scenario_id!r}。",
+        )
     agent = req.agent
     if agent != "us" or agent not in AGENTS or not isinstance(AGENTS.get(agent), dict):
         raise ApiError(400, "INVALID_AGENT", f"临时场景仅支持对手国家代码 'us'，收到 {agent!r}。")
@@ -186,7 +205,7 @@ def create_session(req: "CreateSessionRequest") -> dict:
         session_id = str(uuid.uuid4())
         while session_id in SESSIONS:
             session_id = str(uuid.uuid4())
-        engine = RulesEngine(make_scenario(), session_id)
+        engine = RulesEngine(scenario, session_id)
         runtime = RuntimeMetadata(
             messages=({"role": "system", "content": prompt},),
             offline_cursor=0,
@@ -194,7 +213,7 @@ def create_session(req: "CreateSessionRequest") -> dict:
         )
         rec = SessionRecord(
             session_id=session_id,
-            scenario_id=SCENARIO_ID,
+            scenario_id=scenario_id,
             my_actor=MY_ACTOR,
             opponent_actor=agent,
             mode=detect_mode(),
@@ -260,7 +279,7 @@ def adapt_client_action(payload: Any, rec: SessionRecord, action_id: str) -> tup
     flat["card_id"] = None
     check_flat_schema(flat)
     wrapped = {
-        "action": {k: flat[k] for k in ACTION_FIELDS},
+        "action": pick_action_fields(flat),
         "public_message": flat["public_message"],
     }
     warns = run_validate_action(wrapped)
@@ -282,7 +301,7 @@ def build_auto_action(rec: SessionRecord, next_round: int, action_id: str) -> tu
     }
     check_flat_schema(flat, opponent=True)
     wrapped = {
-        "action": {k: flat[k] for k in ACTION_FIELDS},
+        "action": pick_action_fields(flat),
         "public_message": flat["public_message"],
     }
     warns = run_validate_action(wrapped, opponent=True)
@@ -318,6 +337,8 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
     action.setdefault("conditions", [])
     action.setdefault("expected_effect", "")
     flat = {k: action.get(k) for k in IDENTITY_FIELDS + ACTION_FIELDS}
+    if action.get("effect_labels") is not None:
+        flat["effect_labels"] = action["effect_labels"]
     flat["public_message"] = obj.get("public_message")
     check_flat_schema(flat, opponent=True)
     try:
@@ -335,6 +356,8 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
         "expected_effect": checked_action["expected_effect"],
         "public_message": checked["public_message"].strip(),
     }
+    if checked_action.get("effect_labels") is not None:
+        opp_flat["effect_labels"] = checked_action["effect_labels"]
     return opp_flat, list(warns), checked
 
 
@@ -411,6 +434,7 @@ class CreateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scenario_id: str
     agent: str
+    scenario_path: str | None = None
 
 
 app = FastAPI(title="谈判 HTTP API")

@@ -2,19 +2,16 @@ import copy
 import importlib.util
 import json
 import sys
-from pathlib import Path
 
-from load_scenario import make_scenario
+from load_scenario import ENGINE_ROOT, make_scenario
 
-BASE_DIR = Path(__file__).resolve().parent
-ENGINE_ROOT = BASE_DIR / "C 11.12 三指数"
 if str(ENGINE_ROOT) not in sys.path:
     sys.path.insert(0, str(ENGINE_ROOT))
 
 from engine.core import RulesEngine
 from engine.state import NegotiationState, Offer
 
-HELPER_PATH = ENGINE_ROOT / "tests" / "__pycache__" / "__init__.cpython-312.pyc"
+HELPER_PATH = ENGINE_ROOT / "tests" / "__init__.py"
 SPEC = importlib.util.spec_from_file_location("c_flow_fixtures", HELPER_PATH)
 HELPERS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(HELPERS)
