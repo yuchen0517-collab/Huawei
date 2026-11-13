@@ -116,7 +116,12 @@ def determine_terminal_type(state, scenario: dict) -> Optional[str]:
     """优先级：agreement → walk_away → 已结束无协议 → 僵局 → 轮次耗尽。"""
     if state.agreement is not None:
         covered, missing = coverage(state.agreement.clauses, scenario)
-        return "FULL_AGREEMENT" if not missing else "PARTIAL_AGREEMENT"
+        if not missing:
+            return "FULL_AGREEMENT"
+        rules = scenario.get("terminal_rules", {}) or {}
+        if rules.get("partial_agreement_allowed", True) is False:
+            return "DEADLOCK"
+        return "PARTIAL_AGREEMENT"
 
     for event in state.public_events:
         if event.get("type") == "action" and event.get("action_type") == "walk_away":

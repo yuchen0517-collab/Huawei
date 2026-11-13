@@ -1,0 +1,186 @@
+{
+  "scenario_id": "scn_chip_001",
+  "title": "中美先进计算芯片出口管制与关键矿产交换",
+  "scenario_type": "hypothesis",
+  "background": "双方围绕先进制程出口许可范围、许可证有效期与争端解决渠道展开双边谈判。本场景为教学假设，不代表任何国家真实立场。",
+  "assumptions": [
+    {
+      "assumption_id": "A1",
+      "text": "双方均有达成有限安排的意愿，且愿意以书面条款固定让步。",
+      "reason": "为双边谈判提供可成交区间。",
+      "affects": ["export_license_scope", "license_validity_months"]
+    },
+    {
+      "assumption_id": "A2",
+      "text": "争端解决渠道的选择可以与实体条款分开谈。",
+      "reason": "使程序性议题成为可交换筹码。",
+      "affects": ["dispute_forum"]
+    }
+  ],
+  "parties": [
+    {
+      "party_id": "cn",
+      "name": "中华人民共和国",
+      "role_label": "中国代表团团长",
+      "public_position": "反对将出口管制扩大化，主张以可核查的多边规则处理分歧。"
+    },
+    {
+      "party_id": "us",
+      "name": "美利坚合众国",
+      "role_label": "美国代表团团长",
+      "public_position": "强调国家安全关切，要求保留必要的单边管制工具。"
+    }
+  ],
+  "issues": [
+    {
+      "issue_id": "export_license_scope",
+      "name": "受管制先进制程门槛",
+      "type": "numeric",
+      "unit": "nm",
+      "range": {"min": 7, "max": 28, "step": 1}
+    },
+    {
+      "issue_id": "license_validity_months",
+      "name": "逐案许可有效期",
+      "type": "numeric",
+      "unit": "月",
+      "range": {"min": 6, "max": 36, "step": 6}
+    },
+    {
+      "issue_id": "dispute_forum",
+      "name": "争端解决渠道",
+      "type": "enumerated",
+      "unit": "",
+      "options": [
+        {"option_id": "wto", "label": "世贸组织争端解决机制", "order": 1},
+        {"option_id": "bilateral", "label": "双边磋商机制", "order": 2},
+        {"option_id": "unilateral", "label": "单边国内法程序", "order": 3}
+      ]
+    }
+  ],
+  "public_facts": [
+    "双方上一轮磋商已就核查方式形成技术性共识。",
+    "现有临时安排将在本季度末到期。",
+    "两国产业界均公开呼吁降低不确定性。"
+  ],
+  "private_state_by_party": {
+    "cn": {
+      "goals": [
+        {
+          "issue_id": "export_license_scope",
+          "target": 28,
+          "weight": 0.4,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "target": 24,
+          "weight": 0.35,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "target": "wto",
+          "weight": 0.25,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "export_license_scope",
+          "op": "min",
+          "value": 14,
+          "hard": true,
+          "reason": "管制门槛不得低于 14nm，否则国内产业无法承受。"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "op": "min",
+          "value": 12,
+          "hard": true,
+          "reason": "许可有效期不得短于 12 个月。"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "op": "in",
+          "value": ["wto", "bilateral"],
+          "hard": true,
+          "reason": "不接受将争端交由对方单边国内法程序处理。"
+        }
+      ],
+      "batna": {
+        "utility": 30,
+        "description": "维持现有限制并加快国内替代。",
+        "basis": "产业备份产能可在两年内形成。"
+      },
+      "hidden_task": "在不公开承诺放弃反制的前提下，争取许可有效期不低于 24 个月。",
+      "priority_ranking": [
+        "export_license_scope",
+        "license_validity_months",
+        "dispute_forum"
+      ]
+    },
+    "us": {
+      "goals": [
+        {
+          "issue_id": "export_license_scope",
+          "target": 14,
+          "weight": 0.4,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "target": 12,
+          "weight": 0.35,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "target": "bilateral",
+          "weight": 0.25,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "export_license_scope",
+          "op": "max",
+          "value": 21,
+          "hard": true,
+          "reason": "管制门槛不得高于 21nm，否则安全关切无法覆盖。"
+        },
+        {
+          "issue_id": "license_validity_months",
+          "op": "max",
+          "value": 24,
+          "hard": true,
+          "reason": "许可有效期不得长于 24 个月。"
+        },
+        {
+          "issue_id": "dispute_forum",
+          "op": "in",
+          "value": ["bilateral", "unilateral"],
+          "hard": true,
+          "reason": "不接受把争端完全交由多边机制裁决。"
+        }
+      ],
+      "batna": {
+        "utility": 60,
+        "description": "维持现管制并联合盟友加码。",
+        "basis": "盟友协调机制已具备快速启动条件。"
+      },
+      "hidden_task": "在不公开承认管制失效的前提下，把许可有效期压到 12 个月。",
+      "priority_ranking": [
+        "export_license_scope",
+        "license_validity_months",
+        "dispute_forum"
+      ]
+    }
+  },
+  "max_rounds": 8,
+  "terminal_rules": {
+    "allow_walk_away": false,
+    "accept_requires_no_open_issue": true,
+    "partial_agreement_allowed": false
+  }
+}
