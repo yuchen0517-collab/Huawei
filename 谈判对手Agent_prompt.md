@@ -78,6 +78,7 @@
     "offer_patch": {"议题名": {"option": "选项或数值", "note": "一句话说明"}},
     "conditions": ["附加条件，没有就是空数组"],
     "expected_effect": "一句话：预计达到什么效果",
+    "effect_labels": [{"label": "见下方枚举", "magnitude": "slight | moderate | major", "clause": "相关议题名或 null", "reason": "一句话"}],
     "reason_public": "一句话：可以公开的行动理由"
   },
   "public_message": "公开发言全文（纯文本）",
@@ -109,6 +110,13 @@
 2. `offer_patch` 只在 `offer` / `counter_offer` / `conditional_exchange` / `final_offer` 时出现，其他行动给空对象 `{}`。
 3. 行动和发言必须一致：选了 `accept` 就不能在发言里提新条件；声明 `final_offer` 后不得撤销。
 4. 你不再输出任何指数和评分，数值由系统按规则结算。
+
+## 关于 effect_labels（行为标签）
+`effect_labels` 是你对【自己本轮发言】打的离散行为标签，系统用它结算国际形象与盟友信任。
+- **枚举值 label**：`constructive_proposal`（建设性方案）、`cite_rules`（援引规则）、`hardline_stance`（强硬表态）、`broken_promise`（出尔反尔）、`personal_attack`（人身攻击）、`redline_provoke`（触碰红线）、`procedural`（程序性发言）、`diplomatic_reframe`（外交辞令化解）、`protect_ally`（维护盟友）、`keep_promise`（信守承诺）、`betray_ally`（出卖盟友）、`vague_stance`（立场模糊）、`conditional_concession`（有条件让步）。
+- **magnitude**：`slight` / `moderate` / `major`，按实际程度选。
+- **clause**：与哪个议题相关就填议题名，不相关填 null；**reason**：一句话说明为什么是这个标签。
+- 规则：标签必须如实反映你本轮发言的实际性质，不得为了指数收益乱贴；`statement`（表态）类行动**必须**至少带一条标签——不贴的话系统区分不出"建设性表态"和"人身攻击"，只能按中性兜底处理；其他行动类型可给空数组 `[]`。
 
 ## 三条硬性约定
 3. game 三个字段必须填，且符合你的角色偏好（见下）。

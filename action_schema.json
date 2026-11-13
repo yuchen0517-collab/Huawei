@@ -87,6 +87,55 @@
       "public_message": {
         "type": "string",
         "description": "公开发言全文"
+      },
+      "effect_labels": {
+        "type": "array",
+        "description": "可选：本轮发言的离散行为标签，用于 Image/Trust 指数结算；不带时引擎走兜底推导",
+        "items": {
+          "type": "object",
+          "required": [
+            "label",
+            "magnitude"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "constructive_proposal",
+                "cite_rules",
+                "hardline_stance",
+                "broken_promise",
+                "personal_attack",
+                "redline_provoke",
+                "procedural",
+                "diplomatic_reframe",
+                "protect_ally",
+                "keep_promise",
+                "betray_ally",
+                "vague_stance",
+                "conditional_concession"
+              ]
+            },
+            "magnitude": {
+              "type": "string",
+              "enum": [
+                "slight",
+                "moderate",
+                "major"
+              ]
+            },
+            "clause": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
       }
     },
     "allOf": [

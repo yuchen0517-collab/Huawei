@@ -581,6 +581,48 @@ def test_exact_eight_fields_forwarded_without_extensions(monkeypatch):
         assert "effect_labels" not in action
 
 
+def test_effect_labels_forwarded_when_present(monkeypatch):
+    sid = new_session()
+    captured = []
+    original = api.submit_engine_action
+
+    def spy(engine, flat):
+        captured.append(copy.deepcopy(flat))
+        return original(engine, flat)
+
+    monkeypatch.setattr(api, "submit_engine_action", spy)
+    labels = [
+        {
+            "label": "constructive_proposal",
+            "magnitude": "moderate",
+            "clause": "全球算力资源分配",
+            "reason": "本轮提出了附带可核查机制的分配方案。",
+        }
+    ]
+    payload = dict(VALID_OFFER, effect_labels=labels)
+    resp = client.post(f"/session/{sid}/action", json=payload)
+    assert resp.status_code == 200
+    assert captured[0]["effect_labels"] == labels
+    assert "effect_labels" not in captured[1]
+
+
+def test_effect_labels_invalid_rejected():
+    sid = new_session()
+    bad = [
+        {
+            "label": "not_a_real_label",
+            "magnitude": "moderate",
+            "clause": None,
+            "reason": "非法枚举值应被 schema 拦截。",
+        }
+    ]
+    resp = client.post(
+        f"/session/{sid}/action", json=dict(VALID_OFFER, effect_labels=bad)
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "INVALID_ACTION"
+
+
 def test_next_round_called_once(monkeypatch):
     sid = new_session()
     calls = []
