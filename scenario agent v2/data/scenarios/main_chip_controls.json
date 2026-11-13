@@ -1,5 +1,5 @@
 {
-  "scenario_id": "scn_chip_001",
+  "scenario_id": "scn-chip-controls-0001",
   "title": "中美先进计算芯片出口管制与关键矿产交换",
   "scenario_type": "hypothesis",
   "background": "两国就先进计算芯片的出口许可条件长期僵持。美方以国家安全为由限制高算力芯片对华出口，并对经第三国转口设置审查；中方则以关键矿产（稀土、镓、锗）出口许可作为对等筹码。双方均表示愿意谈，但都不接受先单方面让步。本轮为封闭式双边磋商，议题限定在许可门槛、审批时限、转口限制与关键矿产安排四项。",
@@ -8,19 +8,26 @@
       "assumption_id": "A1",
       "text": "假定中方国产替代可在两年内部分补足中端算力，使其谈不成时不至于完全被动。",
       "reason": "否则中方 BATNA 过低，会谈在任何报价下都只能接受，失去训练意义。",
-      "affects": ["I1"]
+      "affects": [
+        "I1"
+      ]
     },
     {
       "assumption_id": "A2",
       "text": "假定美方在关键矿产议题上的可接受下限为「民用快速通道 + 终端用途承诺」，即选项 O2。",
       "reason": "现实中美方公开坚持第三方核查（O3），本场景为制造可成交区间而下调其底线，属教学假设。",
-      "affects": ["I4"]
+      "affects": [
+        "I4"
+      ]
     },
     {
       "assumption_id": "A3",
       "text": "本场景为双边简化，只保留中美两个主体，第三方盟友与多边机制的立场不予建模。",
       "reason": "本轮范围冻结为双边谈判，多边重构不在范围内。",
-      "affects": ["I3", "I4"]
+      "affects": [
+        "I3",
+        "I4"
+      ]
     }
   ],
   "parties": [
@@ -40,10 +47,14 @@
   "issues": [
     {
       "issue_id": "I1",
-      "name": "可获许可的先进计算芯片算力门槛",
+      "name": "芯片算力门槛",
       "type": "numeric",
       "unit": "TFLOPS(FP16)",
-      "range": { "min": 100, "max": 5000, "step": 100 },
+      "range": {
+        "min": 100,
+        "max": 5000,
+        "step": 100
+      },
       "description": "低于该门槛的芯片可获出口许可。数值越高，中方能拿到的芯片越强；美方则希望压低以维持管制效力。现状 800。"
     },
     {
@@ -51,7 +62,11 @@
       "name": "许可审批时限",
       "type": "numeric",
       "unit": "天",
-      "range": { "min": 15, "max": 180, "step": 15 },
+      "range": {
+        "min": 15,
+        "max": 180,
+        "step": 15
+      },
       "description": "单笔出口许可的法定审批时限上限。天数越短对中方越有利，越长对美方越有利。现状 120 天。"
     },
     {
@@ -60,23 +75,55 @@
       "type": "enumerated",
       "unit": "",
       "options": [
-        { "option_id": "O1", "label": "仅需终端用户声明", "order": 1 },
-        { "option_id": "O2", "label": "仅对实体清单对象要求许可", "order": 2 },
-        { "option_id": "O3", "label": "第三国再出口一律事前许可", "order": 3 },
-        { "option_id": "O4", "label": "禁止经第三国转口", "order": 4 }
+        {
+          "option_id": "O1",
+          "label": "仅需终端用户声明",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "仅对实体清单对象要求许可",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "第三国再出口一律事前许可",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "禁止经第三国转口",
+          "order": 4
+        }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
     },
     {
       "issue_id": "I4",
-      "name": "关键矿产（稀土·镓·锗）出口安排",
+      "name": "关键矿产出口安排",
       "type": "enumerated",
       "unit": "",
       "options": [
-        { "option_id": "O1", "label": "维持现行出口许可制度", "order": 1 },
-        { "option_id": "O2", "label": "对民用终端设 30 天快速通道", "order": 2 },
-        { "option_id": "O3", "label": "设年度配额并接受第三方核查", "order": 3 },
-        { "option_id": "O4", "label": "取消出口许可", "order": 4 }
+        {
+          "option_id": "O1",
+          "label": "维持现行出口许可制度",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "对民用终端设 30 天快速通道",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "设年度配额并接受第三方核查",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "取消出口许可",
+          "order": 4
+        }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
     }
@@ -92,7 +139,9 @@
         "published_at": "2024-12-03",
         "confidence": "A"
       },
-      "applies_to": ["I1"]
+      "applies_to": [
+        "I1"
+      ]
     },
     {
       "fact_id": "CN-05",
@@ -104,7 +153,9 @@
         "published_at": "2025-10-09",
         "confidence": "A"
       },
-      "applies_to": ["I4"]
+      "applies_to": [
+        "I4"
+      ]
     },
     {
       "fact_id": "CN-06",
@@ -116,7 +167,9 @@
         "published_at": "2025-09-13",
         "confidence": "A"
       },
-      "applies_to": ["I1"]
+      "applies_to": [
+        "I1"
+      ]
     },
     {
       "fact_id": "CN-11",
@@ -128,7 +181,9 @@
         "published_at": "2026-06-30",
         "confidence": "A"
       },
-      "applies_to": ["I1"]
+      "applies_to": [
+        "I1"
+      ]
     },
     {
       "fact_id": "US-01",
@@ -140,7 +195,9 @@
         "published_at": "2023-10-17",
         "confidence": "A"
       },
-      "applies_to": ["I1"]
+      "applies_to": [
+        "I1"
+      ]
     },
     {
       "fact_id": "US-04",
@@ -152,7 +209,10 @@
         "published_at": "2025-05-13",
         "confidence": "A"
       },
-      "applies_to": ["I2", "I3"]
+      "applies_to": [
+        "I2",
+        "I3"
+      ]
     },
     {
       "fact_id": "US-05",
@@ -164,7 +224,10 @@
         "published_at": "2026-01-15",
         "confidence": "A"
       },
-      "applies_to": ["I1", "I2"]
+      "applies_to": [
+        "I1",
+        "I2"
+      ]
     },
     {
       "fact_id": "US-09",
@@ -176,22 +239,75 @@
         "published_at": "2025-09-02",
         "confidence": "A"
       },
-      "applies_to": ["I2", "I3"]
+      "applies_to": [
+        "I2",
+        "I3"
+      ]
     }
   ],
   "private_state_by_party": {
     "P1": {
       "goals": [
-        { "issue_id": "I1", "target": 1500, "weight": 0.35, "direction": "higher_better" },
-        { "issue_id": "I2", "target": 30, "weight": 0.20, "direction": "lower_better" },
-        { "issue_id": "I3", "target": "O2", "weight": 0.15, "direction": "ranked" },
-        { "issue_id": "I4", "target": "O1", "weight": 0.30, "direction": "ranked" }
+        {
+          "issue_id": "I1",
+          "target": 1500,
+          "weight": 0.35,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": 30,
+          "weight": 0.2,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I3",
+          "target": "O2",
+          "weight": 0.15,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O1",
+          "weight": 0.3,
+          "direction": "ranked"
+        }
       ],
       "redlines": [
-        { "issue_id": "I1", "op": "min", "value": 800, "hard": true, "reason": "不得低于现行 800 TFLOPS 的可获许可线，否则产业侧无法交代" },
-        { "issue_id": "I4", "op": "in", "value": ["O1", "O2"], "hard": true, "reason": "不接受第三方核查（O3）与取消出口许可（O4）" },
-        { "issue_id": "I2", "op": "max", "value": 90, "hard": false, "reason": "审批时限超过 90 天将实质阻断交付" },
-        { "issue_id": "I3", "op": "in", "value": ["O1", "O2"], "hard": false, "reason": "不接受一律事前许可及转口禁令" }
+        {
+          "issue_id": "I1",
+          "op": "min",
+          "value": 800,
+          "hard": true,
+          "reason": "不得低于现行 800 TFLOPS 的可获许可线，否则产业侧无法交代"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O1",
+            "O2"
+          ],
+          "hard": true,
+          "reason": "不接受第三方核查（O3）与取消出口许可（O4）"
+        },
+        {
+          "issue_id": "I2",
+          "op": "max",
+          "value": 90,
+          "hard": false,
+          "reason": "审批时限超过 90 天将实质阻断交付"
+        },
+        {
+          "issue_id": "I3",
+          "op": "in",
+          "value": [
+            "O1",
+            "O2"
+          ],
+          "hard": false,
+          "reason": "不接受一律事前许可及转口禁令"
+        }
       ],
       "batna": {
         "utility": 40,
@@ -199,20 +315,77 @@
         "basis": "假设 A1；公开事实 CN-11 显示国内智算规模仍在快速增长"
       },
       "hidden_task": "把第三国转口条款的讨论拖到关键矿产安排之后，用矿产让步换许可门槛",
-      "priority_ranking": ["I1", "I4", "I2", "I3"]
+      "priority_ranking": [
+        "I1",
+        "I4",
+        "I2",
+        "I3"
+      ]
     },
     "P2": {
       "goals": [
-        { "issue_id": "I1", "target": 800, "weight": 0.25, "direction": "lower_better" },
-        { "issue_id": "I2", "target": 150, "weight": 0.15, "direction": "higher_better" },
-        { "issue_id": "I3", "target": "O3", "weight": 0.30, "direction": "ranked" },
-        { "issue_id": "I4", "target": "O3", "weight": 0.30, "direction": "ranked" }
+        {
+          "issue_id": "I1",
+          "target": 800,
+          "weight": 0.25,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": 150,
+          "weight": 0.15,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I3",
+          "target": "O3",
+          "weight": 0.3,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O3",
+          "weight": 0.3,
+          "direction": "ranked"
+        }
       ],
       "redlines": [
-        { "issue_id": "I3", "op": "in", "value": ["O2", "O3", "O4"], "hard": true, "reason": "不接受仅凭终端用户声明的转口安排（O1）" },
-        { "issue_id": "I1", "op": "max", "value": 1500, "hard": false, "reason": "门槛高于 1500 将使管制失去实质意义" },
-        { "issue_id": "I4", "op": "in", "value": ["O2", "O3", "O4"], "hard": false, "reason": "希望有可核查安排，但快速通道加用途承诺（O2）可接受" },
-        { "issue_id": "I2", "op": "min", "value": 60, "hard": false, "reason": "审批时限短于 60 天将无法完成必要的安全审查" }
+        {
+          "issue_id": "I3",
+          "op": "in",
+          "value": [
+            "O2",
+            "O3",
+            "O4"
+          ],
+          "hard": true,
+          "reason": "不接受仅凭终端用户声明的转口安排（O1）"
+        },
+        {
+          "issue_id": "I1",
+          "op": "max",
+          "value": 1500,
+          "hard": false,
+          "reason": "门槛高于 1500 将使管制失去实质意义"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O2",
+            "O3",
+            "O4"
+          ],
+          "hard": false,
+          "reason": "希望有可核查安排，但快速通道加用途承诺（O2）可接受"
+        },
+        {
+          "issue_id": "I2",
+          "op": "min",
+          "value": 60,
+          "hard": false,
+          "reason": "审批时限短于 60 天将无法完成必要的安全审查"
+        }
       ],
       "batna": {
         "utility": 35,
@@ -220,7 +393,12 @@
         "basis": "公开事实 US-09：VEU 授权已撤销，对华出口须逐案许可"
       },
       "hidden_task": "把稀土议题与芯片许可解耦，避免形成对等交换的先例",
-      "priority_ranking": ["I3", "I4", "I1", "I2"]
+      "priority_ranking": [
+        "I3",
+        "I4",
+        "I1",
+        "I2"
+      ]
     }
   },
   "max_rounds": 8,

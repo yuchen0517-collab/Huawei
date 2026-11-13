@@ -1,0 +1,421 @@
+{
+  "scenario_id": "scn-chip-controls-nozopa-0001",
+  "title": "中美先进计算芯片出口管制与关键矿产交换（无合作区间变体）",
+  "scenario_type": "hypothesis",
+  "background": "两国就先进计算芯片的出口许可条件长期僵持。美方以国家安全为由限制高算力芯片对华出口，并对经第三国转口设置审查；中方则以关键矿产（稀土、镓、锗）出口许可作为对等筹码。双方均表示愿意谈，但都不接受先单方面让步。本轮为封闭式双边磋商，议题限定在许可门槛、审批时限、转口限制与关键矿产安排四项。",
+  "assumptions": [
+    {
+      "assumption_id": "A1",
+      "text": "假定中方国产替代可在两年内部分补足中端算力，使其谈不成时不至于完全被动。",
+      "reason": "否则中方 BATNA 过低，会谈在任何报价下都只能接受，失去训练意义。",
+      "affects": [
+        "I1"
+      ]
+    },
+    {
+      "assumption_id": "A2",
+      "text": "假定美方在关键矿产议题上的可接受下限为「民用快速通道 + 终端用途承诺」，即选项 O2。",
+      "reason": "现实中美方公开坚持第三方核查（O3），本场景为制造可成交区间而下调其底线，属教学假设。",
+      "affects": [
+        "I4"
+      ]
+    },
+    {
+      "assumption_id": "A3",
+      "text": "本场景为双边简化，只保留中美两个主体，第三方盟友与多边机制的立场不予建模。",
+      "reason": "本轮范围冻结为双边谈判，多边重构不在范围内。",
+      "affects": [
+        "I3",
+        "I4"
+      ]
+    },
+    {
+      "assumption_id": "A4",
+      "text": "本变体故意把关键矿产议题的双方硬红线设为互斥，用于测试规则引擎的僵局判定与理性退出。",
+      "reason": "手册 4.1 要求同一议题至少存在「可谈判」与「无合作区间」两类测试结果。",
+      "affects": [
+        "I4"
+      ]
+    }
+  ],
+  "parties": [
+    {
+      "party_id": "P1",
+      "name": "中方（商务部·工信部）",
+      "role_label": "我方",
+      "public_position": "反对泛化国家安全概念、滥用出口管制；主张提高可获许可的先进计算芯片算力门槛；主张维持关键矿产出口的现行许可制度，不接受第三方核查。"
+    },
+    {
+      "party_id": "P2",
+      "name": "美方（商务部 BIS）",
+      "role_label": "对方",
+      "public_position": "以国家安全为由管制先进计算半导体，防止先进算力经第三国转口规避管制；关注关键矿产供应的稳定性与终端用途。"
+    }
+  ],
+  "issues": [
+    {
+      "issue_id": "I1",
+      "name": "芯片算力门槛",
+      "type": "numeric",
+      "unit": "TFLOPS(FP16)",
+      "range": {
+        "min": 100,
+        "max": 5000,
+        "step": 100
+      },
+      "description": "低于该门槛的芯片可获出口许可。数值越高，中方能拿到的芯片越强；美方则希望压低以维持管制效力。现状 800。"
+    },
+    {
+      "issue_id": "I2",
+      "name": "许可审批时限",
+      "type": "numeric",
+      "unit": "天",
+      "range": {
+        "min": 15,
+        "max": 180,
+        "step": 15
+      },
+      "description": "单笔出口许可的法定审批时限上限。天数越短对中方越有利，越长对美方越有利。现状 120 天。"
+    },
+    {
+      "issue_id": "I3",
+      "name": "第三国再出口限制",
+      "type": "enumerated",
+      "unit": "",
+      "options": [
+        {
+          "option_id": "O1",
+          "label": "仅需终端用户声明",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "仅对实体清单对象要求许可",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "第三国再出口一律事前许可",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "禁止经第三国转口",
+          "order": 4
+        }
+      ],
+      "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
+    },
+    {
+      "issue_id": "I4",
+      "name": "关键矿产出口安排",
+      "type": "enumerated",
+      "unit": "",
+      "options": [
+        {
+          "option_id": "O1",
+          "label": "维持现行出口许可制度",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "对民用终端设 30 天快速通道",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "设年度配额并接受第三方核查",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "取消出口许可",
+          "order": 4
+        }
+      ],
+      "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
+    }
+  ],
+  "public_facts": [
+    {
+      "fact_id": "CN-02",
+      "text": "中方坚决反对美方泛化国家安全概念、滥用出口管制，将采取坚决措施维护中国企业正当合法权益",
+      "type": "立场",
+      "source": {
+        "name": "人民日报（外交部发言人林剑）",
+        "url": "http://paper.people.com.cn/zgnyb/pc/content/202412/09/content_30046238.html",
+        "published_at": "2024-12-03",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "CN-05",
+      "text": "商务部公告2025第61号：对境外相关稀土物项实施出口管制，用于14nm及以下逻辑芯片的申请逐案审批",
+      "type": "行动",
+      "source": {
+        "name": "商务部",
+        "url": "https://www.mofcom.gov.cn/zfxxgk/gkml/art/2025/art_439da9350b8d439cba2b9f0ed57a1de6.html",
+        "published_at": "2025-10-09",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I4"
+      ]
+    },
+    {
+      "fact_id": "CN-06",
+      "text": "商务部就美国对华集成电路措施发起反歧视立案调查（公告2025年第50号）",
+      "type": "行动",
+      "source": {
+        "name": "商务部",
+        "url": "https://www.mofcom.gov.cn/zcfb/blgg/gg/2025/art/2025/art_135b05aa9ee34123a210e392797e1e54.html",
+        "published_at": "2025-09-13",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "CN-11",
+      "text": "截至2026年6月底，中国智能算力规模达2185 EFLOPS（FP16），同比增长177%",
+      "type": "数字",
+      "source": {
+        "name": "工信部/国新办",
+        "url": "https://www.gov.cn/lianbo/202607/content_7076114.htm",
+        "published_at": "2026-06-30",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "US-01",
+      "text": "BIS以保护国家安全为由管制先进计算半导体，聚焦「军事用途」及中国「军民融合」威胁",
+      "type": "立场",
+      "source": {
+        "name": "美国商务部工业和安全局 BIS",
+        "url": "https://www.bis.gov/press-release/commerce-strengthens-restrictions-advanced-computing-semiconductors-semiconductor-manufacturing-equipment",
+        "published_at": "2023-10-17",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "US-04",
+      "text": "BIS启动撤销拜登《AI扩散规则》，改为逐案许可并加强全球芯片出口管制",
+      "type": "行动",
+      "source": {
+        "name": "美国商务部工业和安全局 BIS",
+        "url": "https://www.bis.gov/press-release/department-commerce-announces-recission-biden-era-artificial-intelligence-diffusion-rule-strengthens-chip",
+        "published_at": "2025-05-13",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I2",
+        "I3"
+      ]
+    },
+    {
+      "fact_id": "US-05",
+      "text": "BIS修订对华芯片许可政策，将英伟达H200等从「推定拒绝」改为满足安全条件的逐案审查",
+      "type": "行动",
+      "source": {
+        "name": "美国商务部工业和安全局 BIS",
+        "url": "https://www.bis.gov/press-release/department-commerce-revises-license-review-policy-semiconductors-exported-china",
+        "published_at": "2026-01-15",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1",
+        "I2"
+      ]
+    },
+    {
+      "fact_id": "US-09",
+      "text": "BIS撤销三星中国、SK海力士中国、英特尔大连的VEU授权，对华出口须逐案许可",
+      "type": "行动",
+      "source": {
+        "name": "美国商务部 BIS",
+        "url": "https://www.federalregister.gov/documents/2025/09/02/2025-16735/revocation-of-validated-end-user-authorizations-in-the-peoples-republic-of-china",
+        "published_at": "2025-09-02",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I2",
+        "I3"
+      ]
+    }
+  ],
+  "private_state_by_party": {
+    "P1": {
+      "goals": [
+        {
+          "issue_id": "I1",
+          "target": 1500,
+          "weight": 0.35,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": 30,
+          "weight": 0.2,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I3",
+          "target": "O2",
+          "weight": 0.15,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O1",
+          "weight": 0.3,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "I1",
+          "op": "min",
+          "value": 800,
+          "hard": true,
+          "reason": "不得低于现行 800 TFLOPS 的可获许可线，否则产业侧无法交代"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O1"
+          ],
+          "hard": true,
+          "reason": "【变体】不接受任何形式的快速通道或核查安排，只维持现行制度"
+        },
+        {
+          "issue_id": "I2",
+          "op": "max",
+          "value": 90,
+          "hard": false,
+          "reason": "审批时限超过 90 天将实质阻断交付"
+        },
+        {
+          "issue_id": "I3",
+          "op": "in",
+          "value": [
+            "O1",
+            "O2"
+          ],
+          "hard": false,
+          "reason": "不接受一律事前许可及转口禁令"
+        }
+      ],
+      "batna": {
+        "utility": 40,
+        "description": "维持现状并加速国产替代：先进算力短期缺口扩大，但关键矿产杠杆仍在自己手上。",
+        "basis": "假设 A1；公开事实 CN-11 显示国内智算规模仍在快速增长"
+      },
+      "hidden_task": "把第三国转口条款的讨论拖到关键矿产安排之后，用矿产让步换许可门槛",
+      "priority_ranking": [
+        "I1",
+        "I4",
+        "I2",
+        "I3"
+      ]
+    },
+    "P2": {
+      "goals": [
+        {
+          "issue_id": "I1",
+          "target": 800,
+          "weight": 0.25,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": 150,
+          "weight": 0.15,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I3",
+          "target": "O3",
+          "weight": 0.3,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O3",
+          "weight": 0.3,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "I3",
+          "op": "in",
+          "value": [
+            "O2",
+            "O3",
+            "O4"
+          ],
+          "hard": true,
+          "reason": "不接受仅凭终端用户声明的转口安排（O1）"
+        },
+        {
+          "issue_id": "I1",
+          "op": "max",
+          "value": 1500,
+          "hard": false,
+          "reason": "门槛高于 1500 将使管制失去实质意义"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O3",
+            "O4"
+          ],
+          "hard": true,
+          "reason": "【变体】快速通道无法验证终端用途，必须配额核查或取消许可"
+        },
+        {
+          "issue_id": "I2",
+          "op": "min",
+          "value": 60,
+          "hard": false,
+          "reason": "审批时限短于 60 天将无法完成必要的安全审查"
+        }
+      ],
+      "batna": {
+        "utility": 35,
+        "description": "维持现管制且不达成交换：关键矿产供应继续面临逐案审批的不确定性。",
+        "basis": "公开事实 US-09：VEU 授权已撤销，对华出口须逐案许可"
+      },
+      "hidden_task": "把稀土议题与芯片许可解耦，避免形成对等交换的先例",
+      "priority_ranking": [
+        "I3",
+        "I4",
+        "I1",
+        "I2"
+      ]
+    }
+  },
+  "max_rounds": 8,
+  "terminal_rules": {
+    "allow_walk_away": true,
+    "accept_requires_no_open_issue": true,
+    "partial_agreement_allowed": true
+  },
+  "negotiability": {
+    "verdict": "needs_narrowing",
+    "zopa_exists": false,
+    "notes": "I4 关键矿产议题双方硬红线无交集（中方只接受 O1，美方只接受 O3/O4），预期终局为僵局终止或主动退出；其余三个议题仍有交集，可观察规则引擎是否给出部分协议。"
+  }
+}
