@@ -40,11 +40,19 @@ HEADER_ALIASES: dict[str, tuple[str, ...]] = {
     "note": ("备注",),
 }
 
+<<<<<<< Updated upstream
 _STAGE_PATTERN = re.compile(r"P\d+(?:｜[^，。；;]*)?")
 
 __all__ = [
     "FactCardBundle", "load_factcard_file", "load_factcards", "load_factcard_files",
     "to_public_facts", "to_public_fact_models", "build_index", "write_index", "PARTY_CODE",
+=======
+_STAGE_PATTERN = re.compile(r"P\d")
+
+__all__ = [
+    "FactCardBundle", "load_factcard_file", "load_factcards",
+    "to_public_facts", "build_index", "write_index", "PARTY_CODE",
+>>>>>>> Stashed changes
 ]
 
 
@@ -140,10 +148,15 @@ def _text(value: Any) -> str:
     return str(value).strip()
 
 
+<<<<<<< Updated upstream
 def _party_of(sheet_title: str, party_map: Mapping[str, str] | None = None) -> str:
     prefix = sheet_title.split(SHEET_SUFFIX)[0].strip()
     if party_map and prefix in party_map:
         return party_map[prefix]
+=======
+def _party_of(sheet_title: str) -> str:
+    prefix = sheet_title.split(SHEET_SUFFIX)[0].strip()
+>>>>>>> Stashed changes
     return PARTY_CODE.get(prefix, prefix.lower())
 
 
@@ -156,10 +169,14 @@ def _iter_data_rows(ws, header_row: int):
         yield row
 
 
+<<<<<<< Updated upstream
 def load_factcard_file(
     path: str | Path,
     party_map: Mapping[str, str] | None = None,
 ) -> FactCardBundle:
+=======
+def load_factcard_file(path: str | Path) -> FactCardBundle:
+>>>>>>> Stashed changes
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"事实卡文件不存在：{path}")
@@ -176,7 +193,11 @@ def load_factcard_file(
 
         for title in titles:
             sheet = workbook[title]
+<<<<<<< Updated upstream
             party = _party_of(title, party_map)
+=======
+            party = _party_of(title)
+>>>>>>> Stashed changes
             located = _map_header(sheet)
             if located is None:
                 bundle.warnings.append(f"{title}：找不到表头（需要含「编号」「内容」列）")
@@ -254,6 +275,7 @@ def load_factcard_file(
     return bundle
 
 
+<<<<<<< Updated upstream
 def load_factcards(
     path: str | Path,
     party_map: Mapping[str, str] | None = None,
@@ -273,6 +295,12 @@ def load_factcard_files(
     merged = FactCardBundle()
     for item in paths:
         merged.merge(load_factcard_file(item, party_map))
+=======
+def load_factcards(paths: Iterable[str | Path]) -> FactCardBundle:
+    merged = FactCardBundle()
+    for item in paths:
+        merged.merge(load_factcard_file(item))
+>>>>>>> Stashed changes
     merged.stats = merged.summary()
     return merged
 
@@ -296,12 +324,15 @@ def to_public_facts(
     return result
 
 
+<<<<<<< Updated upstream
 def to_public_fact_models(facts: Iterable[Mapping[str, Any]]) -> list[Any]:
     from agent.scenario.models import PublicFact
 
     return [PublicFact.from_dict(fact) for fact in facts]
 
 
+=======
+>>>>>>> Stashed changes
 def build_index(bundle: FactCardBundle) -> dict[str, Any]:
     by_party: dict[str, list[str]] = {}
     by_type: dict[str, list[str]] = {}
