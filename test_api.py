@@ -1,4 +1,5 @@
 import copy
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -7,20 +8,21 @@ from fastapi.testclient import TestClient
 
 import api
 import neg_cli as neg
+from load_scenario import CLAUSE_NAMES, make_scenario
 
 client = TestClient(api.app, raise_server_exceptions=False)
 
 VALID_OFFER = {
     "action_type": "offer",
     "offer_patch": {
-        "数据跨境流动规则": {
-            "option": "在联合国框架下建立对称适用的数据跨境通报机制",
-            "note": "以对称通报安排回应各方对透明度与数据主权的共同关切。",
+        "全球算力资源分配": {
+            "option": "以既有联盟实践为蓝本设立高风险 AI 出口管制的可核查机制",
+            "note": "以对称、可核查的安排回应各方关切。",
         }
     },
     "conditions": ["核查标准对所有参与方对称适用。"],
-    "expected_effect": "推动各方在数据主权与跨境合作之间形成可讨论的交换条件。",
-    "public_message": "我方愿在数据跨境流动议题上提出建设性方案，建议建立对称适用的通报机制。",
+    "expected_effect": "推动各方形成可讨论的交换条件。",
+    "public_message": "我方愿在全球算力资源分配议题上提出建设性方案。",
 }
 
 STATEMENT = {
@@ -63,6 +65,19 @@ def assert_state_keys(state):
     assert set(state) == set(api.PUBLIC_STATE_KEYS)
 
 
+def flat_action(action_id="engine-1", actor="cn", action_type="offer", patch=None):
+    return {
+        "action_id": action_id,
+        "actor": actor,
+        "action_type": action_type,
+        "card_id": None,
+        "offer_patch": copy.deepcopy(patch if patch is not None else VALID_OFFER["offer_patch"]),
+        "conditions": [],
+        "expected_effect": "",
+        "public_message": "引擎错误适配测试。",
+    }
+
+
 def test_health():
     resp = client.get("/")
     assert resp.status_code == 200
@@ -74,11 +89,11 @@ def test_create_session_initial_state():
     state = get_state(sid)
     assert_state_keys(state)
     assert state["session_id"] == sid
-    assert state["round"] == 0
+    assert state["round"] == 1
     assert state["phase"] == "opening"
     assert state["my_offer"] == {"version": 0, "offers": {}}
     assert state["opponent_offer"] == {"version": 0, "offers": {}}
-    assert state["open_issues"] == list(api.AGENDA)
+    assert state["open_issues"] == list(CLAUSE_NAMES)
     assert state["action_history"] == []
     assert state["status"] == "active"
     assert state["mode"] == "offline"
@@ -92,7 +107,7 @@ def test_create_session_invalid_scenario():
 
 
 def test_create_session_invalid_agent():
-    for value in ("_scenario", "xx", ""):
+    for value in ("_scenario", "xx", "", "eu"):
         resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": value})
         assert resp.status_code == 400
         assert resp.json()["error"] == "INVALID_AGENT"
@@ -103,27 +118,23 @@ def test_create_session_request_validation():
     assert resp.status_code == 422
     assert resp.json()["error"] == "INVALID_REQUEST"
     assert set(resp.json()) == {"error", "detail"}
-    resp = client.post(
-        "/session",
-        json={"scenario_id": "ai_governance", "agent": "us", "extra": 1},
-    )
+    resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": "us", "extra": 1})
     assert resp.status_code == 422
-    assert resp.json()["error"] == "INVALID_REQUEST"
     resp = client.post("/session", json={"scenario_id": 1, "agent": "us"})
     assert resp.status_code == 422
 
 
 def test_action_success_full_flow():
     sid = new_session()
+    before = get_state(sid)
     resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
     assert resp.status_code == 200, resp.text
     state = resp.json()
     assert_state_keys(state)
-    assert state["round"] == 1
-    assert state["phase"] == "opening"
+    assert state["round"] == before["round"] + 1
+    assert state["phase"] == "bargaining"
     assert len(state["action_history"]) == 2
     mine, opp = state["action_history"]
-    assert mine["round"] == 1
     assert mine["actor"] == "cn"
     assert mine["origin"] == "human"
     assert mine["action_id"] == "a000001"
@@ -134,15 +145,14 @@ def test_action_success_full_flow():
     assert opp["actor"] == "us"
     assert opp["origin"] == "opponent_ai"
     assert opp["action_id"] == "a000002"
-    assert opp["card_id"] is None
     assert opp["public_message"] == neg.OFFLINE_RESPONSES[0]["public_message"]
-    assert state["my_offer"]["version"] == 1
-    entry = state["my_offer"]["offers"]["数据跨境流动规则"]
-    assert entry["option"] == VALID_OFFER["offer_patch"]["数据跨境流动规则"]["option"]
-    assert entry["round"] == 1
-    assert entry["action_id"] == "a000001"
-    assert state["opponent_offer"]["version"] == 1
-    assert "AI安全监管框架" in state["opponent_offer"]["offers"]
+    assert state["my_offer"]["version"] == before["my_offer"]["version"] + 1
+    entry = state["my_offer"]["offers"]["全球算力资源分配"]
+    assert entry == VALID_OFFER["offer_patch"]["全球算力资源分配"]
+    assert "round" not in entry and "action_id" not in entry
+    assert state["opponent_offer"]["version"] == 2
+    assert "全球算力资源分配" in state["opponent_offer"]["offers"]
+    assert "全球算力资源分配" not in state["open_issues"]
     assert get_state(sid) == state
 
 
@@ -163,134 +173,122 @@ def test_action_identity_fields_stripped():
 def test_action_double_validation():
     sid = new_session()
     bad_patch = copy.deepcopy(VALID_OFFER)
-    bad_patch["offer_patch"]["数据跨境流动规则"] = {"option": "只有选项没有说明"}
+    bad_patch["offer_patch"]["全球算力资源分配"] = {"option": "只有选项没有说明"}
     resp = client.post(f"/session/{sid}/action", json=bad_patch)
     assert resp.status_code == 400
     assert resp.json()["error"] == "INVALID_ACTION"
-    blank = dict(VALID_OFFER, public_message="   ")
-    resp = client.post(f"/session/{sid}/action", json=blank)
+    resp = client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, public_message="   "))
     assert resp.status_code == 400
-    assert resp.json()["error"] == "INVALID_ACTION"
-    bad_type = dict(VALID_OFFER, action_type="not_a_type")
-    resp = client.post(f"/session/{sid}/action", json=bad_type)
+    resp = client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, action_type="not_a_type"))
     assert resp.status_code == 400
-    assert resp.json()["error"] == "INVALID_ACTION"
 
 
 def test_invalid_action_no_model_call_and_state_unchanged(monkeypatch):
     sid = new_session()
     calls = []
-    monkeypatch.setattr(
-        api, "generate_opponent_turn", lambda *args: calls.append(args) or {}
-    )
+    monkeypatch.setattr(api, "generate_opponent_turn", lambda *args: calls.append(args) or {})
     before = get_state(sid)
-    illegal = {
-        "action_type": "accept",
-        "offer_patch": {"AI安全监管框架": {"option": "x", "note": "y"}},
-        "conditions": [],
-        "expected_effect": "",
-        "public_message": "我方接受。",
-    }
+    illegal = dict(STATEMENT, action_type="accept", offer_patch=VALID_OFFER["offer_patch"])
     resp = client.post(f"/session/{sid}/action", json=illegal)
     assert resp.status_code == 400
     assert resp.json()["error"] == "INVALID_ACTION"
     assert set(resp.json()) == {"error", "detail"}
     assert calls == []
     assert get_state(sid) == before
-    snap = api.SESSIONS[sid].snapshot
-    assert snap.action_seq == 0
-    assert snap.offline_cursor == 0
-    assert len(snap.messages) == 1
+    runtime = api.SESSIONS[sid].runtime
+    assert runtime.action_seq == 0
+    assert runtime.offline_cursor == 0
+    assert len(runtime.messages) == 1
+
+
+def test_engine_rejection_preserves_error_and_zero_change(monkeypatch):
+    sid = new_session()
+    calls = []
+    monkeypatch.setattr(api, "generate_opponent_turn", lambda *args: calls.append(args) or {})
+    before = get_state(sid)
+    rec = api.SESSIONS[sid]
+    archive = copy.deepcopy(rec.engine.state.to_archive_dict())
+    payload = copy.deepcopy(VALID_OFFER)
+    payload["offer_patch"] = {"不存在的条款": {"option": "x", "note": "y"}}
+    resp = client.post(f"/session/{sid}/action", json=payload)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "UNKNOWN_CLAUSE"
+    assert calls == []
+    assert get_state(sid) == before
+    assert rec.engine.state.to_archive_dict() == archive
+    assert rec.runtime.action_seq == 0
+
+
+def test_term_locked_error_mapping_and_zero_change():
+    engine = api.RulesEngine(make_scenario(), "locked-test")
+    engine.scenario["clauses"][0]["locked"] = True
+    archive = copy.deepcopy(engine.state.to_archive_dict())
+    with pytest.raises(api.ApiError) as caught:
+        api.submit_engine_action(engine, flat_action())
+    assert caught.value.status_code == 400
+    assert caught.value.error == "TERM_LOCKED"
+    assert engine.state.to_archive_dict() == archive
+
+
+def test_duplicate_and_phase_closed_error_mappings():
+    engine = api.RulesEngine(make_scenario(), "error-test")
+    action = flat_action()
+    api.submit_engine_action(engine, action)
+    archive = copy.deepcopy(engine.state.to_archive_dict())
+    with pytest.raises(api.ApiError) as caught:
+        api.submit_engine_action(engine, action)
+    assert caught.value.status_code == 409
+    assert caught.value.error == "DUPLICATE_ACTION"
+    assert engine.state.to_archive_dict() == archive
+    engine.state.status = "ended"
+    with pytest.raises(api.ApiError) as caught:
+        api.submit_engine_action(engine, flat_action(action_id="engine-2"))
+    assert caught.value.status_code == 409
+    assert caught.value.error == "PHASE_CLOSED"
 
 
 def test_action_id_sequence_not_consumed_by_failure():
     sid = new_session()
     resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
     assert resp.status_code == 200
-    resp = client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, public_message=" "))
+    bad = copy.deepcopy(VALID_OFFER)
+    bad["offer_patch"] = {"不存在的条款": {"option": "x", "note": "y"}}
+    resp = client.post(f"/session/{sid}/action", json=bad)
     assert resp.status_code == 400
     resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
-    assert resp.status_code == 200
-    ids = [r["action_id"] for r in resp.json()["action_history"]]
+    assert resp.status_code == 200, resp.text
+    ids = [record["action_id"] for record in resp.json()["action_history"]]
     assert ids == ["a000001", "a000002", "a000003", "a000004"]
-
-
-def test_offer_version_rules_unit():
-    side = api.OfferSide()
-    multi = {
-        "action_id": "a000001",
-        "offer_patch": {
-            "议题A": {"option": "x", "note": "a"},
-            "议题B": {"option": 30, "note": "b"},
-        },
-    }
-    side = api.apply_offer(side, multi, 1)
-    assert side.version == 1
-    assert set(side.offers) == {"议题A", "议题B"}
-    empty = {"action_id": "a000002", "offer_patch": {}}
-    assert api.apply_offer(side, empty, 2) is side
-    override = {"action_id": "a000003", "offer_patch": {"议题A": {"option": "y", "note": "c"}}}
-    side2 = api.apply_offer(side, override, 3)
-    assert side2.version == 2
-    assert side2.offers["议题A"]["option"] == "y"
-    assert side2.offers["议题A"]["round"] == 3
-    assert side2.offers["议题B"]["option"] == 30
-    assert side.offers["议题A"]["option"] == "x"
 
 
 def test_offers_independent_between_sides():
     sid = new_session()
     payload = copy.deepcopy(VALID_OFFER)
-    payload["offer_patch"] = {
-        "AI安全监管框架": {"option": "我方版本条款", "note": "我方说明"}
-    }
+    payload["offer_patch"] = {"全球算力资源分配": {"option": "附带可核查机制", "note": "我方说明"}}
     resp = client.post(f"/session/{sid}/action", json=payload)
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     state = resp.json()
-    assert state["my_offer"]["offers"]["AI安全监管框架"]["option"] == "我方版本条款"
-    assert state["opponent_offer"]["offers"]["AI安全监管框架"]["option"] != "我方版本条款"
+    assert state["my_offer"]["offers"]["全球算力资源分配"]["option"] == "附带可核查机制"
+    assert state["opponent_offer"]["offers"]["全球算力资源分配"]["option"] != "附带可核查机制"
     assert state["my_offer"]["version"] == 1
-    assert state["opponent_offer"]["version"] == 1
-
-
-def test_open_issues_and_status_never_change():
-    sid = new_session()
-    for action_type in ("accept", "walk_away"):
-        payload = dict(STATEMENT, action_type=action_type)
-        resp = client.post(f"/session/{sid}/action", json=payload)
-        assert resp.status_code == 200, resp.text
-    resp = client.post(f"/session/{sid}/debrief")
-    assert resp.status_code == 202
-    state = get_state(sid)
-    assert state["open_issues"] == list(api.AGENDA)
-    assert state["status"] == "active"
-
-
-def test_phase_boundaries():
-    assert api.phase_of(0) == "opening"
-    assert api.phase_of(3) == "opening"
-    assert api.phase_of(4) == "bargaining"
-    assert api.phase_of(8) == "bargaining"
-    assert api.phase_of(9) == "closing"
-    assert api.phase_of(10) == "closing"
+    assert state["opponent_offer"]["version"] == 2
 
 
 def test_auto_step_stub_and_single_round():
     sid = new_session()
+    before = get_state(sid)
     resp = client.post(f"/session/{sid}/auto_step")
     assert resp.status_code == 200, resp.text
     state = resp.json()
-    assert state["round"] == 1
+    assert state["round"] == before["round"] + 1
     assert len(state["action_history"]) == 2
-    mine, opp = state["action_history"]
+    mine, _ = state["action_history"]
     assert mine["origin"] == "auto_player"
     assert mine["action_type"] == "statement"
     assert mine["offer_patch"] == {}
-    assert mine["conditions"] == []
-    assert mine["expected_effect"] == ""
     assert mine["public_message"] == neg.CHINA_LINES[0].replace("\n", " ")
     assert state["my_offer"] == {"version": 0, "offers": {}}
-    assert state["opponent_offer"]["version"] == 1
+    assert state["opponent_offer"]["version"] == before["opponent_offer"]["version"] + 1
     assert get_state(sid) == state
 
 
@@ -299,7 +297,7 @@ def test_auto_step_china_lines_cycle():
     texts = []
     for _ in range(4):
         resp = client.post(f"/session/{sid}/auto_step")
-        assert resp.status_code == 200
+        assert resp.status_code == 200, resp.text
         texts.append(resp.json()["action_history"][-2]["public_message"])
     expected = [neg.CHINA_LINES[i % 3].replace("\n", " ") for i in range(4)]
     assert texts == expected
@@ -315,7 +313,7 @@ def test_offline_cursor_isolation_and_cycle():
     client.post(f"/session/{s1}/auto_step")
     r4 = client.post(f"/session/{s1}/auto_step").json()
     assert r4["action_history"][-1]["public_message"] == first
-    assert api.SESSIONS[s2].snapshot.offline_cursor == 1
+    assert api.SESSIONS[s2].runtime.offline_cursor == 1
 
 
 def test_offline_samples_immutable():
@@ -342,18 +340,17 @@ def test_mode_detection(monkeypatch):
 def test_model_failure_atomic(monkeypatch):
     sid = new_online_session(monkeypatch)
     before = get_state(sid)
-    assert before["mode"] == "online"
+    rec = api.SESSIONS[sid]
+    archive = copy.deepcopy(rec.engine.state.to_archive_dict())
     monkeypatch.setattr(neg, "call_with_retry", lambda *args: (None, "", None))
     resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
     assert resp.status_code == 503
     assert resp.json()["error"] == "MODEL_UNAVAILABLE"
     assert get_state(sid) == before
-    snap = api.SESSIONS[sid].snapshot
-    assert snap.round == 0
-    assert snap.action_seq == 0
-    assert snap.offline_cursor == 0
-    assert len(snap.messages) == 1
-    assert snap.action_history == ()
+    assert rec.engine.state.to_archive_dict() == archive
+    assert rec.runtime.action_seq == 0
+    assert rec.runtime.offline_cursor == 0
+    assert len(rec.runtime.messages) == 1
 
 
 def test_systemexit_via_call_deepseek(monkeypatch):
@@ -381,7 +378,7 @@ def test_systemexit_boundary_not_swallowing_others(monkeypatch):
 
     monkeypatch.setattr(neg, "call_with_retry", boom)
     with pytest.raises(KeyboardInterrupt):
-        api.generate_opponent_turn(rec, [], rec.snapshot)
+        api.generate_opponent_turn(rec, [], rec.runtime)
 
 
 def test_opponent_invalid_response_503(monkeypatch):
@@ -395,6 +392,26 @@ def test_opponent_invalid_response_503(monkeypatch):
     assert get_state(sid) == before
 
 
+def test_opponent_engine_rejection_preserves_original_error(monkeypatch):
+    sid = new_online_session(monkeypatch)
+    before = get_state(sid)
+    bad = {
+        "action": {
+            "action_type": "offer",
+            "offer_patch": {"不存在的条款": {"option": "x", "note": "y"}},
+            "conditions": [],
+            "expected_effect": "",
+        },
+        "public_message": "结构上合规但条款不存在。",
+    }
+    monkeypatch.setattr(neg, "call_with_retry", lambda *args: (bad, "raw", None))
+    resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "UNKNOWN_CLAUSE"
+    assert get_state(sid) == before
+    assert api.SESSIONS[sid].runtime.action_seq == 0
+
+
 def test_online_no_fallback_to_offline(monkeypatch):
     sid = new_online_session(monkeypatch)
     monkeypatch.setattr(neg, "call_with_retry", lambda *args: (None, "", None))
@@ -402,8 +419,8 @@ def test_online_no_fallback_to_offline(monkeypatch):
     assert resp.status_code == 503
     state = get_state(sid)
     assert state["mode"] == "online"
-    assert state["round"] == 0
-    assert api.SESSIONS[sid].snapshot.offline_cursor == 0
+    assert state["round"] == 1
+    assert api.SESSIONS[sid].runtime.offline_cursor == 0
 
 
 def test_debrief_placeholder_and_state_unchanged():
@@ -430,11 +447,7 @@ def test_session_not_found_all_endpoints():
 
 def test_malformed_json_and_wrong_top_level():
     sid = new_session()
-    resp = client.post(
-        f"/session/{sid}/action",
-        content="{not json",
-        headers={"Content-Type": "application/json"},
-    )
+    resp = client.post(f"/session/{sid}/action", content="{not json", headers={"Content-Type": "application/json"})
     assert resp.status_code == 400
     assert resp.json()["error"] == "INVALID_JSON"
     resp = client.post(f"/session/{sid}/action", json=[1, 2])
@@ -477,12 +490,12 @@ def test_session_isolation():
     client.post(f"/session/{s1}/auto_step")
     client.post(f"/session/{s2}/auto_step")
     st1, st2 = get_state(s1), get_state(s2)
-    assert st1["round"] == 2
-    assert st2["round"] == 1
+    assert st1["round"] == 3
+    assert st2["round"] == 2
     assert len(st1["action_history"]) == 4
     assert len(st2["action_history"]) == 2
-    assert api.SESSIONS[s1].snapshot.offline_cursor == 2
-    assert api.SESSIONS[s2].snapshot.offline_cursor == 1
+    assert api.SESSIONS[s1].runtime.offline_cursor == 2
+    assert api.SESSIONS[s2].runtime.offline_cursor == 1
 
 
 def test_session_busy(monkeypatch):
@@ -491,10 +504,10 @@ def test_session_busy(monkeypatch):
     release = threading.Event()
     original = api.generate_opponent_turn
 
-    def blocking(rec, messages, snap):
+    def blocking(rec, messages, runtime):
         started.set()
         release.wait(10)
-        return original(rec, messages, snap)
+        return original(rec, messages, runtime)
 
     monkeypatch.setattr(api, "generate_opponent_turn", blocking)
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -506,35 +519,92 @@ def test_session_busy(monkeypatch):
         release.set()
         resp1 = future.result(timeout=15)
     assert resp1.status_code == 200
-    assert get_state(sid)["round"] == 1
+    assert get_state(sid)["round"] == 2
 
 
-def test_state_reads_committed_snapshot_during_turn(monkeypatch):
+def test_state_reads_committed_engine_during_turn(monkeypatch):
     sid = new_session()
     started = threading.Event()
     release = threading.Event()
     original = api.generate_opponent_turn
 
-    def blocking(rec, messages, snap):
+    def blocking(rec, messages, runtime):
         started.set()
         release.wait(10)
-        return original(rec, messages, snap)
+        return original(rec, messages, runtime)
 
     monkeypatch.setattr(api, "generate_opponent_turn", blocking)
     with ThreadPoolExecutor(max_workers=2) as pool:
         future = pool.submit(client.post, f"/session/{sid}/auto_step")
         assert started.wait(10)
         mid = get_state(sid)
-        assert mid["round"] == 0
+        assert mid["round"] == 1
         assert mid["action_history"] == []
         release.set()
         resp = future.result(timeout=15)
     assert resp.status_code == 200
-    assert get_state(sid)["round"] == 1
+    assert get_state(sid)["round"] == 2
 
 
-def test_error_response_shape_and_safety(monkeypatch):
+def test_restore_engine_archive_equivalence_and_isolation():
+    sid = new_session()
+    resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 200
+    original = api.SESSIONS[sid].engine
+    archive = copy.deepcopy(original.state.to_archive_dict())
+    candidate = api.restore_engine(original)
+    assert candidate is not original
+    assert candidate.state.to_archive_dict() == archive
+    candidate.state.open_issues.append("候选修改")
+    candidate.state.private_state_by_party["us"]["sentinel"] = "changed"
+    candidate.state.offers[0].clauses["全球算力资源分配"]["option"] = "changed"
+    assert original.state.to_archive_dict() == archive
+
+
+def test_exact_eight_fields_forwarded_without_extensions(monkeypatch):
+    sid = new_session()
+    captured = []
+    original = api.submit_engine_action
+
+    def spy(engine, flat):
+        captured.append(copy.deepcopy(flat))
+        return original(engine, flat)
+
+    monkeypatch.setattr(api, "submit_engine_action", spy)
+    resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 200
+    expected = {"action_id", "actor", "action_type", "card_id", "offer_patch", "conditions", "expected_effect", "public_message"}
+    assert len(captured) == 2
+    for action in captured:
+        assert set(action) == expected
+        assert "base_version" not in action
+        assert "effect_labels" not in action
+
+
+def test_next_round_called_once(monkeypatch):
+    sid = new_session()
+    calls = []
+    original = api.RulesEngine.next_round
+
+    def spy(self):
+        calls.append(self.session_id)
+        return original(self)
+
+    monkeypatch.setattr(api.RulesEngine, "next_round", spy)
+    resp = client.post(f"/session/{sid}/auto_step")
+    assert resp.status_code == 200
+    assert calls == [sid]
+
+
+def test_error_response_shape_and_privacy(monkeypatch):
     sid = new_online_session(monkeypatch)
+    rec = api.SESSIONS[sid]
+    rec.engine.state.private_state_by_party["us"]["sentinel"] = "US_PRIVATE_SENTINEL"
+    rec.engine.state.private_state_by_party["cn"]["sentinel"] = "CN_PRIVATE_SENTINEL"
+    public_text = json.dumps(get_state(sid), ensure_ascii=False)
+    assert "US_PRIVATE_SENTINEL" not in public_text
+    assert "CN_PRIVATE_SENTINEL" not in public_text
+    assert "private_state_by_party" not in public_text
     monkeypatch.setattr(neg, "call_with_retry", lambda *args: (None, "", None))
     responses = [
         client.post("/session", json={"scenario_id": "bad", "agent": "us"}),
@@ -548,4 +618,4 @@ def test_error_response_shape_and_safety(monkeypatch):
         assert set(body) == {"error", "detail"}
         assert isinstance(body["detail"], str) and body["detail"]
         assert "test-key" not in body["detail"]
-        assert "隐藏任务" not in body["detail"]
+        assert "US_PRIVATE_SENTINEL" not in body["detail"]

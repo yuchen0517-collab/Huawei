@@ -12,14 +12,14 @@ RECORDS = []
 VALID_OFFER = {
     "action_type": "offer",
     "offer_patch": {
-        "数据跨境流动规则": {
-            "option": "在联合国框架下建立对称适用的数据跨境通报机制",
-            "note": "以对称通报安排回应各方对透明度与数据主权的共同关切。",
+        "全球算力资源分配": {
+            "option": "以既有联盟实践为蓝本设立高风险 AI 出口管制的可核查机制",
+            "note": "以对称、可核查的安排回应各方关切。",
         }
     },
     "conditions": ["核查标准对所有参与方对称适用。"],
-    "expected_effect": "推动各方在数据主权与跨境合作之间形成可讨论的交换条件。",
-    "public_message": "我方愿在数据跨境流动议题上提出建设性方案，建议建立对称适用的通报机制，同时保留各方依法维护数据安全的空间。",
+    "expected_effect": "推动各方形成可讨论的交换条件。",
+    "public_message": "我方愿在全球算力资源分配议题上提出建设性方案。",
 }
 
 
@@ -76,37 +76,37 @@ def main():
     resp, data = call(2, "POST", "/session", body={"scenario_id": "ai_governance", "agent": "us"})
     expect(resp.status_code == 200, "开局成功")
     sid = data["session_id"]
-    expect(data["round"] == 0 and data["action_history"] == [], "初始轮次与历史为空")
+    expect(data["round"] == 1 and data["action_history"] == [], "引擎初始轮次为 1 且历史为空")
     expect(data["my_offer"] == {"version": 0, "offers": {}}, "我方初始报价为空")
     expect(data["mode"] == "offline", "离线模式标注 mode=offline")
 
     resp, action_state = call(3, "POST", f"/session/{sid}/action", body=VALID_OFFER)
     expect(resp.status_code == 200, "合法行动被接受")
-    expect(action_state["round"] == 1, "轮次推进到 1")
+    expect(action_state["round"] == data["round"] + 1, "双方行动后轮次由引擎推进一次")
     expect(len(action_state["action_history"]) == 2, "历史新增两条")
-    expect(action_state["my_offer"]["version"] == 1, "我方报价版本 +1")
-    expect(action_state["opponent_offer"]["version"] == 1, "对手报价版本 +1")
+    expect(action_state["my_offer"]["version"] == data["my_offer"]["version"] + 1, "我方报价版本 +1")
+    expect(action_state["opponent_offer"]["version"] == 2, "对手报价版本取引擎结果")
 
     resp, data = call(4, "GET", f"/session/{sid}/state")
     expect(resp.status_code == 200 and data == action_state, "行动后 GET 状态与行动响应一致")
 
     illegal = {
-        "action_type": "accept",
-        "offer_patch": {"AI安全监管框架": {"option": "强行带报价", "note": "非法"}},
+        "action_type": "offer",
+        "offer_patch": {"不存在的条款": {"option": "强行带报价", "note": "非法"}},
         "conditions": [],
         "expected_effect": "",
-        "public_message": "我方接受。",
+        "public_message": "我方尝试提交未知条款。",
     }
     resp, data = call(5, "POST", f"/session/{sid}/action", body=illegal)
-    expect(resp.status_code == 400 and data.get("error") == "INVALID_ACTION", "非法行动返回 400 INVALID_ACTION")
+    expect(resp.status_code == 400 and data.get("error") == "UNKNOWN_CLAUSE", "引擎非法行动返回 400 UNKNOWN_CLAUSE")
     expect(set(data) == {"error", "detail"}, "错误响应只有 error/detail 两字段")
 
     resp, data = call(6, "GET", f"/session/{sid}/state")
-    expect(data == action_state, "非法行动后状态零变更")
+    expect(data == action_state, "引擎拒绝后九字段状态零变更")
 
     resp, auto_state = call(7, "POST", f"/session/{sid}/auto_step")
     expect(resp.status_code == 200, "auto_step 成功")
-    expect(auto_state["round"] == 2, "auto_step 恰好推进一轮")
+    expect(auto_state["round"] == action_state["round"] + 1, "auto_step 恰好推进一轮")
     expect(len(auto_state["action_history"]) == 4, "auto_step 历史再增两条")
     expect(auto_state["action_history"][-2]["origin"] == "auto_player", "自动我方行动 origin=auto_player")
 

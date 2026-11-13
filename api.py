@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import re
+import sys
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -22,6 +23,15 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 BASE_DIR = Path(__file__).resolve().parent
+ENGINE_ROOT = BASE_DIR / "C 11.12 三指数"
+if str(ENGINE_ROOT) not in sys.path:
+    sys.path.insert(0, str(ENGINE_ROOT))
+
+from engine.core import RulesEngine
+from engine.state import NegotiationState, Offer
+from engine.validator import ERRORS as ENGINE_ERRORS
+from load_scenario import make_scenario
+
 SCENARIO_ID = "ai_governance"
 MY_ACTOR = "cn"
 IDENTITY_FIELDS = ("action_id", "actor", "card_id")
@@ -39,7 +49,7 @@ SCHEMA_VALIDATOR = Draft202012Validator(ACTION_SCHEMA)
 PROMPT_MD = neg.load_prompt_markdown()
 AGENTS = neg.load_agents()
 SCENARIO = AGENTS.get("_scenario", {})
-AGENDA = tuple(SCENARIO.get("agenda") or [])
+
 SYSTEM_PROMPTS = {
     key: neg.build_system_prompt(
         PROMPT_MD, cfg, SCENARIO, side=key if key in ("us", "cn") else None
@@ -65,22 +75,11 @@ class ModelUnavailable(ApiError):
 
 
 @dataclass(frozen=True)
-class OfferSide:
-    version: int = 0
-    offers: dict = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class TurnSnapshot:
-    round: int
-    status: str
-    my_offer: OfferSide
-    opponent_offer: OfferSide
-    open_issues: tuple
-    action_history: tuple
+class RuntimeMetadata:
     messages: tuple
     offline_cursor: int
     action_seq: int
+    action_meta: tuple = field(default_factory=tuple)
 
 
 @dataclass
@@ -95,7 +94,8 @@ class SessionRecord:
     model_options: SimpleNamespace
     mutation_lock: threading.Lock
     state_lock: threading.Lock
-    snapshot: TurnSnapshot
+    engine: RulesEngine
+    runtime: RuntimeMetadata
 
 
 SESSIONS: dict[str, SessionRecord] = {}
@@ -118,69 +118,80 @@ def get_session(session_id: str) -> SessionRecord:
     return rec
 
 
-def phase_of(round_no: int) -> str:
-    if round_no <= 3:
-        return "opening"
-    if round_no <= 8:
-        return "bargaining"
-    return "closing"
-
-
 def make_action_id(seq: int) -> str:
     return f"a{seq:06d}"
 
 
-def project_snapshot(rec: SessionRecord, snap: TurnSnapshot) -> dict:
+def restore_engine(engine: RulesEngine) -> RulesEngine:
+    archive = copy.deepcopy(engine.state.to_archive_dict())
+    restored = copy.deepcopy(archive)
+    restored["offers"] = [Offer(**offer) for offer in restored["offers"]]
+    restored["agreement"] = Offer(**restored["agreement"]) if restored["agreement"] else None
+    candidate = RulesEngine(copy.deepcopy(engine.scenario), engine.session_id)
+    candidate.state = NegotiationState(**restored)
+    if candidate.state.to_archive_dict() != archive:
+        raise ApiError(500, "INTERNAL_ERROR", "规则引擎快照恢复失败，本轮未推进。")
+    return candidate
+
+
+def latest_offer(public: dict, actor: str) -> dict:
+    offers = [offer for offer in public["offers"] if offer.get("actor") == actor]
+    if not offers:
+        return {"version": 0, "offers": {}}
+    latest = max(offers, key=lambda offer: offer["version"])
+    return {"version": latest["version"], "offers": copy.deepcopy(latest["clauses"])}
+
+
+def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: RuntimeMetadata) -> dict:
+    public = engine.public_state(MY_ACTOR)
+    action_meta = {action_id: (origin, warnings) for action_id, origin, warnings in runtime.action_meta}
+    history = []
+    for event in public["public_events"]:
+        if event.get("type") != "action":
+            continue
+        record = copy.deepcopy(event)
+        default_origin = "human" if record.get("actor") == MY_ACTOR else "opponent_ai"
+        origin, warnings = action_meta.get(record.get("action_id"), (default_origin, ()))
+        record["origin"] = origin
+        record["warnings"] = list(warnings)
+        history.append(record)
     return {
         "session_id": rec.session_id,
-        "round": snap.round,
-        "phase": phase_of(snap.round),
-        "my_offer": {
-            "version": snap.my_offer.version,
-            "offers": copy.deepcopy(snap.my_offer.offers),
-        },
-        "opponent_offer": {
-            "version": snap.opponent_offer.version,
-            "offers": copy.deepcopy(snap.opponent_offer.offers),
-        },
-        "open_issues": list(snap.open_issues),
-        "action_history": copy.deepcopy(list(snap.action_history)),
-        "status": snap.status,
+        "round": public["round"],
+        "phase": public["phase"],
+        "my_offer": latest_offer(public, rec.my_actor),
+        "opponent_offer": latest_offer(public, rec.opponent_actor),
+        "open_issues": copy.deepcopy(public["open_issues"]),
+        "action_history": history,
+        "status": public["status"],
         "mode": rec.mode,
     }
 
 
 def project_state(rec: SessionRecord) -> dict:
     with rec.state_lock:
-        snap = rec.snapshot
-    return project_snapshot(rec, snap)
+        return project_engine_state(rec, rec.engine, rec.runtime)
 
 
 def create_session(req: "CreateSessionRequest") -> dict:
     if req.scenario_id != SCENARIO_ID:
         raise ApiError(400, "INVALID_SCENARIO", "scenario_id 仅支持 ai_governance。")
     agent = req.agent
-    if agent.startswith("_") or agent not in AGENTS or not isinstance(AGENTS.get(agent), dict):
-        valid = "、".join(k for k in AGENTS if not k.startswith("_"))
-        raise ApiError(400, "INVALID_AGENT", f"未知对手国家代码 {agent!r}，可选：{valid}。")
+    if agent != "us" or agent not in AGENTS or not isinstance(AGENTS.get(agent), dict):
+        raise ApiError(400, "INVALID_AGENT", f"临时场景仅支持对手国家代码 'us'，收到 {agent!r}。")
     cfg = AGENTS[agent]
     indexes = {k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS}
     prompt = SYSTEM_PROMPTS[agent]
-    snapshot = TurnSnapshot(
-        round=0,
-        status="active",
-        my_offer=OfferSide(),
-        opponent_offer=OfferSide(),
-        open_issues=AGENDA,
-        action_history=(),
-        messages=({"role": "system", "content": prompt},),
-        offline_cursor=0,
-        action_seq=0,
-    )
     with SESSIONS_LOCK:
         session_id = str(uuid.uuid4())
         while session_id in SESSIONS:
             session_id = str(uuid.uuid4())
+        engine = RulesEngine(make_scenario(), session_id)
+        runtime = RuntimeMetadata(
+            messages=({"role": "system", "content": prompt},),
+            offline_cursor=0,
+            action_seq=0,
+        )
         rec = SessionRecord(
             session_id=session_id,
             scenario_id=SCENARIO_ID,
@@ -192,10 +203,13 @@ def create_session(req: "CreateSessionRequest") -> dict:
             model_options=SimpleNamespace(no_json_mode=False, temperature=0.7),
             mutation_lock=threading.Lock(),
             state_lock=threading.Lock(),
-            snapshot=snapshot,
+            engine=engine,
+            runtime=runtime,
         )
+        initial_state = project_engine_state(rec, engine, runtime)
+        json.dumps(initial_state, ensure_ascii=False)
         SESSIONS[session_id] = rec
-    return project_state(rec)
+    return initial_state
 
 
 def schema_detail(err) -> str:
@@ -275,9 +289,9 @@ def build_auto_action(rec: SessionRecord, next_round: int, action_id: str) -> tu
     return flat, warns
 
 
-def generate_opponent_turn(rec: SessionRecord, candidate_messages: list, snap: TurnSnapshot) -> dict:
+def generate_opponent_turn(rec: SessionRecord, candidate_messages: list, runtime: RuntimeMetadata) -> dict:
     if rec.mode == "offline":
-        return neg.OFFLINE_RESPONSES[snap.offline_cursor % len(neg.OFFLINE_RESPONSES)]
+        return neg.OFFLINE_RESPONSES[runtime.offline_cursor % len(neg.OFFLINE_RESPONSES)]
     try:
         obj, _, _ = neg.call_with_retry(
             list(candidate_messages), rec.system_prompt, rec.model_options
@@ -324,35 +338,18 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
     return opp_flat, list(warns), checked
 
 
-def make_history_record(round_no: int, origin: str, flat: dict, warns: list) -> dict:
-    return {
-        "round": round_no,
-        "actor": flat["actor"],
-        "origin": origin,
-        "action_id": flat["action_id"],
-        "card_id": flat["card_id"],
-        "action_type": flat["action_type"],
-        "offer_patch": copy.deepcopy(flat["offer_patch"]),
-        "conditions": list(flat["conditions"]),
-        "expected_effect": flat["expected_effect"],
-        "public_message": flat["public_message"],
-        "warnings": list(warns),
-    }
-
-
-def apply_offer(side: OfferSide, flat: dict, round_no: int) -> OfferSide:
-    patch = flat["offer_patch"]
-    if not patch:
-        return side
-    offers = copy.deepcopy(side.offers)
-    for topic, item in patch.items():
-        offers[topic] = {
-            "option": item["option"],
-            "note": item["note"],
-            "round": round_no,
-            "action_id": flat["action_id"],
-        }
-    return OfferSide(version=side.version + 1, offers=offers)
+def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
+    ok, code, _, events = engine.submit_action(copy.deepcopy(flat))
+    if ok:
+        return events
+    error = code or "INTERNAL_ERROR"
+    status_code = 409 if code in {
+        "VERSION_CONFLICT", "DUPLICATE_ACTION", "PHASE_CLOSED",
+    } else 400
+    if code is None:
+        status_code = 500
+    detail = ENGINE_ERRORS.get(error, "规则引擎拒绝了该行动，本轮未推进。")
+    raise ApiError(status_code, error, detail)
 
 
 def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dict:
@@ -360,42 +357,51 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
         raise ApiError(409, "SESSION_BUSY", "本会话有另一轮正在处理，请稍后重试；本次未推进。")
     try:
         with rec.state_lock:
-            snap = rec.snapshot
-        next_round = snap.round + 1
-        my_id = make_action_id(snap.action_seq + 1)
-        opp_id = make_action_id(snap.action_seq + 2)
+            engine = rec.engine
+            runtime = rec.runtime
+        candidate = restore_engine(engine)
+        current_round = candidate.public_state(MY_ACTOR)["round"]
+        my_id = make_action_id(runtime.action_seq + 1)
+        opp_id = make_action_id(runtime.action_seq + 2)
         if auto:
-            my_flat, my_warns = build_auto_action(rec, next_round, my_id)
+            my_flat, my_warns = build_auto_action(rec, current_round, my_id)
             origin = "auto_player"
         else:
             my_flat, my_warns = adapt_client_action(payload, rec, my_id)
             origin = "human"
         user_msg = neg.build_user_message(
-            next_round, rec.initial_indexes, my_flat["public_message"]
+            current_round, rec.initial_indexes, my_flat["public_message"]
         )
-        candidate_messages = list(snap.messages) + [{"role": "user", "content": user_msg}]
-        raw_opp = generate_opponent_turn(rec, candidate_messages, snap)
-        opp_flat, opp_warns, opp_checked = normalize_opponent_turn(raw_opp, rec, opp_id)
-        my_record = make_history_record(next_round, origin, my_flat, my_warns)
-        opp_record = make_history_record(next_round, "opponent_ai", opp_flat, opp_warns)
-        assistant_obj = {k: v for k, v in opp_checked.items() if not k.startswith("_")}
-        new_snap = TurnSnapshot(
-            round=next_round,
-            status=snap.status,
-            my_offer=apply_offer(snap.my_offer, my_flat, next_round),
-            opponent_offer=apply_offer(snap.opponent_offer, opp_flat, next_round),
-            open_issues=snap.open_issues,
-            action_history=snap.action_history + (my_record, opp_record),
-            messages=tuple(candidate_messages) + (
-                {"role": "assistant", "content": json.dumps(assistant_obj, ensure_ascii=False)},
-            ),
-            offline_cursor=snap.offline_cursor + (1 if rec.mode == "offline" else 0),
-            action_seq=snap.action_seq + 2,
+        candidate_messages = list(runtime.messages) + [{"role": "user", "content": user_msg}]
+        submit_engine_action(candidate, my_flat)
+        candidate_meta = runtime.action_meta + ((my_id, origin, tuple(my_warns)),)
+        candidate_seq = runtime.action_seq + 1
+        candidate_cursor = runtime.offline_cursor
+        if candidate.public_state(MY_ACTOR)["status"] != "ended":
+            raw_opp = generate_opponent_turn(rec, candidate_messages, runtime)
+            opp_flat, opp_warns, opp_checked = normalize_opponent_turn(raw_opp, rec, opp_id)
+            submit_engine_action(candidate, opp_flat)
+            assistant_obj = {k: v for k, v in opp_checked.items() if not k.startswith("_")}
+            candidate_messages.append(
+                {"role": "assistant", "content": json.dumps(assistant_obj, ensure_ascii=False)}
+            )
+            candidate_meta += ((opp_id, "opponent_ai", tuple(opp_warns)),)
+            candidate_seq += 1
+            candidate_cursor += 1 if rec.mode == "offline" else 0
+        candidate_public = candidate.public_state(MY_ACTOR)
+        if candidate_public["status"] != "ended" and candidate_public["round"] == current_round:
+            candidate.next_round()
+        new_runtime = RuntimeMetadata(
+            messages=tuple(candidate_messages),
+            offline_cursor=candidate_cursor,
+            action_seq=candidate_seq,
+            action_meta=candidate_meta,
         )
-        state = project_snapshot(rec, new_snap)
+        state = project_engine_state(rec, candidate, new_runtime)
         json.dumps(state, ensure_ascii=False)
         with rec.state_lock:
-            rec.snapshot = new_snap
+            rec.engine = candidate
+            rec.runtime = new_runtime
         return state
     finally:
         rec.mutation_lock.release()

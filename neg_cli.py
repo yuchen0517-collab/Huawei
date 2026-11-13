@@ -722,7 +722,7 @@ OFFLINE_RESPONSES = [
         "action": {
             "action_type": "offer",
             "offer_patch": {
-                "AI安全监管框架": {
+                "全球算力资源分配": {
                     "option": "以既有联盟实践为蓝本设立高风险 AI 出口管制的可核查机制",
                     "note": "美方以规则与技术领先为锚，前置抛出可核查机制作为讨论前提。",
                 },
@@ -758,11 +758,11 @@ OFFLINE_RESPONSES = [
         "action": {
             "action_type": "conditional_exchange",
             "offer_patch": {
-                "AI安全监管框架": {
+                "全球算力资源分配": {
                     "option": "接受联合国框架下的技术性通报，但监督机制须具备实际约束力",
                     "note": "以透明度灵活性换取不削减现有出口管制有效性。",
                 },
-                "技术援助与能力建设": {
+                "数据跨境流动": {
                     "option": "增加对发展中国家的能力建设投入",
                     "note": "作为中方接受监督约束力的对价。",
                 },
