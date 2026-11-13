@@ -40,11 +40,11 @@ HEADER_ALIASES: dict[str, tuple[str, ...]] = {
     "note": ("备注",),
 }
 
-_STAGE_PATTERN = re.compile(r"P\d")
+_STAGE_PATTERN = re.compile(r"P\d+(?:｜[^，。；;]*)?")
 
 __all__ = [
-    "FactCardBundle", "load_factcard_file", "load_factcards",
-    "to_public_facts", "build_index", "write_index", "PARTY_CODE",
+    "FactCardBundle", "load_factcard_file", "load_factcards", "load_factcard_files",
+    "to_public_facts", "to_public_fact_models", "build_index", "write_index", "PARTY_CODE",
 ]
 
 
@@ -140,8 +140,10 @@ def _text(value: Any) -> str:
     return str(value).strip()
 
 
-def _party_of(sheet_title: str) -> str:
+def _party_of(sheet_title: str, party_map: Mapping[str, str] | None = None) -> str:
     prefix = sheet_title.split(SHEET_SUFFIX)[0].strip()
+    if party_map and prefix in party_map:
+        return party_map[prefix]
     return PARTY_CODE.get(prefix, prefix.lower())
 
 
@@ -154,7 +156,10 @@ def _iter_data_rows(ws, header_row: int):
         yield row
 
 
-def load_factcard_file(path: str | Path) -> FactCardBundle:
+def load_factcard_file(
+    path: str | Path,
+    party_map: Mapping[str, str] | None = None,
+) -> FactCardBundle:
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"事实卡文件不存在：{path}")
@@ -171,7 +176,7 @@ def load_factcard_file(path: str | Path) -> FactCardBundle:
 
         for title in titles:
             sheet = workbook[title]
-            party = _party_of(title)
+            party = _party_of(title, party_map)
             located = _map_header(sheet)
             if located is None:
                 bundle.warnings.append(f"{title}：找不到表头（需要含「编号」「内容」列）")
@@ -249,10 +254,25 @@ def load_factcard_file(path: str | Path) -> FactCardBundle:
     return bundle
 
 
-def load_factcards(paths: Iterable[str | Path]) -> FactCardBundle:
+def load_factcards(
+    path: str | Path,
+    party_map: Mapping[str, str] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """加载单个 xlsx，返回 (facts, low_confidence)。
+
+    facts 为可直接 JSON 序列化的 dict 列表；low_confidence 是其中 confidence == "C" 的子集。
+    """
+    bundle = load_factcard_file(path, party_map)
+    return bundle.facts, bundle.low_confidence
+
+
+def load_factcard_files(
+    paths: Iterable[str | Path],
+    party_map: Mapping[str, str] | None = None,
+) -> FactCardBundle:
     merged = FactCardBundle()
     for item in paths:
-        merged.merge(load_factcard_file(item))
+        merged.merge(load_factcard_file(item, party_map))
     merged.stats = merged.summary()
     return merged
 
@@ -274,6 +294,12 @@ def to_public_facts(
             cloned["applies_to"] = list(applies_to.get(cloned["fact_id"], []))
         result.append(cloned)
     return result
+
+
+def to_public_fact_models(facts: Iterable[Mapping[str, Any]]) -> list[Any]:
+    from agent.scenario.models import PublicFact
+
+    return [PublicFact.from_dict(fact) for fact in facts]
 
 
 def build_index(bundle: FactCardBundle) -> dict[str, Any]:
