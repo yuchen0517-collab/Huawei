@@ -36,6 +36,7 @@ from engine.validator import ERRORS as ENGINE_ERRORS
 SCENARIO_ID = "ai_governance"
 MY_ACTOR = "cn"
 IDENTITY_FIELDS = ("action_id", "actor", "card_id")
+TRANSPORT_FIELDS = ("client_action_id", "base_version")
 ACTION_FIELDS = ("action_type", "offer_patch", "conditions", "expected_effect")
 OPTIONAL_ACTION_FIELDS = ("effect_labels",)
 
@@ -73,11 +74,12 @@ MODEL_ERROR_DETAIL = "AI 对手暂时不可用或返回内容不合规，本轮�
 
 
 class ApiError(Exception):
-    def __init__(self, status_code: int, error: str, detail: str):
+    def __init__(self, status_code: int, error: str, detail: str, extra: dict | None = None):
         super().__init__(detail)
         self.status_code = status_code
         self.error = error
         self.detail = detail
+        self.extra = extra
 
 
 class ModelUnavailable(ApiError):
@@ -107,6 +109,7 @@ class SessionRecord:
     state_lock: threading.Lock
     engine: RulesEngine
     runtime: RuntimeMetadata
+    idempotency_ledger: dict = field(default_factory=dict)
 
 
 SESSIONS: dict[str, SessionRecord] = {}
@@ -270,6 +273,23 @@ def run_validate_action(wrapped: dict, opponent: bool = False) -> list:
     return list(warns)
 
 
+def extract_transport_fields(payload: Any) -> tuple[dict, str, int]:
+    if not isinstance(payload, dict):
+        raise ApiError(422, "INVALID_REQUEST", "请求体顶层必须是 JSON 对象。")
+    client_action_id = payload.get("client_action_id")
+    if client_action_id is None or (isinstance(client_action_id, str) and not client_action_id.strip()):
+        raise ApiError(422, "INVALID_REQUEST", "缺少必填字段 client_action_id。")
+    if not isinstance(client_action_id, str):
+        raise ApiError(422, "INVALID_REQUEST", "字段 client_action_id 必须是非空字符串。")
+    if "base_version" not in payload:
+        raise ApiError(422, "INVALID_REQUEST", "缺少必填字段 base_version。")
+    base_version = payload["base_version"]
+    if isinstance(base_version, bool) or not isinstance(base_version, int) or base_version < 0:
+        raise ApiError(422, "INVALID_REQUEST", "字段 base_version 必须是大于等于 0 的整数。")
+    action_payload = {k: v for k, v in payload.items() if k not in TRANSPORT_FIELDS}
+    return action_payload, client_action_id, base_version
+
+
 def adapt_client_action(payload: Any, rec: SessionRecord, action_id: str) -> tuple[dict, list]:
     if not isinstance(payload, dict):
         raise ApiError(422, "INVALID_REQUEST", "请求体顶层必须是 JSON 对象。")
@@ -376,13 +396,28 @@ def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
 
 
 def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dict:
+    action_payload = payload
+    client_action_id = None
+    base_version = None
+    if not auto:
+        action_payload, client_action_id, base_version = extract_transport_fields(payload)
     if not rec.mutation_lock.acquire(blocking=False):
         raise ApiError(409, "SESSION_BUSY", "本会话有另一轮正在处理，请稍后重试；本次未推进。")
     try:
+        if not auto:
+            cached = rec.idempotency_ledger.get(client_action_id)
+            if cached is not None:
+                return copy.deepcopy(cached)
         with rec.state_lock:
             engine = rec.engine
             runtime = rec.runtime
         candidate = restore_engine(engine)
+        if not auto and base_version != candidate.state.current_version:
+            raise ApiError(
+                409, "VERSION_CONFLICT",
+                "客户端基线版本与服务端当前版本不一致，请按 current_state 刷新后重试，本轮未推进。",
+                extra={"current_state": project_engine_state(rec, candidate, runtime)},
+            )
         current_round = candidate.public_state(MY_ACTOR)["round"]
         my_id = make_action_id(runtime.action_seq + 1)
         opp_id = make_action_id(runtime.action_seq + 2)
@@ -390,7 +425,7 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
             my_flat, my_warns = build_auto_action(rec, current_round, my_id)
             origin = "auto_player"
         else:
-            my_flat, my_warns = adapt_client_action(payload, rec, my_id)
+            my_flat, my_warns = adapt_client_action(action_payload, rec, my_id)
             origin = "human"
         user_msg = neg.build_user_message(
             current_round, rec.initial_indexes, my_flat["public_message"]
@@ -425,6 +460,8 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
         with rec.state_lock:
             rec.engine = candidate
             rec.runtime = new_runtime
+        if not auto:
+            rec.idempotency_ledger[client_action_id] = copy.deepcopy(state)
         return state
     finally:
         rec.mutation_lock.release()
@@ -449,10 +486,10 @@ app.add_middleware(
 
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": exc.error, "detail": exc.detail},
-    )
+    content = {"error": exc.error, "detail": exc.detail}
+    if exc.extra:
+        content.update(exc.extra)
+    return JSONResponse(status_code=exc.status_code, content=content)
 
 
 @app.exception_handler(RequestValidationError)

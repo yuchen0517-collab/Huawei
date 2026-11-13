@@ -661,3 +661,126 @@ def test_error_response_shape_and_privacy(monkeypatch):
         assert isinstance(body["detail"], str) and body["detail"]
         assert "test-key" not in body["detail"]
         assert "US_PRIVATE_SENTINEL" not in body["detail"]
+
+import uuid
+
+
+class ContractClient(TestClient):
+    def post(self, url, **kwargs):
+        payload = kwargs.get("json")
+        if isinstance(payload, dict) and url.startswith("/session/") and url.endswith("/action"):
+            rec = api.SESSIONS.get(url.split("/")[2])
+            payload = dict(payload)
+            payload.setdefault("client_action_id", uuid.uuid4().hex)
+            if rec is not None:
+                payload.setdefault("base_version", rec.engine.state.current_version)
+            kwargs["json"] = payload
+        return super().post(url, **kwargs)
+
+
+raw_client = client
+client = ContractClient(api.app, raise_server_exceptions=False)
+
+
+def submit_action(sid, payload, client_action_id, base_version):
+    return raw_client.post(
+        f"/session/{sid}/action",
+        json=dict(payload, client_action_id=client_action_id, base_version=base_version),
+    )
+
+
+def test_idempotent_replay_returns_byte_identical_response():
+    sid = new_session()
+    first = submit_action(sid, VALID_OFFER, "idem-1", 0)
+    assert first.status_code == 200, first.text
+    rec = api.SESSIONS[sid]
+    committed_version = rec.engine.state.current_version
+    history_len = len(first.json()["action_history"])
+    second = submit_action(sid, VALID_OFFER, "idem-1", 0)
+    assert second.status_code == 200, second.text
+    assert second.content == first.content
+    state = get_state(sid)
+    assert state == first.json()
+    assert len(state["action_history"]) == history_len
+    assert rec.engine.state.current_version == committed_version
+    assert rec.runtime.action_seq == 2
+
+
+def test_missing_or_invalid_transport_fields_rejected():
+    sid = new_session()
+    resp = raw_client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 422
+    assert resp.json() == {"error": "INVALID_REQUEST", "detail": "缺少必填字段 client_action_id。"}
+    resp = raw_client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, client_action_id="c-1"))
+    assert resp.status_code == 422
+    assert resp.json() == {"error": "INVALID_REQUEST", "detail": "缺少必填字段 base_version。"}
+    resp = raw_client.post(
+        f"/session/{sid}/action", json=dict(VALID_OFFER, client_action_id="   ", base_version=0)
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "缺少必填字段 client_action_id。"
+    for bad_version in ("0", -1, 1.5, True, None):
+        resp = raw_client.post(
+            f"/session/{sid}/action",
+            json=dict(VALID_OFFER, client_action_id="c-1", base_version=bad_version),
+        )
+        assert resp.status_code == 422, bad_version
+        assert resp.json()["error"] == "INVALID_REQUEST"
+    assert get_state(sid)["action_history"] == []
+    assert api.SESSIONS[sid].idempotency_ledger == {}
+
+
+def test_stale_base_version_conflict_returns_current_state():
+    sid = new_session()
+    ok = submit_action(sid, VALID_OFFER, "v-1", 0)
+    assert ok.status_code == 200, ok.text
+    rec = api.SESSIONS[sid]
+    before = get_state(sid)
+    archive = copy.deepcopy(rec.engine.state.to_archive_dict())
+    resp = submit_action(sid, STATEMENT, "v-2", 0)
+    assert resp.status_code == 409
+    body = resp.json()
+    assert set(body) == {"error", "detail", "current_state"}
+    assert body["error"] == "VERSION_CONFLICT"
+    assert body["current_state"] == before
+    for key in ("my_offer", "opponent_offer", "open_issues"):
+        assert key in body["current_state"]
+    assert get_state(sid) == before
+    assert rec.engine.state.to_archive_dict() == archive
+    assert set(rec.idempotency_ledger) == {"v-1"}
+    retry = submit_action(sid, STATEMENT, "v-2", rec.engine.state.current_version)
+    assert retry.status_code == 200, retry.text
+
+
+def test_failed_attempt_does_not_poison_ledger():
+    sid = new_session()
+    bad = submit_action(sid, dict(VALID_OFFER, unknown_field=1), "retry-1", 0)
+    assert bad.status_code == 400
+    assert bad.json()["error"] == "INVALID_ACTION"
+    assert api.SESSIONS[sid].idempotency_ledger == {}
+    retry = submit_action(sid, VALID_OFFER, "retry-1", 0)
+    assert retry.status_code == 200, retry.text
+    assert len(retry.json()["action_history"]) == 2
+    assert set(api.SESSIONS[sid].idempotency_ledger) == {"retry-1"}
+
+
+def test_transport_fields_stripped_and_replay_skips_engine(monkeypatch):
+    sid = new_session()
+    captured = []
+    original = api.submit_engine_action
+
+    def spy(engine, flat):
+        captured.append(copy.deepcopy(flat))
+        return original(engine, flat)
+
+    monkeypatch.setattr(api, "submit_engine_action", spy)
+    first = submit_action(sid, VALID_OFFER, "spy-1", 0)
+    assert first.status_code == 200, first.text
+    assert len(captured) == 2
+    for flat in captured:
+        assert "client_action_id" not in flat
+        assert "base_version" not in flat
+    second = submit_action(sid, VALID_OFFER, "spy-1", 0)
+    assert second.status_code == 200
+    assert second.content == first.content
+    assert len(captured) == 2

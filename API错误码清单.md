@@ -23,4 +23,4 @@
 | `SESSION_BUSY` | 本会话有另一轮正在处理，请稍后重试；本次未推进。（HTTP 409，API 层） |
 | `MODEL_UNAVAILABLE` | 模型连续失败/超时，未伪造行动，可重试。（HTTP 503，API 层） |
 
-> 其余 HTTP 状态码约定（如 SESSION_BUSY、MODEL_UNAVAILABLE、会话不存在等）见 api.py 的 ApiError 定义；HTTP 400=参数校验失败，404=会话不存在，405=方法不允许，422=请求体校验失败，500=未捕获异常；错误响应统一为 {code, message} 结构。
+> 其余 HTTP 状态码约定（如 SESSION_BUSY、MODEL_UNAVAILABLE、会话不存在等）见 api.py 的 ApiError 定义；HTTP 400=参数校验失败，404=会话不存在，405=方法不允许，422=请求体校验失败，500=未捕获异常；错误响应统一为 {error, detail} 结构；其中 409 VERSION_CONFLICT 的响应在此之外额外携带 current_state 字段，内容为当前会话的全量状态投影（含 my_offer、opponent_offer、open_issues），供客户端刷新基线版本后重试。
