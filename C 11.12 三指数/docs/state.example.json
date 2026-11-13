@@ -1,0 +1,572 @@
+{
+  "session_id": "demo-ai-governance-2026",
+  "scenario_id": "ai-governance-2026",
+  "round": 2,
+  "phase": "ended",
+  "current_version": 4,
+  "offers": [
+    {
+      "action_id": "cn-offer-0001",
+      "actor": "cn",
+      "version": 1,
+      "clauses": {
+        "全球算力资源分配": {
+          "option": "附带可核查机制",
+          "note": "以可核查机制换取分配安排的推进。"
+        }
+      },
+      "created_round": 1,
+      "kind": "offer",
+      "conditions": []
+    },
+    {
+      "action_id": "us-counter-0001",
+      "actor": "us",
+      "version": 2,
+      "clauses": {
+        "前沿模型评测门槛": {
+          "option": 50,
+          "note": "美方将评测门槛从 30 提高到 50。"
+        }
+      },
+      "created_round": 1,
+      "kind": "counter_offer",
+      "conditions": []
+    },
+    {
+      "action_id": "cn-final-0001",
+      "actor": "cn",
+      "version": 3,
+      "clauses": {
+        "全球算力资源分配": {
+          "option": "附带可核查机制",
+          "note": "以可核查机制换取分配安排的推进。"
+        },
+        "数据跨境流动": {
+          "option": "白名单互认",
+          "note": "确认数据跨境采用白名单互认。"
+        }
+      },
+      "created_round": 1,
+      "kind": "final_offer",
+      "conditions": []
+    },
+    {
+      "action_id": "us-counter-0002",
+      "actor": "us",
+      "version": 4,
+      "clauses": {
+        "前沿模型评测门槛": {
+          "option": 45,
+          "note": "美方下调评测门槛至 45。"
+        }
+      },
+      "created_round": 2,
+      "kind": "counter_offer",
+      "conditions": []
+    }
+  ],
+  "agreement": {
+    "action_id": "cn-accept-0001",
+    "actor": "cn",
+    "version": 4,
+    "clauses": {
+      "全球算力资源分配": {
+        "option": "附带可核查机制",
+        "note": "以可核查机制换取分配安排的推进。"
+      },
+      "前沿模型评测门槛": {
+        "option": 45,
+        "note": "美方下调评测门槛至 45。"
+      },
+      "数据跨境流动": {
+        "option": "白名单互认",
+        "note": "确认数据跨境采用白名单互认。"
+      }
+    },
+    "created_round": 2,
+    "kind": "agreement",
+    "conditions": []
+  },
+  "open_issues": [],
+  "action_points": 1,
+  "public_events": [
+    {
+      "event_id": "evt-0001",
+      "type": "action",
+      "round": 1,
+      "action_id": "cn-offer-0001",
+      "actor": "cn",
+      "action_type": "offer",
+      "card_id": null,
+      "offer_patch": {
+        "全球算力资源分配": {
+          "option": "附带可核查机制",
+          "note": "以可核查机制换取分配安排的推进。"
+        }
+      },
+      "conditions": [],
+      "expected_effect": "推动算力分配从自愿分享转向可核查安排。",
+      "public_message": "中方建议在算力资源分配中加入可核查机制，兼顾各方关切。",
+      "version": 1
+    },
+    {
+      "event_id": "evt-0002",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "interest",
+      "before": 68,
+      "after": 50,
+      "delta": -18,
+      "requested_delta": -18,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "cn-offer-0001"
+    },
+    {
+      "event_id": "evt-0003",
+      "type": "index_change",
+      "round": 1,
+      "party": "us",
+      "index": "interest",
+      "before": 35,
+      "after": 60,
+      "delta": 25,
+      "requested_delta": 25,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "cn-offer-0001"
+    },
+    {
+      "event_id": "evt-0004",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "image",
+      "before": 60,
+      "after": 63,
+      "delta": 3,
+      "requested_delta": 3,
+      "clamped": false,
+      "reason": "发言标签：constructive_proposal:moderate",
+      "source": "cn-offer-0001"
+    },
+    {
+      "event_id": "evt-0005",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "trust",
+      "before": 45,
+      "after": 47,
+      "delta": 2,
+      "requested_delta": 2,
+      "clamped": false,
+      "reason": "发言标签：constructive_proposal:moderate",
+      "source": "cn-offer-0001"
+    },
+    {
+      "event_id": "evt-0006",
+      "type": "action",
+      "round": 1,
+      "action_id": "us-counter-0001",
+      "actor": "us",
+      "action_type": "counter_offer",
+      "card_id": null,
+      "offer_patch": {
+        "前沿模型评测门槛": {
+          "option": 50,
+          "note": "美方将评测门槛从 30 提高到 50。"
+        }
+      },
+      "conditions": [],
+      "expected_effect": "以更高评测门槛回应中方提案。",
+      "public_message": "美方同意讨论可核查机制，但评测门槛必须提高。",
+      "version": 2
+    },
+    {
+      "event_id": "evt-0007",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "interest",
+      "before": 50,
+      "after": 57,
+      "delta": 7,
+      "requested_delta": 7,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "us-counter-0001"
+    },
+    {
+      "event_id": "evt-0008",
+      "type": "index_change",
+      "round": 1,
+      "party": "us",
+      "index": "interest",
+      "before": 60,
+      "after": 52,
+      "delta": -8,
+      "requested_delta": -8,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "us-counter-0001"
+    },
+    {
+      "event_id": "evt-0009",
+      "type": "index_change",
+      "round": 1,
+      "party": "us",
+      "index": "image",
+      "before": 55,
+      "after": 54,
+      "delta": -1,
+      "requested_delta": -1,
+      "clamped": false,
+      "reason": "发言标签：hardline_stance:slight",
+      "source": "us-counter-0001"
+    },
+    {
+      "event_id": "evt-0010",
+      "type": "index_change",
+      "round": 1,
+      "party": "us",
+      "index": "trust",
+      "before": 40,
+      "after": 42,
+      "delta": 2,
+      "requested_delta": 2,
+      "clamped": false,
+      "reason": "发言标签：hardline_stance:slight",
+      "source": "us-counter-0001"
+    },
+    {
+      "event_id": "evt-0011",
+      "type": "action",
+      "round": 1,
+      "action_id": "cn-final-0001",
+      "actor": "cn",
+      "action_type": "final_offer",
+      "card_id": null,
+      "offer_patch": {
+        "数据跨境流动": {
+          "option": "白名单互认",
+          "note": "确认数据跨境采用白名单互认。"
+        }
+      },
+      "conditions": [],
+      "expected_effect": "锁定中方最后立场。",
+      "public_message": "这是中方的最后报价：白名单互认，不再修改。",
+      "version": 3
+    },
+    {
+      "event_id": "evt-0012",
+      "type": "final_offer_declared",
+      "round": 1,
+      "party": "cn",
+      "version": 3
+    },
+    {
+      "event_id": "evt-0013",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "image",
+      "before": 63,
+      "after": 62,
+      "delta": -1,
+      "requested_delta": -1,
+      "clamped": false,
+      "reason": "发言标签：hardline_stance:slight",
+      "source": "cn-final-0001"
+    },
+    {
+      "event_id": "evt-0014",
+      "type": "index_change",
+      "round": 1,
+      "party": "cn",
+      "index": "trust",
+      "before": 47,
+      "after": 49,
+      "delta": 2,
+      "requested_delta": 2,
+      "clamped": false,
+      "reason": "发言标签：hardline_stance:slight",
+      "source": "cn-final-0001"
+    },
+    {
+      "event_id": "evt-0015",
+      "type": "round_advanced",
+      "round": 2,
+      "rounds_without_offer": 0
+    },
+    {
+      "event_id": "evt-0016",
+      "type": "action",
+      "round": 2,
+      "action_id": "us-counter-0002",
+      "actor": "us",
+      "action_type": "counter_offer",
+      "card_id": null,
+      "offer_patch": {
+        "前沿模型评测门槛": {
+          "option": 45,
+          "note": "美方下调评测门槛至 45。"
+        }
+      },
+      "conditions": [],
+      "expected_effect": "以小幅让步换取协议。",
+      "public_message": "美方可以将门槛下调到 45，但这是有条件的让步。",
+      "version": 4
+    },
+    {
+      "event_id": "evt-0017",
+      "type": "index_change",
+      "round": 2,
+      "party": "cn",
+      "index": "interest",
+      "before": 57,
+      "after": 55,
+      "delta": -2,
+      "requested_delta": -2,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "us-counter-0002"
+    },
+    {
+      "event_id": "evt-0018",
+      "type": "index_change",
+      "round": 2,
+      "party": "us",
+      "index": "interest",
+      "before": 52,
+      "after": 54,
+      "delta": 2,
+      "requested_delta": 2,
+      "clamped": false,
+      "reason": "条款效用重算",
+      "source": "us-counter-0002"
+    },
+    {
+      "event_id": "evt-0019",
+      "type": "action",
+      "round": 2,
+      "action_id": "cn-accept-0001",
+      "actor": "cn",
+      "action_type": "accept",
+      "card_id": null,
+      "offer_patch": {},
+      "conditions": [],
+      "expected_effect": "接受美方还价，达成协议。",
+      "public_message": "中方接受美方还价，谈判达成协议。",
+      "version": 4
+    },
+    {
+      "event_id": "evt-0020",
+      "type": "index_change",
+      "round": 2,
+      "party": "cn",
+      "index": "image",
+      "before": 62,
+      "after": 65,
+      "delta": 3,
+      "requested_delta": 3,
+      "clamped": false,
+      "reason": "发言标签：diplomatic_reframe:slight",
+      "source": "cn-accept-0001"
+    },
+    {
+      "event_id": "evt-0021",
+      "type": "index_change",
+      "round": 2,
+      "party": "cn",
+      "index": "trust",
+      "before": 49,
+      "after": 51,
+      "delta": 2,
+      "requested_delta": 2,
+      "clamped": false,
+      "reason": "发言标签：diplomatic_reframe:slight",
+      "source": "cn-accept-0001"
+    },
+    {
+      "event_id": "evt-0022",
+      "type": "terminal",
+      "round": 2,
+      "terminal_type": "FULL_AGREEMENT"
+    }
+  ],
+  "private_state_by_party": {
+    "cn": {
+      "bottom_line": "可接受附带可核查机制的算力分配安排",
+      "notes": "不接受完全市场主导的分配方式。"
+    },
+    "us": {
+      "bottom_line": "可接受附带可核查机制，但不接受完全自愿分享。",
+      "notes": "要求前沿模型评测门槛不高于 70。"
+    }
+  },
+  "status": "ended",
+  "terminal": {
+    "type": "FULL_AGREEMENT",
+    "label": "完整协议",
+    "round": 2,
+    "coverage": 1.0
+  },
+  "indices": {
+    "cn": {
+      "interest": 55,
+      "image": 65,
+      "trust": 51
+    },
+    "us": {
+      "interest": 54,
+      "image": 54,
+      "trust": 42
+    }
+  },
+  "behavior_log": [
+    {
+      "action_id": "cn-offer-0001",
+      "actor": "cn",
+      "round": 1,
+      "action_type": "offer",
+      "label_mode": "effect_labels",
+      "labels": [
+        {
+          "label": "constructive_proposal",
+          "magnitude": "moderate",
+          "clause": null,
+          "reason": "",
+          "target": "both"
+        }
+      ],
+      "deltas": {
+        "image": 3,
+        "trust": 2
+      },
+      "clause_changes": [
+        {
+          "clause": "全球算力资源分配",
+          "before": "自愿分享",
+          "after": "附带可核查机制"
+        }
+      ]
+    },
+    {
+      "action_id": "us-counter-0001",
+      "actor": "us",
+      "round": 1,
+      "action_type": "counter_offer",
+      "label_mode": "effect_labels",
+      "labels": [
+        {
+          "label": "hardline_stance",
+          "magnitude": "slight",
+          "clause": null,
+          "reason": "",
+          "target": "both"
+        }
+      ],
+      "deltas": {
+        "image": -1,
+        "trust": 2
+      },
+      "clause_changes": [
+        {
+          "clause": "前沿模型评测门槛",
+          "before": 30,
+          "after": 50
+        }
+      ]
+    },
+    {
+      "action_id": "cn-final-0001",
+      "actor": "cn",
+      "round": 1,
+      "action_type": "final_offer",
+      "label_mode": "effect_labels",
+      "labels": [
+        {
+          "label": "hardline_stance",
+          "magnitude": "slight",
+          "clause": null,
+          "reason": "",
+          "target": "both"
+        }
+      ],
+      "deltas": {
+        "image": -1,
+        "trust": 2
+      },
+      "clause_changes": [
+        {
+          "clause": "数据跨境流动",
+          "before": "白名单互认",
+          "after": "白名单互认"
+        }
+      ]
+    },
+    {
+      "action_id": "us-counter-0002",
+      "actor": "us",
+      "round": 2,
+      "action_type": "counter_offer",
+      "label_mode": "effect_labels",
+      "labels": [
+        {
+          "label": "conditional_concession",
+          "magnitude": "slight",
+          "clause": null,
+          "reason": "",
+          "target": "both"
+        }
+      ],
+      "deltas": {
+        "image": 0,
+        "trust": 0
+      },
+      "clause_changes": [
+        {
+          "clause": "前沿模型评测门槛",
+          "before": 50,
+          "after": 45
+        }
+      ]
+    },
+    {
+      "action_id": "cn-accept-0001",
+      "actor": "cn",
+      "round": 2,
+      "action_type": "accept",
+      "label_mode": "effect_labels",
+      "labels": [
+        {
+          "label": "diplomatic_reframe",
+          "magnitude": "slight",
+          "clause": null,
+          "reason": "",
+          "target": "both"
+        }
+      ],
+      "deltas": {
+        "image": 3,
+        "trust": 2
+      },
+      "clause_changes": []
+    }
+  ],
+  "rounds_without_offer": 0,
+  "final_offer_declared_by": {
+    "cn": 3,
+    "us": null
+  },
+  "seen_action_ids": [
+    "cn-offer-0001",
+    "us-counter-0001",
+    "cn-final-0001",
+    "us-counter-0002",
+    "cn-accept-0001"
+  ]
+}

@@ -12,7 +12,7 @@ from engine.terminal import TERMINAL_TYPES
 
 BASE_DIR = Path(__file__).resolve().parent
 CHIP_SCENARIO_PATH = (
-    BASE_DIR.parent / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
+    BASE_DIR / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
 )
 
 CLAUSE_COMPUTE = "可获许可的先进计算芯片算力门槛"
