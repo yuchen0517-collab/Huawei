@@ -12,13 +12,14 @@ from engine.terminal import TERMINAL_TYPES
 
 BASE_DIR = Path(__file__).resolve().parent
 CHIP_SCENARIO_PATH = (
-    BASE_DIR / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
+    # B 最新交付在上级目录（原 Huawei/scenario agent v2 为旧版留存）
+    BASE_DIR.parent / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
 )
 
-CLAUSE_COMPUTE = "可获许可的先进计算芯片算力门槛"
+CLAUSE_COMPUTE = "芯片算力门槛"
 CLAUSE_DAYS = "许可审批时限"
 CLAUSE_REEXPORT = "第三国再出口限制"
-CLAUSE_MINERALS = "关键矿产（稀土·镓·锗）出口安排"
+CLAUSE_MINERALS = "关键矿产出口安排"
 REEXPORT_O2 = "仅对实体清单对象要求许可"
 REEXPORT_O3 = "第三国再出口一律事前许可"
 MINERALS_O2 = "对民用终端设 30 天快速通道"
@@ -127,7 +128,7 @@ def test_minimal_scenario_full_agreement():
 def test_chip_scenario_full_agreement():
     print("\n===== 局 2：B 芯片场景（load_scenario 转换）离线整局 =====")
     scenario = load_scenario(CHIP_SCENARIO_PATH)
-    assert scenario["scenario_id"] == "scn_chip_001"
+    assert scenario["scenario_id"] == "scn-chip-controls-0001"
     assert [clause["type"] for clause in scenario["clauses"]] == [
         "numeric", "numeric", "enum", "enum",
     ]
