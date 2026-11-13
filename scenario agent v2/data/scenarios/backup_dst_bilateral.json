@@ -1,0 +1,395 @@
+{
+  "scenario_id": "scn-dst-cn-us-0001",
+  "title": "中美跨境数字服务税与平台征税安排",
+  "scenario_type": "hypothesis",
+  "background": "中方已对跨境数字服务实施增值税征管，并要求平台经营者登记纳税；美方长期反对单边数字服务税，曾以 301 调查与加征关税回应欧盟成员国做法。本轮为双边假设推演：双方就税率、征税门槛、追溯期与现有加征关税的去留进行封闭磋商。本场景不对任何现实谈判结果作预测。",
+  "assumptions": [
+    {
+      "assumption_id": "A1",
+      "text": "假定双方同意把讨论集中在数字服务税与平台征税，不涉及更广泛的市场准入议题。",
+      "reason": "议题过宽会退化成零和立场表态，收窄到四项可量化条款才能形成交换。",
+      "affects": [
+        "I1",
+        "I2",
+        "I3",
+        "I4"
+      ]
+    },
+    {
+      "assumption_id": "A2",
+      "text": "假定美方愿以逐步取消加征关税，换取中方在税率与门槛上作出明确承诺。",
+      "reason": "这是本场景唯一的交换结构；若无此假设，双方只剩相互施压。",
+      "affects": [
+        "I1",
+        "I4"
+      ]
+    },
+    {
+      "assumption_id": "A3",
+      "text": "本场景为中美双边假设推演，其他国家与多边进程的立场不予建模。",
+      "reason": "本轮范围冻结为双边谈判，多边重构不在范围内。",
+      "affects": [
+        "I1",
+        "I4"
+      ]
+    }
+  ],
+  "parties": [
+    {
+      "party_id": "P1",
+      "name": "中方（财政部·税务总局）",
+      "role_label": "我方",
+      "public_position": "主张对跨境数字服务公平征税，税率与门槛应符合本国数字经济发展阶段；反对以单边关税回应税收政策分歧。"
+    },
+    {
+      "party_id": "P2",
+      "name": "美方（贸易代表办公室 USTR）",
+      "role_label": "对方",
+      "public_position": "反对针对本国企业的单边数字服务税，认为其构成歧视性贸易措施；要求税率与门槛不得针对特定国别企业。"
+    }
+  ],
+  "issues": [
+    {
+      "issue_id": "I1",
+      "name": "数字服务税税率",
+      "type": "numeric",
+      "unit": "%",
+      "range": {
+        "min": 0,
+        "max": 6,
+        "step": 0.5
+      },
+      "options": null,
+      "description": "对跨境数字服务营业额适用的税率。0 表示不设单边税。现状按 0 计。"
+    },
+    {
+      "issue_id": "I2",
+      "name": "征税门槛",
+      "type": "enumerated",
+      "unit": null,
+      "range": null,
+      "options": [
+        {
+          "option_id": "O1",
+          "label": "全球营收 1 亿元且境内营收 200 万元",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "全球营收 5 亿元且境内营收 500 万元",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "全球营收 20 亿元且境内营收 2000 万元",
+          "order": 3
+        }
+      ],
+      "description": "达到门槛才需登记纳税。门槛越低，覆盖面越广。order 按对中方有利程度排序。"
+    },
+    {
+      "issue_id": "I3",
+      "name": "追溯适用期",
+      "type": "numeric",
+      "unit": "月",
+      "range": {
+        "min": 0,
+        "max": 36,
+        "step": 6
+      },
+      "options": null,
+      "description": "税法生效后可向前追溯的月数。追溯越久，企业补税压力越大。"
+    },
+    {
+      "issue_id": "I4",
+      "name": "加征关税去留",
+      "type": "enumerated",
+      "unit": null,
+      "range": null,
+      "options": [
+        {
+          "option_id": "O1",
+          "label": "立即取消全部加征关税",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "三年内分步取消",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "承诺不再新增但与税收进度挂钩",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "维持现行加征安排",
+          "order": 4
+        }
+      ],
+      "description": "order 按对中方有利程度排序，1 最有利。"
+    }
+  ],
+  "public_facts": [
+    {
+      "fact_id": "CN-01",
+      "text": "财税〔2016〕36号明确向境外提供、完全在境外消费的数字服务适用增值税零税率",
+      "type": "行动",
+      "source": {
+        "name": "国家税务总局上海市税务局",
+        "url": "http://shanghai.chinatax.gov.cn/tax/zcfw/zcjd/201604/t422817.html",
+        "published_at": "2016-04-06",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "CN-03",
+      "text": "《电子商务法》施行，要求电商经营者依法办理登记并履行纳税义务",
+      "type": "行动",
+      "source": {
+        "name": "人民日报海外版（中央网信办转载）",
+        "url": "https://www.cac.gov.cn/2019-01/07/c_1123954767.htm",
+        "published_at": "2019-01-01",
+        "confidence": "B"
+      },
+      "applies_to": [
+        "I2"
+      ]
+    },
+    {
+      "fact_id": "CN-06",
+      "text": "“十四五”规划纲要提出，积极参与数据安全、数字货币、数字税等国际规则制定",
+      "type": "立场",
+      "source": {
+        "name": "新华社（纲要受权发布）",
+        "url": "http://www.xinhuanet.com/politics/2021lh/2021-03/13/c_1127205564_6.htm",
+        "published_at": "2021-03-13",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I3"
+      ]
+    },
+    {
+      "fact_id": "CN-12",
+      "text": "国家税务总局：单边数字税易致过度征税、双重征税并引发贸易报复",
+      "type": "立场",
+      "source": {
+        "name": "中国税务报（国家税务总局国际税务司研究小组）",
+        "url": "https://finance.sina.com.cn/jjxw/2021-12-01/doc-ikyamrmy6167939.shtml",
+        "published_at": "2021-12-01",
+        "confidence": "B"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "US-01",
+      "text": "美国首次以301条款调查法国3%数字服务税，指其针对美国企业",
+      "type": "行动",
+      "source": {
+        "name": "美国贸易代表办公室（USTR）",
+        "url": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2019/july/ustr-announces-initiation-section-301",
+        "published_at": "2019-07-10",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I1"
+      ]
+    },
+    {
+      "fact_id": "US-09",
+      "text": "美国对印度、英国、土耳其等六国商品加征25%关税，但暂缓180天",
+      "type": "行动",
+      "source": {
+        "name": "USTR",
+        "url": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/june/ustr-announces-and-immediately-suspends-tariffs-section-301-digital-services-taxes-investigations",
+        "published_at": "2021-06-02",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I4"
+      ]
+    },
+    {
+      "fact_id": "US-18",
+      "text": "特朗普点名法、英、意、西、奥、土、加七国数字税，考虑重启301调查",
+      "type": "立场",
+      "source": {
+        "name": "美国白宫",
+        "url": "https://www.whitehouse.gov/presidential-actions/2025/02/defending-american-companies-and-innovators-from-overseas-extortion-and-unfair-fines-and-penalties/",
+        "published_at": "2025-02-21",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I4"
+      ]
+    },
+    {
+      "fact_id": "US-22",
+      "text": "G7声明：构建“并行体系”，就数字经济征税与各国税收主权开展建设性对话",
+      "type": "立场",
+      "source": {
+        "name": "加拿大财政部（G7主席国）",
+        "url": "https://www.canada.ca/en/department-finance/news/2025/06/g7-statement-on-global-minimum-taxes.html",
+        "published_at": "2025-06-28",
+        "confidence": "A"
+      },
+      "applies_to": [
+        "I4"
+      ]
+    }
+  ],
+  "private_state_by_party": {
+    "P1": {
+      "goals": [
+        {
+          "issue_id": "I1",
+          "target": 3.0,
+          "weight": 0.3,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": "O1",
+          "weight": 0.25,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I3",
+          "target": 24,
+          "weight": 0.15,
+          "direction": "higher_better"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O1",
+          "weight": 0.3,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "I1",
+          "op": "min",
+          "value": 1.0,
+          "hard": true,
+          "reason": "税率低于 1% 无法覆盖征管成本，政策上不可接受"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O1",
+            "O2",
+            "O3"
+          ],
+          "hard": true,
+          "reason": "必须出现取消或收敛承诺，不接受维持现行加征安排"
+        },
+        {
+          "issue_id": "I3",
+          "op": "max",
+          "value": 30,
+          "hard": false,
+          "reason": "追溯期过长会引发企业强烈反弹"
+        }
+      ],
+      "batna": {
+        "utility": 38,
+        "description": "继续按现行办法征管并承受加征关税，税收到手但出口承压。",
+        "basis": "公开事实 CN-01、CN-12：现行征管口径与单边措施的反制风险"
+      },
+      "hidden_task": "把加征关税的去留与税率绑定谈，避免先让税率、后无筹码",
+      "priority_ranking": [
+        "I4",
+        "I1",
+        "I2",
+        "I3"
+      ]
+    },
+    "P2": {
+      "goals": [
+        {
+          "issue_id": "I1",
+          "target": 0.0,
+          "weight": 0.3,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I2",
+          "target": "O3",
+          "weight": 0.2,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I3",
+          "target": 0,
+          "weight": 0.1,
+          "direction": "lower_better"
+        },
+        {
+          "issue_id": "I4",
+          "target": "O4",
+          "weight": 0.4,
+          "direction": "ranked"
+        }
+      ],
+      "redlines": [
+        {
+          "issue_id": "I1",
+          "op": "max",
+          "value": 3.0,
+          "hard": true,
+          "reason": "税率超过 3% 视为针对本国企业的歧视性措施"
+        },
+        {
+          "issue_id": "I4",
+          "op": "in",
+          "value": [
+            "O2",
+            "O3",
+            "O4"
+          ],
+          "hard": true,
+          "reason": "不接受无条件的立即取消，需与税收安排挂钩"
+        },
+        {
+          "issue_id": "I3",
+          "op": "max",
+          "value": 12,
+          "hard": false,
+          "reason": "追溯期超过 12 个月将在国内政治上难以解释"
+        }
+      ],
+      "batna": {
+        "utility": 35,
+        "description": "维持加征关税并重启调查，持续施压但无法取得税收安排上的确定性。",
+        "basis": "公开事实 US-01、US-09、US-18：301 调查与加征关税的既有做法"
+      },
+      "hidden_task": "把税率压到 3% 以下并锁定，作为可向国内交代的成果",
+      "priority_ranking": [
+        "I1",
+        "I4",
+        "I2",
+        "I3"
+      ]
+    }
+  },
+  "max_rounds": 8,
+  "terminal_rules": {
+    "allow_walk_away": true,
+    "accept_requires_no_open_issue": true,
+    "partial_agreement_allowed": true
+  },
+  "negotiability": {
+    "verdict": "direct",
+    "zopa_exists": true,
+    "notes": "交换结构：中方在税率上退到 3% 以内，换取美方在加征关税上让到分步取消；门槛与追溯期作为次级筹码微调。"
+  }
+}

@@ -779,8 +779,172 @@ def _check_r8_enum_values(data: Mapping[str, Any]) -> list[Problem]:
     return problems
 
 
+# ---------------------------------------------------------------------------
+# R9 条款命名与引擎兼容：条款名会被当作行动 JSON 的键，选项 label 会被当作选项 id
+# ---------------------------------------------------------------------------
+MAX_CLAUSE_NAME_LEN = 20
+EXACT_PARTIES = 2
+_ILLEGAL_NAME_CHARS = frozenset('"\\{}[],:')
+
+
+def _check_r9_clause_naming(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+
+    parties = data.get("parties")
+    if isinstance(parties, list) and len(parties) != EXACT_PARTIES:
+        problems.append(Problem(
+            "R9_clause_naming",
+            "parties",
+            f"规则引擎仅支持双边谈判，parties 必须恰好 {EXACT_PARTIES} 个，实际为 {len(parties)} 个",
+        ))
+
+    seen_names: dict[str, int] = {}
+    raw_issues = data.get("issues")
+    if isinstance(raw_issues, list):
+        for issue_index, issue in enumerate(raw_issues):
+            if not isinstance(issue, Mapping):
+                continue
+            name = issue.get("name")
+            name_path = f"issues[{issue_index}].name"
+            if not isinstance(name, str) or not name.strip():
+                problems.append(Problem("R9_clause_naming", name_path, "条款名（name）不能为空"))
+            else:
+                if name in seen_names:
+                    problems.append(Problem(
+                        "R9_clause_naming",
+                        name_path,
+                        f"条款名 {name!r} 与 issues[{seen_names[name]}] 重复；"
+                        f"条款名会被当作行动 JSON 的键，必须全场景唯一",
+                    ))
+                else:
+                    seen_names[name] = issue_index
+                if len(name) > MAX_CLAUSE_NAME_LEN:
+                    problems.append(Problem(
+                        "R9_clause_naming",
+                        name_path,
+                        f"条款名 {name!r} 长度 {len(name)} 超过 {MAX_CLAUSE_NAME_LEN} 字，过长不便作为 JSON 键使用",
+                    ))
+                illegal = sorted({char for char in name if char in _ILLEGAL_NAME_CHARS})
+                if illegal:
+                    problems.append(Problem(
+                        "R9_clause_naming",
+                        name_path,
+                        f"条款名 {name!r} 含非法字符 {illegal}",
+                    ))
+
+            seen_labels: dict[str, int] = {}
+            for option_index, option in enumerate(_dict_list(issue.get("options"))):
+                label = option.get("label")
+                label_path = f"issues[{issue_index}].options[{option_index}].label"
+                if not isinstance(label, str) or not label.strip():
+                    problems.append(Problem("R9_clause_naming", label_path, "选项 label 不能为空"))
+                    continue
+                if label in seen_labels:
+                    problems.append(Problem(
+                        "R9_clause_naming",
+                        label_path,
+                        f"选项 label {label!r} 与 options[{seen_labels[label]}] 重复；"
+                        f"规则引擎直接用 label 作为选项 id，同一议题内必须唯一",
+                    ))
+                else:
+                    seen_labels[label] = option_index
+
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# R10 事实必须有来源 / R11 假设必须可追溯
+# 这是「事实与假设分离」的代码闸门：能点开原文的才算事实，其余一律进 assumptions
+# ---------------------------------------------------------------------------
+def _check_r10_facts_sourced(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+    issue_ids = set(_issue_index(data).keys())
+    raw_facts = data.get("public_facts")
+    if not isinstance(raw_facts, list):
+        return problems
+
+    for fact_index, fact in enumerate(raw_facts):
+        base = f"public_facts[{fact_index}]"
+        if not isinstance(fact, Mapping):
+            problems.append(Problem("R10_facts_sourced", base, "事实条目必须是对象"))
+            continue
+
+        text = fact.get("text")
+        if not isinstance(text, str) or not text.strip():
+            problems.append(Problem("R10_facts_sourced", f"{base}.text", "事实内容不能为空"))
+
+        source = fact.get("source")
+        if not isinstance(source, Mapping):
+            problems.append(Problem(
+                "R10_facts_sourced", f"{base}.source",
+                "缺少 source；没有来源的内容必须写入 assumptions，不能算事实",
+            ))
+        else:
+            url = source.get("url")
+            if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+                problems.append(Problem(
+                    "R10_facts_sourced", f"{base}.source.url",
+                    f"来源链接必须以 http(s) 开头，实际为 {url!r}；无法核实的条目应降级为假设",
+                ))
+            name = source.get("name")
+            if not isinstance(name, str) or not name.strip():
+                problems.append(Problem("R10_facts_sourced", f"{base}.source.name", "来源名称不能为空"))
+
+        applies_to = fact.get("applies_to")
+        if not isinstance(applies_to, list):
+            problems.append(Problem("R10_facts_sourced", f"{base}.applies_to", "applies_to 必须是数组"))
+        else:
+            unknown = [item for item in applies_to if item not in issue_ids]
+            if unknown:
+                problems.append(Problem(
+                    "R10_facts_sourced", f"{base}.applies_to",
+                    f"引用了不存在的 issue_id：{unknown}，现有议题为 {sorted(issue_ids)}",
+                ))
+    return problems
+
+
+def _check_r11_assumption_traceable(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+    issue_ids = set(_issue_index(data).keys())
+    raw_assumptions = data.get("assumptions")
+    if not isinstance(raw_assumptions, list):
+        return problems
+
+    for index, assumption in enumerate(raw_assumptions):
+        base = f"assumptions[{index}]"
+        if not isinstance(assumption, Mapping):
+            problems.append(Problem("R11_assumption_traceable", base, "假设条目必须是对象"))
+            continue
+
+        for field_name in ("text", "reason"):
+            value = assumption.get(field_name)
+            if not isinstance(value, str) or not value.strip():
+                problems.append(Problem(
+                    "R11_assumption_traceable", f"{base}.{field_name}",
+                    f"{field_name} 不能为空；假设必须写清内容与理由，否则无法与事实区分",
+                ))
+
+        affects = assumption.get("affects")
+        if not isinstance(affects, list) or not affects:
+            problems.append(Problem(
+                "R11_assumption_traceable", f"{base}.affects",
+                "affects 不能为空；必须指明该假设影响哪些 issue_id",
+            ))
+        else:
+            unknown = [item for item in affects if item not in issue_ids]
+            if unknown:
+                problems.append(Problem(
+                    "R11_assumption_traceable", f"{base}.affects",
+                    f"引用了不存在的 issue_id：{unknown}，现有议题为 {sorted(issue_ids)}",
+                ))
+    return problems
+
+
 _RULES = (
     _check_r0_required_fields,
+    _check_r9_clause_naming,
+    _check_r10_facts_sourced,
+    _check_r11_assumption_traceable,
     _check_r8_enum_values,
     _check_r1_weight_sum,
     _check_r2_target_in_range,

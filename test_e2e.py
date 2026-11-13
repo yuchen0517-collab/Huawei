@@ -12,8 +12,8 @@ from engine.terminal import TERMINAL_TYPES
 
 BASE_DIR = Path(__file__).resolve().parent
 CHIP_SCENARIO_PATH = (
-    # B 最新交付在上级目录（原 Huawei/scenario agent v2 为旧版留存）
-    BASE_DIR.parent / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
+    # B 最新交付已从 feat/scenario-b 收编进仓库（11/13），仓库自包含
+    BASE_DIR / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
 )
 
 CLAUSE_COMPUTE = "芯片算力门槛"

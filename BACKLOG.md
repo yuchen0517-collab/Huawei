@@ -9,3 +9,4 @@
 | 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | 传入 B 场景时仅引擎场景切换，Prompt 文案与初始指数展示未联动 | 三人对齐后决定 Prompt 是否随场景生成 |
 | 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | 按 negotiability.notes 口径实现，仅在双方偏好完全相反时成立 | 若后续场景双方偏好非完全相反，需 B 给出逐方 score || 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
 | 6 | 外部交付目录（C 11.12 三指数、scenario agent v2、Diplomat_webdemo2.0）被仓库 pytest 误收集 | C 的 79 条测试只能在其自身目录下运行（仓库 rootdir 下收集会 ImportError），已在 conftest.py 的 collect_ignore 中排除 | 无，属既定约束；C 的测试一律 cd 到其目录后跑 `python -m pytest tests/ -q` |
+| 7 | B 分支 feat/scenario-b 的 factcard_loader.py 带 6 处未解决合并冲突标记（<<<<<<< Updated upstream），test_factcard_loader.py 无法收集 | 11/13 晚收编新版目录时发现；主链路不 import 该文件，不阻塞第一轮 | 通知 B 在其分支解决冲突后重新推送，我们再同步 |

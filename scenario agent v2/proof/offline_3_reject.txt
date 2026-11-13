@@ -1,0 +1,5 @@
+【场景三】连续不合格 → 抛异常，不返回半成品
+stage=validate
+问题数=1
+
+[R1_weight_sum] private_state_by_party.cn.goals：goals.weight 之和为 0.800000，应为 1（容差 0.001）
