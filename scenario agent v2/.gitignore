@@ -1,0 +1,8 @@
+﻿__pycache__/
+*.pyc
+.pytest_cache/
+.merkle-snapshot.json
+.codeartsdoer/temp/
+.env
+.env.local
+*.log
