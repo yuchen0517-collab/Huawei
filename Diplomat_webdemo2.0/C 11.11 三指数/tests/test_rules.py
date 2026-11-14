@@ -180,6 +180,31 @@ class RulesTest(unittest.TestCase):
         self.assertTrue(evaluation["batna_comparison"]["us"]["better_than_batna"])
         self.assertIsNone(evaluation["learning_performance"])
 
+    def test_batna_hides_counterpart_from_viewer(self):
+        engine = full_engine()
+        full = engine.evaluate()
+        mine = engine.evaluate(viewer="cn")
+        self.assertEqual(
+            mine["batna_comparison"]["cn"], full["batna_comparison"]["cn"]
+        )
+        self.assertIsNotNone(mine["batna_comparison"]["cn"]["net_gain"])
+        us = mine["batna_comparison"]["us"]
+        self.assertIsNone(us["batna"])
+        self.assertIsNone(us["net_gain"])
+        self.assertIsNone(us["better_than_batna"])
+        self.assertEqual(
+            us["achieved"], full["batna_comparison"]["us"]["achieved"]
+        )
+
+    def test_batna_unknown_viewer_hides_all(self):
+        engine = full_engine()
+        view = engine.evaluate(viewer="public")
+        self.assertTrue(view["batna_comparison"])
+        for item in view["batna_comparison"].values():
+            self.assertIsNone(item["batna"])
+            self.assertIsNone(item["net_gain"])
+            self.assertIsNone(item["better_than_batna"])
+
     def test_partial_agreement(self):
         engine = make_engine()
         submit(engine, action_id="cn-1", patch={"全球算力资源分配": "附带可核查机制"})

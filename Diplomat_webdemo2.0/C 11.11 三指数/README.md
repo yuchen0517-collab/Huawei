@@ -10,7 +10,7 @@ python -m unittest discover -s tests -t .
 python demo.py
 ```
 
-第一条命令运行 103 条单元测试；第二条跑完一局完整谈判，打印每步状态与
+第一条命令运行 106 条单元测试；第二条跑完一局完整谈判，打印每步状态与
 `FINAL_OFFER_LOCKED` 的真实拦截，并把真实结果写入
 `docs/state.example.json` 与 `docs/evaluation.example.json`。
 
@@ -39,7 +39,7 @@ tests/
   test_rules.py        21 条行动/终局
   test_indices.py      19 条三指数
   test_audit.py        10 条协议审计
-  test_adapter.py      26 条场景适配（映射、效用、红线、端到端、信息隔离）
+  test_adapter.py      29 条场景适配（映射、效用、红线、端到端、信息隔离）
 docs/
   index_rules.md      三指数口径
   action_schema.md    行动结构逐字段说明
@@ -102,6 +102,11 @@ evaluation = engine.evaluate()
 
 `learning_performance` 恒为 `None`，归成员D 填充。
 `evidence_links` 是 `public_events` 的下标列表，观战页可据此回点。
+
+BATNA 按视角裁剪：`engine.evaluate(viewer="cn")` 只给中方真值，对方
+`batna / net_gain / better_than_batna` 全为 `null`（`net_gain` 能反推底牌）。
+无参 `engine.evaluate()` 只在复盘、审计、演示等内部全量场景使用；
+给玩家看的接口必须传己方 `party_id`。
 
 ### 协议审计
 

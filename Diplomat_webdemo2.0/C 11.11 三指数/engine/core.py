@@ -268,8 +268,9 @@ class RulesEngine:
     def public_state(self, viewer: str = "") -> dict:
         return self.state.to_public_dict(viewer)
 
-    def evaluate(self) -> dict:
-        return evaluate(self.state, self.scenario)
+    def evaluate(self, viewer: str = "") -> dict:
+        """viewer 为空取全量；给玩家看的评价必须传己方 party_id。"""
+        return evaluate(self.state, self.scenario, viewer)
 
     def replay(self) -> dict:
         start = initial_indices(self.scenario)
