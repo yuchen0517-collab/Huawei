@@ -62,6 +62,17 @@ except ScenarioContractError as exc:
     raise
 ```
 
+### 示例 4：对外评价按 viewer 裁剪
+
+```python
+from load_scenario_bridge import evaluate_for
+
+evaluation = evaluate_for(engine, "cn")
+# 六字段结构不变；batna_comparison 里非 cn 方的 batna / net_gain /
+# better_than_batna 一律为 null，achieved 仍下发（公开指数）。
+# viewer 为空时抛 ValueError，禁止无参取全量对外。
+```
+
 ## 3. 字段映射表（以引擎实际实现为准）
 
 | # | B 侧 | C 侧 | 规则 |
@@ -94,7 +105,7 @@ except ScenarioContractError as exc:
 | 26 | `public_facts` | `public_facts` | 直传保留，引擎不用 |
 | 27 | — | `deadlock_rounds` | 默认 `2` |
 | 28 | — | `action_points_per_round` | 默认 `3` |
-| 29 | — | `clauses[].initial` | 枚举取 `order` 最小项，数值取 `range.min`，并 warning |
+| 29 | `issues[].initial`（可选） | `clauses[].initial` | 显式值优先并跳过推导 warning；缺省时枚举取 `order` 最小项、数值取双方 ideal 中点并按硬红线可行域夹逼，并记 `INITIAL_DERIVED` |
 | 30 | —（可选 `index_rules`，上游组装层可补） | `index_rules` | 输入自带则原样保留；否则注入 `demo_scenario.json` 同口径默认表并 warning |
 | 31 | — | `allow_accept_with_open_issues` | 由第 23 条取反得到 |
 
@@ -111,6 +122,20 @@ except ScenarioContractError as exc:
 - `lower_better`：`ideal = target`，引擎同一公式自然表现为“越接近 target 越高分”。
 
 适配层只负责把 `target` 写入 `positions[p].ideal`，不在场景里预存所有取值的分数。
+
+### 初始值（numeric `initial`）
+
+1. B 若在 `issues[]` 中给出显式 `initial`：直接采用（必须落在 `[min, max]`），
+   不记 `INITIAL_DERIVED`。
+2. 否则取双方 `ideal` 中点，再夹逼到双方硬红线可行域：
+   `lo = max(所有 below_is_violation 的 redline)`，
+   `hi = min(所有 above_is_violation 的 redline)`，最终 `min(max(mid, lo), hi)`。
+3. 降级分支：
+   - `IDEALS_INCOMPLETE`：ideal 不足两方 → 回退 `range.min` + warning；
+   - `REDLINE_RANGE_EMPTY`：`lo > hi`（双方红线无交集）→ 取中点 + warning，交审计暴露。
+
+在本夹具上：条款一 `[7,28]`、ideal 28/14、红线 14/21 → mid 21 夹到 21；
+条款二 `[6,36]`、ideal 24/12、红线 12/24 → mid 18 夹到 18。
 
 ### 枚举条款（ranked）
 
@@ -156,6 +181,8 @@ except ScenarioContractError as exc:
 | `HIDDEN_TASK_MISSING` | `hidden_task` 缺失，`bottom_line` 置空 |
 | `PRIORITY_RANKING_MISSING` | `priority_ranking` 缺失，置空数组 |
 | `MULTIPLE_NUMERIC_REDLINES` | 同一方对同一数值议题给了多条红线，引擎单槽位只留一条 |
+| `IDEALS_INCOMPLETE` | 数值议题 ideal 不足两方，无法取中点，回退 `range.min` |
+| `REDLINE_RANGE_EMPTY` | 双方硬红线可行域为空，取中点并由审计关注 |
 
 ## 7. 已知限制（需与 B 对齐）
 
@@ -165,8 +192,9 @@ except ScenarioContractError as exc:
    **结算表的唯一源头是 `demo_scenario.json`**，改表时必须通知 A 同步；
    `tests/test_adapter.py::test_default_index_rules_matches_demo_scenario` 会守卫
    默认常量与 demo 表一致。
-2. **B 契约没有 `initial`**：当前初始方案由 `order` 最小值 / `range.min` 推导，
-   可能让初始 Interest 偏离剧情设定。建议 B 增加 `initial_option` / `initial_value`。
+2. **B 契约没有 `initial`**：当前数值取双方 ideal 中点并按硬红线夹逼，枚举取 `order`
+   最小项，均记 `INITIAL_DERIVED`。建议 B 在 `issues[]` 补 `initial`
+   （数值为数值型、枚举为 `option_id`）；适配层已支持显式值优先与前向校验。
 3. **B 契约没有 `deadlock_rounds` 与 `action_points_per_round`**：固定为 2 与 3，
    无法按场景调节节奏。
 4. **数值红线单槽位**：现有引擎每个数值条款每方只有一个 `redline`。若 B 同方同时给出
@@ -199,7 +227,7 @@ except ScenarioContractError as exc:
 | `hard` 缺省视为非红线 | 漏掉未显式声明 `hard` 的红线 | `hard` 缺省按硬红线处理 |
 | 权重不归一化 | 权重和不为 1 时 Interest 失真 | 按参与方归一化并 warning |
 | `terminal_rules` 只映射一个字段 | 丢 `allow_walk_away` / `partial_agreement_allowed` | 三个字段全部映射 |
-| `initial` 取极端值且不告警 | 开局 Interest 偏低且无提示 | 推导并输出 `INITIAL_DERIVED` warning |
+| `initial` 取极端值且不告警 | 开局 Interest 偏低且可能落在对方硬红线违规区间 | 数值取双方 ideal 中点 + 硬红线夹逼，枚举取 order 最小项，均输出 `INITIAL_DERIVED` |
 | `assumptions` 丢 `assumption_id` | 只留 `text` | 保留 `[A1] ` 前缀 |
 
 ### A 侧接入方式（唯一改动点）
@@ -217,5 +245,6 @@ from load_scenario_bridge import ENGINE_ROOT, load_scenario, make_scenario
 | `convert_b_scenario(data)` | 直接委托 `adapter.adapt_scenario`，不再自行映射字段 |
 | `load_scenario(path=None)` | `path=None` 回落 `make_scenario()`；否则读文件（utf-8-sig）并自动识别 B/C |
 | `make_scenario(agents_path=None)` | 保留 A 的 `agents.json → ai_governance` 组装逻辑 |
+| `evaluate_for(engine, viewer)` | 对外评价收口：先取全量六字段，再按 viewer 裁剪他方 BATNA |
 
 `ENGINE_ROOT` 也一并导出，`api.py` 依赖它做 `sys.path` 注入，无需改动。

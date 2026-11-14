@@ -144,13 +144,23 @@ def validate_b_contract(b_scenario) -> List[str]:
     if "terminal_rules" in b_scenario and not isinstance(terminal_rules, dict):
         errors.append("$.terminal_rules: 必须是对象。")
     elif isinstance(terminal_rules, dict):
+        # B 契约用单数 accept_requires_no_open_issue，C 场景用复数。
+        # 两者都接受，单数优先；同时出现且取值冲突视为契约错误。
         for key in (
             "allow_walk_away",
             "accept_requires_no_open_issue",
+            "accept_requires_no_open_issues",
             "partial_agreement_allowed",
         ):
             if key in terminal_rules and not isinstance(terminal_rules[key], bool):
                 errors.append(f"$.terminal_rules.{key}: 必须是布尔值。")
+        singular = terminal_rules.get("accept_requires_no_open_issue")
+        plural = terminal_rules.get("accept_requires_no_open_issues")
+        if singular is not None and plural is not None and singular != plural:
+            errors.append(
+                "$.terminal_rules: accept_requires_no_open_issue 与 "
+                "accept_requires_no_open_issues 同时出现且取值冲突。"
+            )
 
     parties = b_scenario.get("parties")
     party_ids: List[str] = []
@@ -220,6 +230,17 @@ def validate_b_contract(b_scenario) -> List[str]:
                             errors.append(f"{path}.range: min/max 必须是数值。")
                         elif float(low) >= float(high):
                             errors.append(f"{path}.range: 期望 min < max。")
+                        elif "initial" in issue:
+                            initial = issue["initial"]
+                            if not _is_number(initial):
+                                errors.append(
+                                    f"{path}.initial: 数值议题的初始值必须是数值。"
+                                )
+                            elif float(initial) < float(low) or float(initial) > float(high):
+                                errors.append(
+                                    f"{path}.initial: 初始值 {initial!r} "
+                                    f"不在 [{low}, {high}] 内。"
+                                )
                 else:
                     options = issue.get("options")
                     if not isinstance(options, list) or not options:
@@ -252,6 +273,13 @@ def validate_b_contract(b_scenario) -> List[str]:
                                 )
                             else:
                                 orders.add(order)
+                        if "initial" in issue:
+                            initial = issue["initial"]
+                            if not _require_text(initial) or initial not in option_ids:
+                                errors.append(
+                                    f"{path}.initial: 初始值必须是该议题的 option_id 之一，"
+                                    f"实际为 {initial!r}。"
+                                )
 
     private_state = b_scenario.get("private_state_by_party")
     if "private_state_by_party" in b_scenario:
@@ -468,14 +496,18 @@ def _adapt_enum_clause(
         hard_redlines[party] = hard
         soft_redlines[party] = soft
 
-    warnings.append(
-        _warning(
-            "INITIAL_DERIVED",
-            f"issues[{issue_id}].initial",
-            f"枚举议题「{name}」缺少初始值，已取 order 最小的选项 "
-            f"{option_ids[0]!r}，建议 B 补充。",
+    if "initial" in issue:
+        initial = issue["initial"]
+    else:
+        initial = option_ids[0]
+        warnings.append(
+            _warning(
+                "INITIAL_DERIVED",
+                f"issues[{issue_id}].initial",
+                f"枚举议题「{name}」缺少初始值，已取 order 最小的选项 "
+                f"{option_ids[0]!r}，建议 B 补充。",
+            )
         )
-    )
 
     result = {
         "name": name,
@@ -483,13 +515,96 @@ def _adapt_enum_clause(
         "type": "enum",
         "unit": issue.get("unit", ""),
         "options": clause_options,
-        "initial": option_ids[0],
+        "initial": initial,
         "weights": {},
         "redlines": hard_redlines,
     }
     if any(soft_redlines.values()):
         result["soft_redlines"] = soft_redlines
     return result
+
+
+def _derived_initial(
+    positions: Dict[str, dict], low: float, high: float
+) -> Tuple[float, Optional[str]]:
+    """由双方 ideal 中点推导初始值，再夹逼到双方硬红线可行域。
+
+    返回 (初始值, 诊断码)。诊断码为 None 表示夹逼成功；
+    IDEALS_INCOMPLETE 表示 ideal 不足两方，已回退 low；
+    REDLINE_RANGE_EMPTY 表示双方硬红线可行域为空，已取中点交给审计暴露。
+    """
+    ideals = [
+        position["ideal"] for position in positions.values() if "ideal" in position
+    ]
+    if len(ideals) != 2:
+        return float(low), "IDEALS_INCOMPLETE"
+
+    mid = (float(ideals[0]) + float(ideals[1])) / 2.0
+    lo = max(
+        [
+            float(position["redline"])
+            for position in positions.values()
+            if position.get("redline_direction") == "below_is_violation"
+            and "redline" in position
+        ],
+        default=float(low),
+    )
+    hi = min(
+        [
+            float(position["redline"])
+            for position in positions.values()
+            if position.get("redline_direction") == "above_is_violation"
+            and "redline" in position
+        ],
+        default=float(high),
+    )
+    if lo > hi:
+        return mid, "REDLINE_RANGE_EMPTY"
+    return min(max(mid, lo), hi), None
+
+
+def _resolve_numeric_initial(
+    issue: dict,
+    positions: Dict[str, dict],
+    low: float,
+    high: float,
+    warnings: List[dict],
+    name: str,
+) -> float:
+    """显式 initial 优先；否则按双方 ideal 中点 + 硬红线可行域夹逼推导。"""
+    issue_id = issue["issue_id"]
+    if "initial" in issue:
+        # 契约校验已保证类型与范围，此处直接采用 B 的显式值并跳过推导告警。
+        return float(issue["initial"])
+
+    derived, code = _derived_initial(positions, low, high)
+    if code == "IDEALS_INCOMPLETE":
+        warnings.append(
+            _warning(
+                "IDEALS_INCOMPLETE",
+                f"issues[{issue_id}].initial",
+                f"数值议题「{name}」的 ideal 不足两方，无法取中点，"
+                f"已回退 range.min={low}。",
+            )
+        )
+    elif code == "REDLINE_RANGE_EMPTY":
+        warnings.append(
+            _warning(
+                "REDLINE_RANGE_EMPTY",
+                f"issues[{issue_id}].initial",
+                f"数值议题「{name}」双方硬红线可行域为空（lo > hi），"
+                f"已取中点 {derived!r}，请审计关注。",
+            )
+        )
+    warnings.append(
+        _warning(
+            "INITIAL_DERIVED",
+            f"issues[{issue_id}].initial",
+            f"数值议题「{name}」缺少初始值，已取双方 ideal 中点并按硬红线可行域夹逼，"
+            f"建议 B 补充（当前推导值 {derived!r}）。",
+        )
+    )
+    return derived
 
 
 def _adapt_numeric_clause(
@@ -557,13 +672,7 @@ def _adapt_numeric_clause(
         if position:
             positions[party] = position
 
-    warnings.append(
-        _warning(
-            "INITIAL_DERIVED",
-            f"issues[{issue_id}].initial",
-            f"数值议题「{name}」缺少初始值，已取 range.min={low}，建议 B 补充。",
-        )
-    )
+    initial = _resolve_numeric_initial(issue, positions, low, high, warnings, name)
 
     return {
         "name": name,
@@ -572,7 +681,7 @@ def _adapt_numeric_clause(
         "unit": issue.get("unit", ""),
         "range": [low, high],
         "step": range_value.get("step"),
-        "initial": low,
+        "initial": initial,
         "weights": {},
         "positions": positions,
     }
@@ -708,11 +817,16 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
     _apply_weights(clauses, party_ids, raw_weights, warnings)
 
     terminal_rules_source = _as_dict(b_scenario["terminal_rules"])
+    # 单数键（B 契约）优先；复数键（C 场景）兼容。契约校验已排除两者冲突。
+    if "accept_requires_no_open_issue" in terminal_rules_source:
+        accept_no_open = terminal_rules_source["accept_requires_no_open_issue"]
+    else:
+        accept_no_open = terminal_rules_source.get(
+            "accept_requires_no_open_issues", True
+        )
     terminal_rules = {
         "allow_walk_away": terminal_rules_source.get("allow_walk_away", True),
-        "accept_requires_no_open_issues": terminal_rules_source.get(
-            "accept_requires_no_open_issue", True
-        ),
+        "accept_requires_no_open_issues": accept_no_open,
         "partial_agreement_allowed": terminal_rules_source.get(
             "partial_agreement_allowed", True
         ),
@@ -746,6 +860,9 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
         "scenario_type": scenario_type,
         "background": b_scenario["background"],
         "assumptions": [_assumption_text(item) for item in b_scenario["assumptions"]],
+        # 旁路键：原样保留 B 的结构化假设，供审计/复盘做“假设—条款”追溯；
+        # 引擎只读 assumptions（字符串数组），全程忽略本键。
+        "assumptions_detail": deepcopy(b_scenario["assumptions"]),
         "max_rounds": b_scenario["max_rounds"],
         "deadlock_rounds": DEFAULT_DEADLOCK_ROUNDS,
         "action_points_per_round": DEFAULT_ACTION_POINTS_PER_ROUND,

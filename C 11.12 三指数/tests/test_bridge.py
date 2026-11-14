@@ -11,6 +11,7 @@ from engine import RulesEngine
 from load_scenario_bridge import (
     ENGINE_ROOT,
     convert_b_scenario,
+    evaluate_for,
     get_last_warnings,
     is_b_scenario,
     load_scenario,
@@ -229,6 +230,96 @@ class MakeScenarioRegressionTest(unittest.TestCase):
                 self.assertGreaterEqual(value, 0)
                 self.assertLessEqual(value, 100)
         self.assertTrue(ENGINE_ROOT.joinpath("engine", "core.py").is_file())
+
+    def test_design_table_matches_agents_json(self):
+        _, warnings = make_scenario_with_warnings()
+        mismatches = [
+            item
+            for item in warnings
+            if item["code"] == "DESIGN_TABLE_UNVERIFIED"
+            and item["field"].startswith("agents.")
+        ]
+        self.assertEqual(mismatches, [])
+
+    def test_design_table_unverified_clause_emits_warning(self):
+        _, warnings = make_scenario_with_warnings()
+        fields = {
+            item["field"]
+            for item in warnings
+            if item["code"] == "DESIGN_TABLE_UNVERIFIED"
+        }
+        # agenda 里有「全球算力资源分配」「数据跨境流动规则」，能对上；
+        # 「前沿模型评测门槛」对不上，必须记 warning。
+        self.assertIn("clauses.前沿模型评测门槛", fields)
+        self.assertNotIn("clauses.全球算力资源分配", fields)
+
+    def test_agents_fallback_copy_warning(self):
+        _, warnings = make_scenario_with_warnings()
+        fallback = [
+            item for item in warnings if item["code"] == "AGENTS_FALLBACK_COPY"
+        ]
+        if (ENGINE_ROOT.parent / "agents.json").is_file():
+            self.assertEqual(fallback, [])
+        else:
+            self.assertEqual(len(fallback), 1)
+
+    def test_batna_none_keeps_evaluation_shape(self):
+        engine = RulesEngine(make_scenario(), session_id="bridge-batna")
+        steps = (
+            ("b1", "cn", "offer", {"全球算力资源分配": "附带可核查机制"}),
+            ("b2", "us", "counter_offer", {"前沿模型评测门槛": 55}),
+            ("b3", "cn", "counter_offer", {"数据跨境流动": "白名单互认"}),
+        )
+        for action_id, actor, action_type, patch in steps:
+            ok, code, message, _ = engine.submit_action(
+                make_action(action_id, actor, action_type, patch)
+            )
+            self.assertTrue(ok, f"{action_id}: {code} {message}")
+        engine.next_round()
+        ok, code, message, _ = engine.submit_action(make_action("b4", "us", "accept"))
+        self.assertTrue(ok, f"{code}: {message}")
+        evaluation = engine.evaluate()
+        self.assertEqual(evaluation["agreement_quality"]["coverage"], 1.0)
+        us_entry = evaluation["batna_comparison"]["us"]
+        self.assertEqual(
+            set(us_entry), {"batna", "achieved", "net_gain", "better_than_batna"}
+        )
+        self.assertIsNone(us_entry["batna"])
+        self.assertIsNone(us_entry["net_gain"])
+        self.assertIsNone(us_entry["better_than_batna"])
+
+
+class EvaluateForTest(unittest.TestCase):
+    def setUp(self):
+        self.engine = RulesEngine(
+            convert_b_scenario(load_b()), session_id="bridge-eval"
+        )
+
+    def test_filters_other_party_batna(self):
+        evaluation = evaluate_for(self.engine, "cn")
+        self.assertEqual(evaluation["batna_comparison"]["cn"]["batna"], 30)
+        self.assertIsNone(evaluation["batna_comparison"]["us"]["batna"])
+        self.assertIsNone(evaluation["batna_comparison"]["us"]["net_gain"])
+        self.assertIsNone(evaluation["batna_comparison"]["us"]["better_than_batna"])
+        self.assertEqual(
+            evaluation["batna_comparison"]["us"]["achieved"],
+            self.engine.state.indices["us"]["interest"],
+        )
+        self.assertEqual(
+            set(evaluation),
+            {
+                "terminal_type",
+                "agreement_quality",
+                "batna_comparison",
+                "redline_check",
+                "learning_performance",
+                "evidence_links",
+            },
+        )
+
+    def test_rejects_empty_viewer(self):
+        with self.assertRaises(ValueError):
+            evaluate_for(self.engine, "")
 
 
 if __name__ == "__main__":

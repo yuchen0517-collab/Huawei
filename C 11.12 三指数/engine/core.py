@@ -178,6 +178,8 @@ class RulesEngine:
                 # 场景禁止部分协议时不得判 PARTIAL_AGREEMENT；与
                 # determine_terminal_type 保持一致改判 DEADLOCK，
                 # agreement 对象保留在 state 中供审计回看。
+                # validator 已先行拦截（requires_full + open_issues 非空时返回
+                # AGREEMENT_HAS_OPEN_ISSUES），此处为状态被外部篡改时的兜底。
                 terminal_type = (
                     "PARTIAL_AGREEMENT"
                     if rules.get("partial_agreement_allowed", True) is not False

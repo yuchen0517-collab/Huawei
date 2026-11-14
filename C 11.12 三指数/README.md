@@ -10,7 +10,7 @@ python -m unittest discover -s tests -t .
 python demo.py
 ```
 
-第一条命令运行 129 条单元测试；第二条跑完一局完整谈判，打印每步状态与
+第一条命令运行 142 条单元测试；第二条跑完一局完整谈判，打印每步状态与
 `AGREEMENT_HAS_OPEN_ISSUES`、`FINAL_OFFER_LOCKED` 的真实拦截，并把真实
 结果写入 `docs/state.example.json` 与 `docs/evaluation.example.json`。
 
@@ -28,8 +28,10 @@ adapter/
   __init__.py
   scenario_adapter.py  成员B 契约 → 引擎场景；全项目唯一的 B→C 转换实现
 load_scenario_bridge.py  成员A 场景入口的兼容桥（is_b_scenario / convert_b_scenario /
-                         load_scenario / make_scenario），convert 直接委托适配层
-agents.json               ai_governance 场景的 C 侧精简数据源（字段名与 A 侧一致）
+                         load_scenario / make_scenario / evaluate_for），
+                         convert 直接委托适配层
+agents.json               ai_governance 场景的 C 侧精简数据源（字段名与 A 侧一致）；
+                          运行优先读 A 的完整注册表，找不到才回落到本副本
 agent/
   audit/
     auditor.py  协议审计五项检查（只出意见，不改协议）
@@ -42,8 +44,8 @@ tests/
   test_rules.py        23 条行动/终局（含取值冲突、phase 转移回归）
   test_indices.py      19 条三指数
   test_audit.py        10 条协议审计
-  test_adapter.py      29 条场景契约适配（映射/效用/红线/端到端/信息隔离）
-  test_bridge.py       21 条桥接（双实现统一/入口回落/BOM/隔离/占位分数防回归）
+  test_adapter.py      35 条场景契约适配（映射/效用/红线/initial 推导/端到端/信息隔离）
+  test_bridge.py       28 条桥接（双实现统一/入口回落/BOM/隔离/设计表对齐/评价裁剪）
 docs/
   index_rules.md        三指数口径
   action_schema.md      行动结构逐字段说明
@@ -62,7 +64,7 @@ INTEGRATION_NOTES.md    2026-11-14 适配层归位与引擎能力合并的决策
 三种场景来源，统一走同一个入口：
 
 ```python
-from load_scenario_bridge import load_scenario, make_scenario
+from load_scenario_bridge import evaluate_for, load_scenario, make_scenario
 
 engine = RulesEngine(load_scenario(scenario_path), session_id=session_id)
 # scenario_path 为 None 时回落 make_scenario()（agents.json → ai_governance）
@@ -88,13 +90,17 @@ if not ok:
     # code 是 18 类错误码之一；message 可直接展示给前端
     ...
 view = engine.public_state(viewer="cn")        # 按观察者过滤私有底牌
-evaluation = engine.evaluate(viewer="cn")      # 对外展示必须传 viewer
+evaluation = evaluate_for(engine, "cn")        # 对外评价：裁剪他方 BATNA 底牌
 ```
 
 - `action` 必须逐字符合 `docs/action_schema.md` 的 JSON Schema。
 - `events` 是本次新增的事件列表，可增量推给前端。
 - `engine.next_round()` 推进回合；`engine.finish()` 手动结束。
-- `engine.evaluate()` 不传 `viewer` 只用于复盘 / 审计 / demo；给玩家看的评价必须传己方 party_id。
+- `engine.evaluate()` 不传 `viewer` 只用于复盘 / 审计 / demo；给玩家看的评价统一走
+  `load_scenario_bridge.evaluate_for(engine, party_id)`（先取全量六字段，再按 viewer
+  裁剪 `batna_comparison`，不改变 `engine.evaluate()` 签名）。
+- `agents.json` 读取顺序：成员A 的完整注册表（仓库根）优先；找不到才回落到
+  `C 11.12 三指数/agents.json` 精简副本，并记 `AGENTS_FALLBACK_COPY` warning。
 
 ### 成员B（场景契约）
 

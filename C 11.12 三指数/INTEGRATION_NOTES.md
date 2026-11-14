@@ -74,6 +74,11 @@
 | `accept` 终局：先算 `missing`，再按 `partial_agreement_allowed` 决定 `PARTIAL_AGREEMENT` / `DEADLOCK` | 原实现硬编码 `PARTIAL_AGREEMENT`，绕过场景开关 | 缺省 true 时与原来完全一致 |
 | `evaluate(viewer="")` 透传 | 与 `terminal.evaluate` 对齐 | 默认参数 |
 
+`accept` 的 `DEADLOCK` 分支是**防御性口径**：`validator` 已先行拦截
+（`requires_full` + `open_issues` 非空时返回 `AGREEMENT_HAS_OPEN_ISSUES`），
+该分支只在状态被外部篡改时兜底，正常流程不可达；行为与
+`determine_terminal_type` 保持一致。
+
 `phase` 状态机、`evaluate()` 结构、`batna_comparison()` 字段、`replay()` 均未删除或改写。
 
 ## 5. A 侧 `convert_b_scenario()` 的缺陷逐条结论
@@ -89,22 +94,33 @@
 | 4 | 成立（按残留文本还原为“权重未归一化”） | `_weights()` 直接 `round(weight, 4)`，权重和偏离 1 时 Interest 口径失真且无告警 | 已修复：`_apply_weights` 归一化 + `WEIGHT_NORMALIZED` |
 | 5 | 成立（按残留文本还原为“归一化阈值与告警缺失”） | A 侧无 0.01 阈值判断、无结构化 warning | 已修复：`abs(total-1.0) > 0.01` 触发告警 |
 | 6 | 成立 | `terminal_rules` 只映射 `accept_requires_no_open_issue` | 已修复：三字段全映射，引擎三开关全支持 |
-| 7 | 成立 | 数值 `initial = minimum`、枚举 `initial = options[0]`，且无 warning | 部分修复：`INITIAL_DERIVED` warning 已有；**“取双方 target 中点”未采用**，原因见 5.1 |
-| 8 | 成立 | `[assumption["text"] for ...]` 丢弃 `assumption_id` / `affects` | 已修复：保留 `[A1] ` 前缀；`affects` 仍不进入 C 场景（见第 6 节） |
+| 7 | 成立 | 数值 `initial = minimum`、枚举 `initial = options[0]`，且无 warning | 已修复：数值取双方 ideal 中点并按硬红线夹逼，枚举取 order 最小项；两者均记 `INITIAL_DERIVED`；显式 `initial` 优先（见 5.1） |
+| 8 | 成立 | `[assumption["text"] for ...]` 丢弃 `assumption_id` / `affects` | 已修复：`assumptions` 保留 `[A1] ` 前缀；新增旁路键 `assumptions_detail` 原样保留结构化假设（含 `affects`） |
 
-### 5.1 bug 7 的取舍（需要裁决）
+### 5.1 bug 7 已裁决：采用「中点 + 硬红线夹逼」
 
-适配层当前数值 `initial = range.min`，`tests/test_adapter.py::test_initial_utility_matches_engine`
-把开局效用锁在 `cn=0.39 / us=0.6717`，这两个数字正是 `range.min` 的结果。
-改成“双方 target 中点”会直接改变开局 Interest，且必须同时改这条断言——
-与本次“29 条移植测试原样全绿、禁止改断言”的硬约束冲突。
+2026-11-14 裁决：数值条款 `initial` 由 `range.min` 改为
+**双方 `ideal` 中点，再夹逼到双方硬红线可行区间**。
 
-因此本次**保留 `range.min` + `INITIAL_DERIVED` warning**，把“中点”作为待裁决项：
-- 若接受改基线：改 `_adapt_numeric_clause` 的 `initial` 并同步更新 1 条断言；
-- 若不改基线：由 B 在契约中补 `initial` 字段，适配层优先采用显式值。
+理由（已实测）：`range.min` 让开局方案在两个数值条款上都落在 cn 的硬红线违规区间
+（`受管制先进制程门槛` initial=7 < cn redline 14；`逐案许可有效期` initial=6 < cn redline 12），
+等于从一个“对方绝不接受”的非法基点起算。中点方案对双方 ideal 对称，且夹逼后落在可行域内
+（条款一 `[14,21]` → 21；条款二 `[12,24]` → 18）。
 
-`load_scenario_bridge.make_scenario()` 中数值条款的 `initial` 已取双方理想点中点
-（该路径没有既有断言锁定）。
+实现：`adapter.scenario_adapter._derived_initial()` / `_resolve_numeric_initial()`。
+
+- `IDEALS_INCOMPLETE`（ideal 不足两方）→ 回退 `range.min` + warning；
+- `REDLINE_RANGE_EMPTY`（双方硬红线可行域为空）→ 取中点 + warning，交给审计暴露；
+- 夹逼成功 → 只记 `INITIAL_DERIVED`。
+
+断言同步：本轮唯一授权改动的断言是
+`tests/test_adapter.py::test_initial_utility_matches_engine`，期望值由
+`cn=0.39 / us=0.6717` 改为 `cn=0.7967 / us=0.6717`（实跑 0.796667 / 0.671667）。
+us 不变是夹具的偶然：us 的 ideal 到 `range.min` 的距离恰好等于到中点夹逼值的距离。
+
+前向兼容：B 若在 `issues[]` 中提供显式 `initial`，适配层**优先采用**并跳过推导与
+`INITIAL_DERIVED` warning；类型或范围非法（数值项不在 `[min,max]`、枚举项不是
+`option_id`）直接抛 `ScenarioContractError`。
 
 ### 5.2 A 侧另外三处缺陷（任务书未列，但已确认）
 
@@ -116,10 +132,11 @@
 
 ## 6. 已知遗留问题
 
-1. **`affects` 未进入 C 场景**：`assumptions` 以字符串数组落地（保留 `[A1] ` 前缀），
-   `affects` 仍是可追溯性缺口。引擎当前不消费 `assumptions`，若要做“假设—条款”联动审计，
-   需要把 `assumptions` 改成结构化对象并允许引擎忽略多余字段。
-2. **适配层数值 `initial = range.min`**：见 5.1，等裁决。
+1. **`affects` 由旁路键承载**：`assumptions` 仍是字符串数组（引擎只读它），
+   `assumptions_detail` 原样保留 `assumption_id / text / reason / affects`。
+   审计/复盘工具改读旁路键即可；若要把 `affects` 接进引擎，需要引擎侧新增只读消费点。
+2. **数值 `initial` 已改为中点 + 夹逼**：见 5.1。`IDEALS_INCOMPLETE` /
+   `REDLINE_RANGE_EMPTY` 两个降级分支需要审计关注。
 3. **`step` 不参与校验**：B 若依赖步长离散化，需要引擎补校验。
 4. **数值红线单槽位**：同方 `min`+`max` 区间约束只保留第一条。
 5. **多参与方**：`accept` 只找“第一个对方”，三方以上会退化。

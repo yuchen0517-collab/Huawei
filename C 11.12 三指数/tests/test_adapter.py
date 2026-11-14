@@ -16,7 +16,7 @@ from adapter import (
 from adapter.scenario_adapter import DEFAULT_INDEX_RULES
 from engine import RulesEngine, load_scenario
 from engine.indices import initial_plan, score, utility
-from engine.validator import soft_redline_violations
+from engine.validator import is_redline_violation, soft_redline_violations
 from tests import make_action
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -70,6 +70,18 @@ class AdapterMappingTest(unittest.TestCase):
     def test_assumptions_keep_ids(self):
         self.assertEqual(len(self.adapted["assumptions"]), 2)
         self.assertTrue(self.adapted["assumptions"][0].startswith("[A1] "))
+
+    def test_assumptions_detail_preserved(self):
+        detail = self.adapted["assumptions_detail"]
+        self.assertEqual(len(detail), 2)
+        self.assertEqual(detail[0]["assumption_id"], "A1")
+        self.assertEqual(
+            detail[0]["affects"],
+            ["export_license_scope", "license_validity_months"],
+        )
+        self.assertEqual(
+            self.adapted["assumptions"][0], f"[A1] {detail[0]['text']}"
+        )
 
     def test_enum_ranked_scores_edge_target(self):
         forum = clause_by_name(self.adapted, "争端解决渠道")
@@ -227,6 +239,61 @@ class AdapterContractTest(unittest.TestCase):
             any(item["code"] == "DEFAULT_INDEX_RULES" for item in warnings)
         )
 
+    def test_explicit_initial_takes_precedence(self):
+        source = b_scenario()
+        source["issues"][0]["initial"] = 20
+        source["issues"][2]["initial"] = "bilateral"
+        scenario, warnings = _adapt_with_warnings(source)
+        self.assertEqual(
+            clause_by_name(scenario, "受管制先进制程门槛")["initial"], 20.0
+        )
+        self.assertEqual(
+            clause_by_name(scenario, "争端解决渠道")["initial"], "bilateral"
+        )
+        derived_fields = {
+            item["field"] for item in warnings if item["code"] == "INITIAL_DERIVED"
+        }
+        self.assertNotIn("issues[export_license_scope].initial", derived_fields)
+        self.assertNotIn("issues[dispute_forum].initial", derived_fields)
+        self.assertIn("issues[license_validity_months].initial", derived_fields)
+
+    def test_illegal_explicit_initial_raises(self):
+        out_of_range = b_scenario()
+        out_of_range["issues"][0]["initial"] = 99
+        with self.assertRaises(ScenarioContractError) as context:
+            adapt_scenario(out_of_range)
+        self.assertIn("issues[0].initial", str(context.exception))
+
+        bad_enum = b_scenario()
+        bad_enum["issues"][2]["initial"] = "war"
+        with self.assertRaises(ScenarioContractError) as context:
+            adapt_scenario(bad_enum)
+        self.assertIn("issues[2].initial", str(context.exception))
+
+        bad_type = b_scenario()
+        bad_type["issues"][0]["initial"] = "high"
+        with self.assertRaises(ScenarioContractError) as context:
+            adapt_scenario(bad_type)
+        self.assertIn("issues[0].initial", str(context.exception))
+
+    def test_terminal_rules_plural_key_accepted(self):
+        source = b_scenario()
+        rules = source["terminal_rules"]
+        rules.pop("accept_requires_no_open_issue")
+        rules["accept_requires_no_open_issues"] = False
+        adapted = adapt_scenario(source)
+        self.assertFalse(
+            adapted["terminal_rules"]["accept_requires_no_open_issues"]
+        )
+        self.assertTrue(adapted["allow_accept_with_open_issues"])
+
+    def test_terminal_rules_conflicting_keys_raise(self):
+        source = b_scenario()
+        source["terminal_rules"]["accept_requires_no_open_issues"] = False
+        with self.assertRaises(ScenarioContractError) as context:
+            adapt_scenario(source)
+        self.assertIn("冲突", str(context.exception))
+
 
 def _adapt_with_warnings(source: dict):
     return adapt_scenario_with_warnings(source)
@@ -239,8 +306,39 @@ class AdapterEngineTest(unittest.TestCase):
         cls.plan = initial_plan(cls.scenario)
 
     def test_initial_utility_matches_engine(self):
-        self.assertAlmostEqual(utility(self.plan, "cn", self.scenario), 0.39, places=4)
+        # initial 改为「双方 ideal 中点 + 硬红线可行域夹逼」后的基线：
+        # cn=0.796667 / us=0.671667（us 不变是夹具的偶然，见 INTEGRATION_NOTES 5.1）。
+        self.assertAlmostEqual(utility(self.plan, "cn", self.scenario), 0.7967, places=4)
         self.assertAlmostEqual(utility(self.plan, "us", self.scenario), 0.6717, places=4)
+
+    def test_initial_plan_respects_hard_redlines(self):
+        plan = initial_plan(self.scenario)
+        numeric = {
+            clause["name"]: clause
+            for clause in self.scenario["clauses"]
+            if clause["type"] == "numeric"
+        }
+        self.assertTrue(numeric)
+        for name, clause in numeric.items():
+            option = plan[name]["option"]
+            for party in ("cn", "us"):
+                self.assertFalse(
+                    is_redline_violation(clause, option, party),
+                    f"条款「{name}」初始值 {option!r} 落在 {party} 的硬红线违规区间。",
+                )
+
+    def test_initial_derived_clamped_when_redlines_conflict(self):
+        source = b_scenario()
+        for item in source["private_state_by_party"]["us"]["redlines"]:
+            if item["issue_id"] == "export_license_scope":
+                item["value"] = 16
+        scenario, warnings = _adapt_with_warnings(source)
+        clause = clause_by_name(scenario, "受管制先进制程门槛")
+        # 中点 (28+14)/2 = 21，us 硬红线 max=16 → 可行域 [14,16] 把中点夹到 16。
+        self.assertEqual(clause["initial"], 16.0)
+        self.assertFalse(
+            any(item["code"] == "REDLINE_RANGE_EMPTY" for item in warnings)
+        )
 
     def test_hard_redline_blocks_action(self):
         engine = RulesEngine(deepcopy(self.scenario), session_id="redline-test")
