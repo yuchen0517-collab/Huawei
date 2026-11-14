@@ -170,11 +170,20 @@ class RulesEngine:
 
         if action_type == "accept":
             self._seal_agreement(actor, action["action_id"], action["conditions"])
-            terminal_event = self._record_terminal(
-                "FULL_AGREEMENT"
-                if not coverage(self.state.agreement.clauses, self.scenario)[1]
-                else "PARTIAL_AGREEMENT"
-            )
+            covered, missing = coverage(self.state.agreement.clauses, self.scenario)
+            if not missing:
+                terminal_type = "FULL_AGREEMENT"
+            else:
+                rules = self.scenario.get("terminal_rules", {}) or {}
+                # 场景禁止部分协议时不得判 PARTIAL_AGREEMENT；与
+                # determine_terminal_type 保持一致改判 DEADLOCK，
+                # agreement 对象保留在 state 中供审计回看。
+                terminal_type = (
+                    "PARTIAL_AGREEMENT"
+                    if rules.get("partial_agreement_allowed", True) is not False
+                    else "DEADLOCK"
+                )
+            terminal_event = self._record_terminal(terminal_type)
             if terminal_event:
                 events.append(terminal_event)
         elif action_type == "walk_away":
@@ -273,8 +282,8 @@ class RulesEngine:
     def public_state(self, viewer: str = "") -> dict:
         return self.state.to_public_dict(viewer)
 
-    def evaluate(self) -> dict:
-        return evaluate(self.state, self.scenario)
+    def evaluate(self, viewer: str = "") -> dict:
+        return evaluate(self.state, self.scenario, viewer)
 
     def replay(self) -> dict:
         start = initial_indices(self.scenario)

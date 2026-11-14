@@ -1,0 +1,80 @@
+{
+  "_说明": "本文件是成员A agents.json 的 C 侧精简副本，只保留 make_scenario() 组装 ai_governance 场景实际读取的字段（_scenario.player 与 us）。完整谈判对手注册表仍由成员A 在仓库根维护；两边字段名必须保持一致。",
+  "_scenario": {
+    "name": "《全球AI治理框架公约》多边谈判",
+    "venue": "联合国大会特别会议",
+    "agenda": [
+      "AI安全监管框架",
+      "数据跨境流动规则",
+      "技术援助与能力建设",
+      "全球算力资源分配"
+    ],
+    "player": {
+      "label": "中国",
+      "full": "中华人民共和国",
+      "role": "中国常驻联合国代表 特命全权大使",
+      "initial_interest": 50,
+      "initial_image": 70,
+      "initial_trust": 65,
+      "hidden_tasks": [
+        {
+          "text": "推动「全球AI治理研究院」落户中国",
+          "priority": "高",
+          "done": false
+        },
+        {
+          "text": "为发展中国家争取不低于 30% 的全球公共算力配额",
+          "priority": "中",
+          "done": false
+        },
+        {
+          "text": "阻止「AI安全联盟」成为全球标准制定机构",
+          "priority": "高",
+          "done": false
+        }
+      ],
+      "strategy": {
+        "template": "principled_flexible",
+        "baseline": "cooperate",
+        "trust_threshold": 50
+      }
+    }
+  },
+  "us": {
+    "label": "美国",
+    "agent_entity": "美利坚合众国",
+    "public_position": "强调「基于规则的 AI 治理」，主张由民主国家制定标准；建立「AI 安全联盟」，对高风险 AI 实施出口管制；强调知识产权保护，反对强制性技术转让；以国家安全为由限制尖端 AI 技术外流。",
+    "core_interests_ranked": "1. 技术霸权维护（限制竞争对手追赶） 2. 标准制定权（让美国主导的技术标准成为全球规范） 3. 国家安全优先（出口管制与投资审查） 4. 数字经济利益（确保本土科技巨头全球竞争力）",
+    "red_lines": "1. 绝不接受任何限制美国 AI 研发的条款 2. 绝不接受把标准制定权交给联合国框架下的多数表决机制 3. 绝不允许对华 AI 技术限制被本决议稀释 4. 绝不接受强制性技术转让",
+    "batna": "若全球谈判失败，美国将联合五眼联盟、日本与欧盟组建「AI 安全联盟」，在小圈子内制定规则再对外推广。",
+    "hidden_task_card": "目标1（高）：推动「AI 安全联盟」成为全球 AI 治理的核心机制。目标2（中）：在算力监管条款中植入「可核查」机制，为技术监控铺路。目标3（高）：确保对中国的 AI 技术限制不被谈判决议削弱。",
+    "initial_interest": 50,
+    "initial_image": 70,
+    "initial_trust": 65,
+    "strategy": {
+      "template": "tit_for_tat",
+      "baseline": "escalate",
+      "retaliation": 0.7,
+      "trust_threshold": 60,
+      "escalate_triggers": [
+        "取消出口管制",
+        "解除实体清单",
+        "昇腾",
+        "军民融合",
+        "军事用途",
+        "核查我方",
+        "限制我方研发",
+        "歧视性条款"
+      ],
+      "cooperate_conditions": [
+        "逐案许可",
+        "具体配额",
+        "对等",
+        "互认",
+        "可核查",
+        "安全条件",
+        "具体数字"
+      ]
+    }
+  }
+}

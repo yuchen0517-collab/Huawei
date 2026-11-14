@@ -68,7 +68,13 @@ def agreement_quality(state, scenario: dict) -> dict:
     }
 
 
-def batna_comparison(state, scenario: dict) -> dict:
+def batna_comparison(state, scenario: dict, viewer: str = "") -> dict:
+    """BATNA 对比。viewer 为空表示内部全量（复盘 / 审计 / 演示）。
+
+    传入参与方 id 时只给该方真值；其余各方 batna / net_gain /
+    better_than_batna 一律置 null，避免 net_gain = achieved - batna
+    反推出对方底牌。achieved 来自公开指数，可以下发。
+    """
     result = {}
     for party in scenario.get("parties", []):
         if isinstance(party, dict):
@@ -78,7 +84,8 @@ def batna_comparison(state, scenario: dict) -> dict:
             party_id = party
             batna = None
         achieved = int(state.indices.get(party_id, {}).get("interest", 0))
-        if batna is None:
+        hidden = bool(viewer) and party_id != viewer
+        if batna is None or hidden:
             result[party_id] = {
                 "batna": None,
                 "achieved": achieved,
@@ -116,7 +123,12 @@ def determine_terminal_type(state, scenario: dict) -> Optional[str]:
     """优先级：agreement → walk_away → 已结束无协议 → 僵局 → 轮次耗尽。"""
     if state.agreement is not None:
         covered, missing = coverage(state.agreement.clauses, scenario)
-        return "FULL_AGREEMENT" if not missing else "PARTIAL_AGREEMENT"
+        if not missing:
+            return "FULL_AGREEMENT"
+        rules = scenario.get("terminal_rules", {}) or {}
+        if rules.get("partial_agreement_allowed", True) is False:
+            return "DEADLOCK"
+        return "PARTIAL_AGREEMENT"
 
     for event in state.public_events:
         if event.get("type") == "action" and event.get("action_type") == "walk_away":
@@ -147,8 +159,12 @@ def build_terminal(state, scenario: dict, terminal_type: Optional[str] = None) -
     }
 
 
-def evaluate(state, scenario: dict) -> dict:
-    """六字段评价。learning_performance 恒为 None，归成员D。"""
+def evaluate(state, scenario: dict, viewer: str = "") -> dict:
+    """六字段评价。learning_performance 恒为 None，归成员D。
+
+    viewer 为空是内部全量；传参与方 id 时，batna_comparison 只暴露该方真值。
+    对外给玩家看的评价必须传 viewer，不得无参调用。
+    """
     terminal_type = (
         state.terminal.get("type")
         if state.terminal
@@ -165,7 +181,7 @@ def evaluate(state, scenario: dict) -> dict:
     return {
         "terminal_type": terminal_type,
         "agreement_quality": agreement_quality(state, scenario),
-        "batna_comparison": batna_comparison(state, scenario),
+        "batna_comparison": batna_comparison(state, scenario, viewer),
         "redline_check": redline_check(state, scenario),
         "learning_performance": None,
         "evidence_links": evidence,

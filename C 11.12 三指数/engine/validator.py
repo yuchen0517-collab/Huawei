@@ -76,7 +76,12 @@ ERRORS = {
     "FINAL_OFFER_ALREADY_DECLARED": "已声明过最后报价，不得再次声明。",
     "FINAL_OFFER_LOCKED": "已声明最后报价，不能再修改条款。",
     "FINAL_OFFER_EMPTY": "最后报价没有带任何条款。",
+    "WALK_AWAY_FORBIDDEN": "本场景不允许退出谈判。",
 }
+
+# 数值红线方向。适配层可选输出 redline_direction；缺省时由 ideal/redline
+# 的大小关系隐式推导，保证 v2 旧场景行为零变化。
+REDLINE_DIRECTIONS = ("below_is_violation", "above_is_violation")
 
 
 def party_ids(scenario: dict) -> List[str]:
@@ -265,19 +270,49 @@ def apply_patch(plan: Dict[str, dict], patch: Dict[str, dict]) -> Dict[str, dict
     return merged
 
 
+def _numeric_redline_hit(position: dict, option) -> bool:
+    """数值条款红线判定。
+
+    优先使用显式 redline_direction（适配层新增，可选）；不传时保持 v2 原有
+    “由 ideal 与 redline 的大小关系隐式判方向”的行为，确保旧场景零变化。
+    """
+    if "redline" not in position:
+        return False
+    redline = position["redline"]
+    direction = position.get("redline_direction")
+    if direction == "below_is_violation":
+        return option < redline
+    if direction == "above_is_violation":
+        return option > redline
+
+    if "ideal" not in position:
+        return False
+    ideal = position["ideal"]
+    if ideal > redline:
+        return option < redline
+    if ideal < redline:
+        return option > redline
+    return False
+
+
 def is_redline_violation(clause: dict, option, party: str) -> bool:
+    """硬红线判定。软红线（soft）不计入 blocking，由 soft_redline_violations 报告。"""
     if clause.get("type") == "numeric":
         position = (clause.get("positions") or {}).get(party, {})
-        if "ideal" not in position or "redline" not in position:
+        if position.get("soft") is True:
             return False
-        ideal = position["ideal"]
-        redline = position["redline"]
-        if ideal > redline:
-            return option < redline
-        if ideal < redline:
-            return option > redline
-        return False
+        return _numeric_redline_hit(position, option)
     return option in ((clause.get("redlines") or {}).get(party) or [])
+
+
+def is_soft_redline_violation(clause: dict, option, party: str) -> bool:
+    """软红线判定，只用于 warning，不阻断行动。"""
+    if clause.get("type") == "numeric":
+        position = (clause.get("positions") or {}).get(party, {})
+        if position.get("soft") is not True:
+            return False
+        return _numeric_redline_hit(position, option)
+    return option in ((clause.get("soft_redlines") or {}).get(party) or [])
 
 
 def redline_violations(plan: Dict[str, dict], scenario: dict) -> List[Tuple[str, str]]:
@@ -290,6 +325,21 @@ def redline_violations(plan: Dict[str, dict], scenario: dict) -> List[Tuple[str,
         option = option_value(entry)
         for party in party_ids(scenario):
             if is_redline_violation(clause, option, party):
+                violations.append((name, party))
+    return violations
+
+
+def soft_redline_violations(plan: Dict[str, dict], scenario: dict) -> List[Tuple[str, str]]:
+    """软红线警告清单；调用方只展示，不据此拒绝行动。"""
+    violations: List[Tuple[str, str]] = []
+    clauses = clause_map(scenario)
+    for name, entry in plan.items():
+        clause = clauses.get(name)
+        if clause is None:
+            continue
+        option = option_value(entry)
+        for party in party_ids(scenario):
+            if is_soft_redline_violation(clause, option, party):
                 violations.append((name, party))
     return violations
 
@@ -349,11 +399,22 @@ def validate_action(action, state, scenario: dict) -> Tuple[bool, str, str]:
         if counterpart is None or latest_offer(state, counterpart) is None:
             return fail("NO_COUNTERPART_OFFER", "")
         rules = scenario.get("terminal_rules", {}) or {}
-        if rules.get("accept_requires_no_open_issues", True) and state.open_issues:
+        # 场景禁止部分协议时，accept 必须覆盖全部条款（否则终局只能是 DEADLOCK）。
+        partial_allowed = rules.get("partial_agreement_allowed", True) is not False
+        allow_open = rules.get("allow_accept_with_open_issues") is True
+        requires_full = not partial_allowed or (
+            not allow_open and rules.get("accept_requires_no_open_issues", True)
+        )
+        if requires_full and state.open_issues:
             return fail(
                 "AGREEMENT_HAS_OPEN_ISSUES",
                 f"未决条款：{', '.join(state.open_issues)}。",
             )
+
+    if action_type == "walk_away":
+        rules = scenario.get("terminal_rules", {}) or {}
+        if rules.get("allow_walk_away", True) is False:
+            return fail("WALK_AWAY_FORBIDDEN", "")
 
     if state.action_points <= 0:
         return fail("ACTION_POINTS_INSUFFICIENT", "")
