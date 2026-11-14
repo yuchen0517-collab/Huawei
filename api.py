@@ -24,10 +24,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 BASE_DIR = Path(__file__).resolve().parent
 
-from load_scenario import ENGINE_ROOT, load_scenario, make_scenario
+# B→C 场景转换的唯一实现在成员C 的 load_scenario_bridge（委托 adapter/），
+# 位于引擎目录内，需先把该目录加入 sys.path。
+ENGINE_DIR = BASE_DIR / "C 11.12 三指数"
+if str(ENGINE_DIR) not in sys.path:
+    sys.path.insert(0, str(ENGINE_DIR))
 
-if str(ENGINE_ROOT) not in sys.path:
-    sys.path.insert(0, str(ENGINE_ROOT))
+from load_scenario_bridge import ENGINE_ROOT, load_scenario, make_scenario
 
 from engine.core import RulesEngine
 from engine.state import NegotiationState, Offer

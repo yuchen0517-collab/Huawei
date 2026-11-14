@@ -20,9 +20,10 @@ CLAUSE_COMPUTE = "芯片算力门槛"
 CLAUSE_DAYS = "许可审批时限"
 CLAUSE_REEXPORT = "第三国再出口限制"
 CLAUSE_MINERALS = "关键矿产出口安排"
-REEXPORT_O2 = "仅对实体清单对象要求许可"
-REEXPORT_O3 = "第三国再出口一律事前许可"
-MINERALS_O2 = "对民用终端设 30 天快速通道"
+# 适配层以 B 契约的 option_id 为引擎取值（中文文本在 label 字段）
+REEXPORT_O2 = "O2"  # 仅对实体清单对象要求许可
+REEXPORT_O3 = "O3"  # 第三国再出口一律事前许可
+MINERALS_O2 = "O2"  # 对民用终端设 30 天快速通道
 
 
 def make_action(action_id, actor, action_type, patch=None, message=""):
@@ -137,13 +138,22 @@ def test_chip_scenario_full_agreement():
     assert compute["range"] == [100, 5000]
     assert compute["unit"] == "TFLOPS(FP16)"
     assert compute["weights"] == {"cn": 0.35, "us": 0.25}
-    assert compute["positions"]["cn"] == {"ideal": 1500, "redline": 800}
+    assert {
+        key: compute["positions"]["cn"][key] for key in ("ideal", "redline")
+    } == {"ideal": 1500, "redline": 800}
+    # 适配层新增：显式红线方向（旧转换器会丢弃 op 方向）
+    assert compute["positions"]["cn"]["redline_direction"] == "below_is_violation"
     reexport = next(c for c in scenario["clauses"] if c["name"] == CLAUSE_REEXPORT)
-    assert reexport["options"][0]["score"] == {"cn": 1.0, "us": 0.25}
-    assert reexport["redlines"]["us"] == ["仅需终端用户声明"]
+    scores = {option["id"]: option["score"] for option in reexport["options"]}
+    # 适配层按各方 goals[].target 打分：目标选项得满分，其余按排名距离递减
+    assert scores["O2"]["cn"] == 1.0  # cn 的 target
+    assert scores["O3"]["us"] == 1.0  # us 的 target
+    assert scores["O2"]["cn"] > scores["O1"]["cn"] > scores["O4"]["cn"]
+    assert scores["O3"]["us"] > scores["O2"]["us"] > scores["O1"]["us"]
+    assert reexport["redlines"]["us"] == ["O1"]  # 仅需终端用户声明
     assert reexport["redlines"]["cn"] == []
     minerals = next(c for c in scenario["clauses"] if c["name"] == CLAUSE_MINERALS)
-    assert minerals["redlines"]["cn"] == ["设年度配额并接受第三方核查", "取消出口许可"]
+    assert minerals["redlines"]["cn"] == ["O3", "O4"]  # 配额核查 / 取消出口许可
     engine = RulesEngine(scenario, "e2e-chip")
     steps = [
         make_action("e2-1", "cn", "offer", {
