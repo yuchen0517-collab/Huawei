@@ -784,3 +784,70 @@ def test_transport_fields_stripped_and_replay_skips_engine(monkeypatch):
     assert second.status_code == 200
     assert second.content == first.content
     assert len(captured) == 2
+
+
+def test_model_timeout_fails_atomically_and_same_request_can_retry(monkeypatch):
+    sid = new_online_session(monkeypatch)
+    before = get_state(sid)
+    rec = api.SESSIONS[sid]
+    archive = copy.deepcopy(rec.engine.state.to_archive_dict())
+    calls = []
+
+    def timeout_once(req, timeout):
+        calls.append({"url": req.full_url, "timeout": timeout})
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(neg.urllib.request, "urlopen", timeout_once)
+    monkeypatch.setattr(
+        neg.time, "sleep", lambda _: pytest.fail("60 秒超时后不应继续内层重试")
+    )
+    failed = submit_action(sid, VALID_OFFER, "timeout-retry-1", 0)
+    assert failed.status_code == 503
+    assert failed.json()["error"] == "MODEL_UNAVAILABLE"
+    assert len(calls) == 1
+    assert calls[0]["timeout"] == 60
+    assert get_state(sid) == before
+    assert rec.engine.state.to_archive_dict() == archive
+    assert rec.runtime.action_seq == 0
+    assert rec.idempotency_ledger == {}
+    assert not rec.mutation_lock.locked()
+
+
+    monkeypatch.setattr(
+        neg,
+        "call_with_retry",
+        lambda *args: (copy.deepcopy(neg.OFFLINE_RESPONSES[0]), "raw", "stop"),
+    )
+    retry = submit_action(sid, VALID_OFFER, "timeout-retry-1", 0)
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["round"] == 2
+    assert [event["action_id"] for event in retry.json()["action_history"]] == [
+        "a000001", "a000002",
+    ]
+    assert not rec.mutation_lock.locked()
+
+
+def test_three_invalid_model_json_responses_return_503_without_fabricated_action(monkeypatch):
+    sid = new_online_session(monkeypatch)
+    before = get_state(sid)
+    rec = api.SESSIONS[sid]
+    archive = copy.deepcopy(rec.engine.state.to_archive_dict())
+    calls = []
+
+    def invalid_json(messages, json_mode=True, temperature=0.7):
+        calls.append(json_mode)
+        return "{ definitely not valid JSON", "stop"
+
+    monkeypatch.setattr(neg, "call_deepseek", invalid_json)
+    monkeypatch.setattr(neg.time, "sleep", lambda _: None)
+    response = submit_action(sid, VALID_OFFER, "invalid-json-1", 0)
+    assert response.status_code == 503
+    assert response.json()["error"] == "MODEL_UNAVAILABLE"
+    assert calls == [True, True, False]
+    assert get_state(sid) == before
+    assert rec.engine.state.to_archive_dict() == archive
+    assert rec.runtime.action_seq == 0
+    assert rec.runtime.offline_cursor == 0
+    assert len(rec.runtime.messages) == 1
+    assert rec.idempotency_ledger == {}
+    assert not rec.mutation_lock.locked()

@@ -27,6 +27,7 @@ import copy
 import json
 import os
 import re
+import socket
 import sys
 import time
 import unicodedata
@@ -394,7 +395,7 @@ def call_deepseek(messages: list[dict], json_mode: bool = True,
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=60) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             choice = data["choices"][0]
             content = choice["message"].get("content") or ""
@@ -413,6 +414,14 @@ def call_deepseek(messages: list[dict], json_mode: bool = True,
             break
         except Exception as e:  # 网络层
             last_err = f"{type(e).__name__}: {e}"
+            reason = e.reason if isinstance(e, urllib.error.URLError) else None
+            timed_out = (
+                isinstance(e, (TimeoutError, socket.timeout))
+                or isinstance(reason, (TimeoutError, socket.timeout))
+                or (isinstance(reason, str) and "timed out" in reason.lower())
+            )
+            if timed_out:
+                break
             if attempt < 3:
                 time.sleep(2 * attempt)
                 continue
