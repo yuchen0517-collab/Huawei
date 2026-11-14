@@ -179,9 +179,44 @@ def is_b_scenario(data: Any) -> bool:
     return isinstance(data, dict) and "issues" in data and "private_state_by_party" in data
 
 
+def _alias_party_ids(scenario: dict) -> dict:
+    """把适配结果的参与方 id 归一为 A 侧会话约定 cn/us。
+
+    字段翻译全部由 adapter 完成；这里只按 parties 声明顺序重命名 id
+    （第一方→cn，第二方→us），因为 A 侧的 index_rules 结算表、api.py
+    （MY_ACTOR="cn"）与既有测试都以 cn/us 为口径。已经是 cn/us 时原样返回。
+    """
+    parties = scenario.get("parties") or []
+    ids = [party.get("id") for party in parties if isinstance(party, dict)]
+    if len(ids) != 2 or set(ids) == {"cn", "us"}:
+        return scenario
+    alias = dict(zip(ids, ("cn", "us")))
+
+    def rekey(table: Any) -> Any:
+        if not isinstance(table, dict):
+            return table
+        return {alias.get(key, key): value for key, value in table.items()}
+
+    for party in parties:
+        party["id"] = alias[party["id"]]
+    for clause in scenario.get("clauses") or []:
+        clause["weights"] = rekey(clause.get("weights"))
+        clause["positions"] = rekey(clause.get("positions"))
+        clause["redlines"] = rekey(clause.get("redlines"))
+        clause["soft_redlines"] = rekey(clause.get("soft_redlines"))
+        for option in clause.get("options") or []:
+            option["score"] = rekey(option.get("score"))
+    rules = scenario.get("index_rules") or {}
+    for key in ("initial", "sensitivity"):
+        if key in rules:
+            rules[key] = rekey(rules[key])
+    return scenario
+
+
 def convert_b_scenario(data: dict) -> dict:
-    """B 格式 → C 格式。唯一实现是 adapter.adapt_scenario，本函数只做转发。"""
-    return adapt_scenario(data)
+    """B 格式 → C 格式。字段翻译唯一实现是 adapter.adapt_scenario；
+    本函数只做转发 + 参与方 id 的 cn/us 会话约定归一。"""
+    return _alias_party_ids(adapt_scenario(data))
 
 
 def evaluate_for(engine, viewer: str) -> dict:
@@ -347,8 +382,18 @@ def make_scenario_with_warnings(
             )
         )
     _verify_design_table(agents, warnings)
-    clauses: List[dict] = [_enum_clause(design, warnings) for design in _ENUM_CLAUSES]
-    clauses.extend(_numeric_clause(design, warnings) for design in _NUMERIC_CLAUSES)
+    # 条款顺序固定跟随 CLAUSE_NAMES（A 侧 API 的 open_issues 等输出以此为口径），
+    # 与 _ENUM_CLAUSES / _NUMERIC_CLAUSES 的分组顺序解耦。
+    clause_by_name: Dict[str, dict] = {}
+    for design in _ENUM_CLAUSES:
+        clause = _enum_clause(design, warnings)
+        clause_by_name[clause["name"]] = clause
+    for design in _NUMERIC_CLAUSES:
+        clause = _numeric_clause(design, warnings)
+        clause_by_name[clause["name"]] = clause
+    clauses: List[dict] = [
+        clause_by_name[name] for name in CLAUSE_NAMES if name in clause_by_name
+    ]
     index_rules, index_warnings = _make_index_rules(player, opponent)
     warnings.extend(index_warnings)
 

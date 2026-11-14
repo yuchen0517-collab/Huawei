@@ -107,6 +107,20 @@ def _as_dict(value) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+def _normalized_private_state(raw) -> dict:
+    """private_state_by_party 的键按小写归一。
+
+    parties[].party_id 在本层一律小写归一（见 validate_b_contract），
+    但 B 的交付文件可能使用 P1/P2 等大写 id 作为私有状态的键；
+    不归一时校验与映射会漏配。重复键（大小写不同）保留先出现者。
+    """
+    normalized: Dict[str, object] = {}
+    for key, value in _as_dict(raw).items():
+        if isinstance(key, str):
+            normalized.setdefault(key.lower(), value)
+    return normalized
+
+
 def validate_b_contract(b_scenario) -> List[str]:
     """校验 B 侧必填字段与枚举合法性，返回错误列表（不抛异常）。"""
     errors: List[str] = []
@@ -286,6 +300,7 @@ def validate_b_contract(b_scenario) -> List[str]:
         if not isinstance(private_state, dict):
             errors.append("$.private_state_by_party: 必须是对象。")
         else:
+            private_state = _normalized_private_state(private_state)
             for party_id in party_ids:
                 path = f"$.private_state_by_party.{party_id}"
                 if party_id not in private_state:
@@ -735,7 +750,7 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
 
     parties_source = b_scenario["parties"]
     party_ids = [party["party_id"].lower() for party in parties_source]
-    private_state = b_scenario["private_state_by_party"]
+    private_state = _normalized_private_state(b_scenario["private_state_by_party"])
 
     parties: List[dict] = []
     for party in parties_source:
