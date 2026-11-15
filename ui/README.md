@@ -96,7 +96,7 @@ ui/
 | 接受协议 | `POST /session/{id}/action`，`action_type:"accept"`，`offer_patch:{}`，`expected_effect/public_message` 必填 | `httpAdapter.accept()`；成功后按投影 `status:"ended"` 进终局 |
 | 条款可选值 | 投影 9 字段暂无 options；计划第 5 天补 `clauses[{name,type,options,initial}]` | 优先 `payload.clauses`；过渡用 `DIPLOMAT_CONFIG.clauseOptions` |
 | 行动点 | 投影未暴露；计划 `{current,max}`；未补入前每轮 3 点、每行动 1 点 | 已裁决 K4=3：mock/空态 `3/3`；投影存在时以 max 覆盖 |
-| speaker_score | 服务端未实现；终局 null 态 | 不本地算分；`null` 显示不计分 |
+| speakerScore | 服务端未实现；终局 null 态 | 不本地算分；`null` 显示不计分 |
 | debrief | 202 纯受理，无复盘/教练内容 | 提示「已受理，内容本轮不返回」 |
 | 开局 | `{scenario_id:"ai_governance", agent:"us", scenario_path:null}`；agent 只能 `us` | `openSession` 默认，可配置覆盖 |
 | offers | 只含 `option` + `note` | 只读；选项来自 `clauses`/`clauseOptions` |
@@ -108,9 +108,16 @@ ui/
 |---|---|---|
 | clauses | enum + numeric（`unit`/`range{min,max,step}`/`initial`），11-16 上午联调前补入 | 已支持 numeric 数值输入；enum 仍用下拉 |
 | action_points | `{current,max}`；每行动扣 1；**D 已裁决 `max=3`（2026-11-15）** | mock/空态 `3/3`；投影存在时以 `max` 覆盖 |
-| speakerScore | 产出方 C＋B，A 透传，**不由 D**；外层 camelCase | 先读 `payload.speakerScore`，兼容 `speaker_score`；只展示 |
+| speakerScore | 产出方 C＋B，A 透传，**不由 D**；外层 camelCase | 只读 `payload.speakerScore`；只展示 |
 | C 单复数 | C 已澄清：B 契约单数、引擎复数，适配层双读，不是 bug | 前端不读该字段 |
 | 对方可信度 | C 回 D（2026-11-15）：百分比改为定性分级 | 高 ≥70／中 40–69／低 1–39／未知；规则写 tooltip，不显示百分比 |
+
+### 第四轮确认（2026-11-15）
+
+- **K4 落章**：D 裁决 **3**；A 改 `load_scenario_bridge.py` 的 5→3，与投影同一次提交；mock/空态已 `3/3`。
+- **投影**：`clauses`＋`action_points` 仍未落地，承诺 11-16 上午联调前；前端已兼容 enum/numeric 与 `{current,max}`。
+- **speakerScore**：外层 camelCase 定稿；前端只读 `payload.speakerScore`，终局 null 态。
+- **C 单复数**：C 已澄清、适配层双读；A 第四轮附项不再阻塞，建议 A 撤回。
 
 ## 控制台快照与双断点测量
 

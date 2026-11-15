@@ -236,8 +236,7 @@
       apMax: apMax,
       clauses: clauses,
       openIssues: openIssues,
-      speakerScore: payload.speakerScore !== undefined ? payload.speakerScore
-        : (payload.speaker_score !== undefined ? payload.speaker_score : state.speakerScore),
+      speakerScore: payload.speakerScore !== undefined ? payload.speakerScore : state.speakerScore,
       ended: payload.status === "ended" ? true : state.ended,
       serviceDown: null,
       sessionLost: false

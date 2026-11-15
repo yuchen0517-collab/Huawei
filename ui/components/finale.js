@@ -12,12 +12,12 @@
 
   D.components.finale = function (s) {
     var sc = s.speakerScore;
-    // K5：只以 speaker_score===null 判定，不用 round===1 兜底
+    // K5：只以 speakerScore===null 判定，不用 round===1 兜底
     var isNull = !sc;
     var grade = isNull ? "—" : D.util.gradeOf(sc.total);
     var note = isNull
       ? "四维评分自对方首次发言后开始计算。"
-      : "总分与四维分均由服务端 speaker_score 返回，前端只做展示与评级映射。";
+      : "总分与四维分均由服务端 speakerScore 返回，前端只做展示与评级映射。";
 
     var dims = isNull ? "" : SCORE_DEF.map(function (d) {
       var v = sc[d.k];
@@ -26,14 +26,14 @@
     }).join("");
 
     var feedback = isNull
-      ? "首轮不计分：第 1 轮对方尚未发言，speaker_score 返回 null，不填零分，也不生成替代分数。"
+      ? "首轮不计分：第 1 轮对方尚未发言，speakerScore 返回 null，不填零分，也不生成替代分数。"
       : sc.feedback;
 
     return '<div class="fbox">' +
       '<div class="fhead"><div class="txt"><div class="k">终局 · 基础复盘</div><h2>协议达成 · 有限共识</h2></div>' +
         '<button class="btn" id="finaleClose" data-act="closeFinale">返回会场</button></div>' +
       '<div class="fbody">' +
-        '<div class="fcard wide"><h4>结局判定 · 发言评分 speaker_score</h4>' +
+        '<div class="fcard wide"><h4>结局判定 · 发言评分 speakerScore</h4>' +
           '<div class="fscore-wrap"><div class="fgrade' + (isNull ? " null" : "") + '" id="fGrade">' + grade + '</div>' +
             '<div class="fscore-main"><div class="score"><span class="n" id="fScore">' + (isNull ? "—" : sc.total) + '</span>' +
             '<span class="d">/ 100 · 四维加权：立场 30% / 策略 30% / 情绪 20% / 内容 20%</span></div>' +

@@ -106,7 +106,7 @@
 |---|---|
 | 触发 | 查看协议 → 接受协议（未决条款先清零；若仍有未决，引擎 400 `INVALID_ACTION`） |
 | 请求 | `POST /session/{id}/action`，`action_type:"accept"`、`offer_patch:{}`、`expected_effect/public_message` 非空 |
-| 屏幕表现 | 成功后 `status:"ended"` → 终局；`speaker_score` 为 null 时按 null 态，不填零分 |
+| 屏幕表现 | 成功后 `status:"ended"` → 终局；`speakerScore` 为 null 时按 null 态，不填零分 |
 | 截图点 | Network 请求体 + 终局覆盖层 |
 | 文件名 | `state-11-accept.png` |
 
