@@ -246,5 +246,55 @@ from load_scenario_bridge import ENGINE_ROOT, load_scenario, make_scenario
 | `load_scenario(path=None)` | `path=None` 回落 `make_scenario()`；否则读文件（utf-8-sig）并自动识别 B/C |
 | `make_scenario(agents_path=None)` | 保留 A 的 `agents.json → ai_governance` 组装逻辑 |
 | `evaluate_for(engine, viewer)` | 对外评价收口：先取全量六字段，再按 viewer 裁剪他方 BATNA |
+| `submit_for(engine, viewer, action)` | 身份收口：强制用 viewer 覆盖 `action.actor`，与 A 的 `api.py` 同一口径 |
+| `debrief_for(engine, requester)` | 复盘收口：转发 `engine.debrief_state()`，未终局 / 空 requester 一律拒绝 |
 
 `ENGINE_ROOT` 也一并导出，`api.py` 依赖它做 `sys.path` 注入，无需改动。
+
+## 9. 多智能体发言调度（TurnScheduler）
+
+`engine/scheduler.py` 是 C 侧新增的**确定性**调度器：纯标准库、无副作用、
+不修改 `NegotiationState`，也不依赖随机 / 时间 / UUID / 网络 / LLM。
+发言顺序只由 `round_no` 与 `scenario["parties"]` 的声明顺序推导。
+
+### 9.1 A 侧如何调用（不改 `multi_agent.py` 的内部状态）
+
+```python
+from engine.scheduler import TurnScheduler
+
+scheduler = TurnScheduler(engine.scenario)
+
+order = scheduler.speaking_order(engine.state.round)   # 本回合发言顺序，list[str]
+for party in order:
+    budget = scheduler.action_budget(party, engine.state.round)  # 本回合行动点
+    # ... 让该 party 的 Agent 产出行动，经 api.adapt_client_action 后提交 ...
+    if scheduler.is_last_round(engine.state.round):
+        break
+
+summary = scheduler.describe()   # 只读摘要，可直接下发 UI / 复盘
+```
+
+- `speaking_order(round_no)`：第 1 回合从 parties 声明顺序首位开始，
+  之后每回合起始位后移一位、尾部回绕。两方严格交替；五方（1v5）
+  每 5 回合构成一个完整轮转周期。
+- `action_budget(party, round_no)`：数据源严格取
+  `scenario["action_points_per_round"]`。整数表示全员同额；映射表示按方定额，
+  键按 actor 小写归一，未知参与方返回 0（fail-closed）。当前所有回合同额，
+  `round_no` 参数为后续“逐回合递增预算”预留。
+- `is_last_round(round_no)`：`round_no >= max_rounds` 即为真（含超出场景）。
+- `describe()`：只输出 parties / party_count / max_rounds /
+  action_points_per_round / rotation / last_round，**不含任何 private 字段**，
+  已由 `tests/test_scheduler.py::IsolationAndPurityTest` 锁定。
+
+### 9.2 与 `multi_agent.py` 的边界
+
+A 的 `multi_agent.py` 保持现有职责（拼接 Agent prompt、调用模型、产出行动），
+只需要把“谁先发言、能发几次”从内部逻辑改为读取 `TurnScheduler` 的结果。
+C 侧不 import A 的模块，也不反向修改其内部状态；双方只通过
+`engine.scenario`（只读）和 `engine.state.round` 交互。
+
+### 9.3 确定性验收
+
+同一 `scenario` 与同一 `round_no`，任意实例、任意调用次数，结果完全一致；
+调度器全程只读，调用后引擎状态逐字段不变。对应测试：
+`tests/test_scheduler.py`（12 条）。

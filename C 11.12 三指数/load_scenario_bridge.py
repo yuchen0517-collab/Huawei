@@ -222,6 +222,9 @@ def convert_b_scenario(data: dict) -> dict:
 def evaluate_for(engine, viewer: str) -> dict:
     """A 侧对外评价入口：只暴露 viewer 自己的私有信息。
 
+    这是**唯一**允许把评价交给玩家的出口；`engine.evaluate()` 无参调用只供
+    内部复盘 / 审计 / demo 使用。
+
     内部先用 `engine.evaluate()` 取全量六字段，再用 `engine.public_state(viewer)`
     裁剪 `batna_comparison`：非 viewer 方的 `batna` / `net_gain` /
     `better_than_batna` 一律置 None，避免由 `net_gain` 反推对方底牌。
@@ -242,6 +245,32 @@ def evaluate_for(engine, viewer: str) -> dict:
         entry["better_than_batna"] = None
     evaluation["batna_comparison"] = comparison
     return evaluation
+
+
+def submit_for(engine, viewer: str, action: dict):
+    """按 viewer 身份提交行动：强制覆盖客户端传来的 actor。
+
+    引擎本身没有“会话”概念，只校验 actor ∈ parties；身份不可伪造的收口
+    必须在编排层完成（与成员A `api.py::adapt_client_action` 的
+    `flat["actor"] = rec.my_actor` 同一口径）。本函数是 C 侧等价的收口：
+    调用方必须显式声明 viewer，action 里自带的 actor 一律被丢弃覆盖。
+    """
+    if not viewer:
+        raise ValueError("viewer 不能为空：提交行动必须绑定己方 party_id。")
+    forced = deepcopy(action)
+    forced["actor"] = viewer
+    return engine.submit_action(forced)
+
+
+def debrief_for(engine, requester: str) -> dict:
+    """A 侧复盘入口：转发到 `engine.debrief_state()` 的终局闸门。
+
+    未终局、或 requester 为空时都会抛错；调用方不得绕过本函数直接读存档。
+    返回体含双方 private 与 `visibility="debrief"` 标记。
+    """
+    if not requester:
+        raise ValueError("requester 不能为空：复盘态必须显式授权。")
+    return engine.debrief_state(requester)
 
 
 def _verify_design_table(agents: dict, warnings: List[dict]) -> None:
