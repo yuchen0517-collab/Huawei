@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 import os
 import re
@@ -30,9 +31,16 @@ ENGINE_DIR = BASE_DIR / "C 11.12 三指数"
 if str(ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(ENGINE_DIR))
 
-from load_scenario_bridge import ENGINE_ROOT, load_scenario, make_scenario
+from load_scenario_bridge import (
+    ENGINE_ROOT,
+    debrief_for,
+    evaluate_for,
+    load_scenario,
+    make_scenario,
+    submit_for,
+)
 
-from engine.core import RulesEngine
+from engine.core import IllegalDebriefAccess, RulesEngine
 from engine.state import NegotiationState, Offer
 from engine.validator import ERRORS as ENGINE_ERRORS
 
@@ -142,6 +150,10 @@ def make_action_id(seq: int) -> str:
 def restore_engine(engine: RulesEngine) -> RulesEngine:
     archive = copy.deepcopy(engine.state.to_archive_dict())
     restored = copy.deepcopy(archive)
+    # to_archive_dict() 会带 `_visibility="god_view"` 等存档标记键，
+    # 不是 NegotiationState 字段，重建前必须剔除（标记会在重新导出时再生成）。
+    state_fields = {f.name for f in dataclasses.fields(NegotiationState)}
+    restored = {k: v for k, v in restored.items() if k in state_fields}
     restored["offers"] = [Offer(**offer) for offer in restored["offers"]]
     restored["agreement"] = Offer(**restored["agreement"]) if restored["agreement"] else None
     candidate = RulesEngine(copy.deepcopy(engine.scenario), engine.session_id)
@@ -385,7 +397,9 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
 
 
 def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
-    ok, code, _, events = engine.submit_action(copy.deepcopy(flat))
+    # 身份收口走 C 侧 submit_for（强制 actor=viewer，丢弃客户端自带 actor），
+    # 与 adapt_client_action 的 flat["actor"] = rec.my_actor 同一口径。
+    ok, code, _, events = submit_for(engine, flat["actor"], copy.deepcopy(flat))
     if ok:
         return events
     error = code or "INTERNAL_ERROR"
@@ -581,10 +595,21 @@ def auto_step_endpoint(session_id: str) -> dict:
     return run_turn(get_session(session_id), auto=True)
 
 
-@app.post("/session/{session_id}/debrief", status_code=202)
+@app.post("/session/{session_id}/debrief")
 def debrief_endpoint(session_id: str) -> dict:
-    get_session(session_id)
-    return {"status": "accepted"}
+    rec = get_session(session_id)
+    with rec.state_lock:
+        engine = rec.engine
+        try:
+            debrief = debrief_for(engine, MY_ACTOR)
+        except IllegalDebriefAccess as exc:
+            raise ApiError(409, "DEBRIEF_NOT_AVAILABLE", str(exc))
+        # 对外评价唯一出口：evaluate_for 会把他方 batna / net_gain /
+        # better_than_batna 置 None，禁止直出 engine.evaluate()。
+        evaluation = evaluate_for(engine, MY_ACTOR)
+    result = {"debrief": debrief, "evaluation": evaluation}
+    json.dumps(result, ensure_ascii=False)
+    return result
 
 
 if __name__ == "__main__":

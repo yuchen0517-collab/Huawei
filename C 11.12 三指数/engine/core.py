@@ -37,6 +37,16 @@ def load_scenario(path: str) -> dict:
         return json.load(handle)
 
 
+class IllegalDebriefAccess(Exception):
+    """未终局或未显式授权时请求复盘态上帝视角。
+
+    对应设计说明书表 14 的可见性状态机：
+    生成 → 仅系统 / 对战 → 保密态 / 复盘 → 揭晓。
+    只有对局进入 `status == "ended"` 且调用方显式提供 requester 时，
+    才允许打开揭晓开关；其余情况一律抛本异常。
+    """
+
+
 class RulesEngine:
     def __init__(self, scenario: dict, session_id: str = "demo-session"):
         self.scenario = scenario
@@ -178,6 +188,8 @@ class RulesEngine:
                 # 场景禁止部分协议时不得判 PARTIAL_AGREEMENT；与
                 # determine_terminal_type 保持一致改判 DEADLOCK，
                 # agreement 对象保留在 state 中供审计回看。
+                # validator 已先行拦截（requires_full + open_issues 非空时返回
+                # AGREEMENT_HAS_OPEN_ISSUES），此处为状态被外部篡改时的兜底。
                 terminal_type = (
                     "PARTIAL_AGREEMENT"
                     if rules.get("partial_agreement_allowed", True) is not False
@@ -283,7 +295,42 @@ class RulesEngine:
         return self.state.to_public_dict(viewer)
 
     def evaluate(self, viewer: str = "") -> dict:
+        """内部全量评价。**禁止直接对外返回**。
+
+        viewer 为空时 `batna_comparison` 返回双方 BATNA 真值与 net_gain，
+        而 `net_gain = achieved - batna`、`achieved` 是公开指数，等价于
+        把对方底牌交出去（R2）。
+        对外给玩家看的评价**唯一**出口是
+        `load_scenario_bridge.evaluate_for(engine, viewer)`：它先用本方法取
+        全量六字段，再按 viewer 裁剪他方 `batna / net_gain / better_than_batna`。
+        """
         return evaluate(self.state, self.scenario, viewer)
+
+    def debrief_state(self, requester: str = "") -> dict:
+        """复盘态上帝视角。仅当 `status == "ended"` 时可用；否则抛 IllegalDebriefAccess。
+
+        这是打开可见性开关的**唯一**入口，对应设计说明书表 14 的「复盘→揭晓」。
+        - 未终局即调用 → `IllegalDebriefAccess`；
+        - 未显式提供 requester → `IllegalDebriefAccess`（复盘必须有人负责授权）；
+        - 终局且显式授权 → 返回含双方 private 的全量视图，并带
+          `"visibility": "debrief"` 标记，与存档用的 `"_visibility": "god_view"` 区分。
+
+        本方法只读：不写 behavior_log、不追加 public_events、不修改任何状态。
+        """
+        if self.state.status != "ended":
+            raise IllegalDebriefAccess(
+                "复盘态仅在终局后开放："
+                f"当前 status={self.state.status!r}，round={self.state.round}。"
+            )
+        if not requester:
+            raise IllegalDebriefAccess(
+                "复盘解锁必须显式指定 requester（裁判 / 复盘主持人），"
+                "不得由终局自动放开。"
+            )
+        data = self.state.to_archive_dict()
+        data["visibility"] = "debrief"
+        data["requester"] = requester
+        return data
 
     def replay(self) -> dict:
         start = initial_indices(self.scenario)

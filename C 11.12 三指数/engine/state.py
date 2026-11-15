@@ -114,6 +114,16 @@ class NegotiationState:
         return f"evt-{len(self.public_events) + 1:04d}"
 
     def to_public_dict(self, viewer: str = "") -> dict:
+        """单方世界观：private_state_by_party 只含 viewer 自己。
+
+        防呆（R5）：viewer 为空返回的是**空 private**，不是“全量”。
+        空字符串只表示“没有观看者”，调用方不得据此推断“空 = 上帝视角”。
+        全量视图只有两个出口：
+        - `to_archive_dict()`：存档用，带 `_visibility="god_view"` 危险标记；
+        - `RulesEngine.debrief_state()`：终局且显式授权后的复盘态。
+        本方法对未知 viewer（含 "root" / "*" 之类魔法字符串）一律返回空 private，
+        宁可少给，绝不误给。
+        """
         private = {}
         if viewer and viewer in self.private_state_by_party:
             private = {viewer: deepcopy(self.private_state_by_party[viewer])}
@@ -139,7 +149,18 @@ class NegotiationState:
         }
 
     def to_archive_dict(self) -> dict:
+        """存档用上帝视角：**全量**返回所有参与方的 private_state_by_party。
+
+        危险提示（R1）：本方法不做任何可见性裁剪，结果只能落盘存档或交给
+        复盘工具，**禁止直接返回给任何单方玩家**。对外复盘必须走
+        `RulesEngine.debrief_state()` 的终局闸门，那里会额外写入
+        `visibility="debrief"` 标记。
+
+        返回体带 `_visibility="god_view"` 标记，供上层在日志/接口层识别并拦截：
+        任何面向玩家的响应里一旦出现该标记，即视为隔离被击穿。
+        """
         data = self.to_public_dict("")
         data["private_state_by_party"] = deepcopy(self.private_state_by_party)
         data["seen_action_ids"] = deepcopy(self.seen_action_ids)
+        data["_visibility"] = "god_view"
         return data

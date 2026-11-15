@@ -30,19 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from adapter import adapt_scenario
 
 BASE_DIR = Path(__file__).resolve().parent
-
-
-def _resolve_agents_path() -> Path:
-    """agents.json 的唯一真源在成员A 仓库根目录（含全部国家席位）；
-    引擎目录内的同名文件若是 C 自带的精简版则不优先使用。"""
-    candidates = (BASE_DIR.parent / "agents.json", BASE_DIR / "agents.json")
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return candidates[0]
-
-
-AGENTS_PATH = _resolve_agents_path()
+AGENTS_PATH = BASE_DIR / "agents.json"
 SCENARIO_ID = "ai_governance"
 ENGINE_DIR_NAME = "C 11.12 三指数"
 CLAUSE_NAMES = (
@@ -127,6 +115,13 @@ _NUMERIC_CLAUSES = (
     },
 )
 
+# 设计表中可由 agents.json 直接核对的声明值；其余项无法核对，
+# make_scenario() 会逐项记 DESIGN_TABLE_UNVERIFIED。
+_DESIGN_TABLE_INDICES = {
+    "cn": {"initial_interest": 50, "initial_image": 70, "initial_trust": 65},
+    "us": {"initial_interest": 50, "initial_image": 70, "initial_trust": 65},
+}
+
 _LAST_WARNINGS: List[dict] = []
 
 
@@ -162,6 +157,21 @@ def _resolve_engine_root() -> Path:
 
 
 ENGINE_ROOT = _resolve_engine_root()
+
+
+def _resolve_agents_path() -> Tuple[Path, bool]:
+    """返回 (agents.json 路径, 是否回落到 C 侧精简副本)。
+
+    读取顺序：成员A 的完整注册表（`BASE_DIR.parent/agents.json`）优先；
+    找不到才回落到本目录的精简副本，并由调用方记 AGENTS_FALLBACK_COPY warning。
+    本模块若被复制到 A 的仓库根，`BASE_DIR.parent` 没有注册表，
+    此时 `BASE_DIR/agents.json` 就是 A 的完整注册表，不算回落。
+    """
+    primary = BASE_DIR.parent / "agents.json"
+    if primary.is_file():
+        return primary, False
+    fallback = BASE_DIR.name == ENGINE_DIR_NAME
+    return BASE_DIR / "agents.json", fallback
 
 
 def is_b_scenario(data: Any) -> bool:
@@ -207,6 +217,96 @@ def convert_b_scenario(data: dict) -> dict:
     """B 格式 → C 格式。字段翻译唯一实现是 adapter.adapt_scenario；
     本函数只做转发 + 参与方 id 的 cn/us 会话约定归一。"""
     return _alias_party_ids(adapt_scenario(data))
+
+
+def evaluate_for(engine, viewer: str) -> dict:
+    """A 侧对外评价入口：只暴露 viewer 自己的私有信息。
+
+    这是**唯一**允许把评价交给玩家的出口；`engine.evaluate()` 无参调用只供
+    内部复盘 / 审计 / demo 使用。
+
+    内部先用 `engine.evaluate()` 取全量六字段，再用 `engine.public_state(viewer)`
+    裁剪 `batna_comparison`：非 viewer 方的 `batna` / `net_gain` /
+    `better_than_batna` 一律置 None，避免由 `net_gain` 反推对方底牌。
+    `engine.evaluate()` 的签名保持原样，本函数是编排层的对外收口。
+    """
+    if not viewer:
+        raise ValueError("viewer 不能为空：对外评价必须指定己方 party_id。")
+    evaluation = deepcopy(engine.evaluate())
+    public_private = (engine.public_state(viewer) or {}).get(
+        "private_state_by_party", {}
+    ) or {}
+    comparison = evaluation.get("batna_comparison") or {}
+    for party, entry in comparison.items():
+        if party in public_private:
+            continue
+        entry["batna"] = None
+        entry["net_gain"] = None
+        entry["better_than_batna"] = None
+    evaluation["batna_comparison"] = comparison
+    return evaluation
+
+
+def submit_for(engine, viewer: str, action: dict):
+    """按 viewer 身份提交行动：强制覆盖客户端传来的 actor。
+
+    引擎本身没有“会话”概念，只校验 actor ∈ parties；身份不可伪造的收口
+    必须在编排层完成（与成员A `api.py::adapt_client_action` 的
+    `flat["actor"] = rec.my_actor` 同一口径）。本函数是 C 侧等价的收口：
+    调用方必须显式声明 viewer，action 里自带的 actor 一律被丢弃覆盖。
+    """
+    if not viewer:
+        raise ValueError("viewer 不能为空：提交行动必须绑定己方 party_id。")
+    forced = deepcopy(action)
+    forced["actor"] = viewer
+    return engine.submit_action(forced)
+
+
+def debrief_for(engine, requester: str) -> dict:
+    """A 侧复盘入口：转发到 `engine.debrief_state()` 的终局闸门。
+
+    未终局、或 requester 为空时都会抛错；调用方不得绕过本函数直接读存档。
+    返回体含双方 private 与 `visibility="debrief"` 标记。
+    """
+    if not requester:
+        raise ValueError("requester 不能为空：复盘态必须显式授权。")
+    return engine.debrief_state(requester)
+
+
+def _verify_design_table(agents: dict, warnings: List[dict]) -> None:
+    """校验常量设计表与 agents.json 的可对齐项，对齐不上的记 DESIGN_TABLE_UNVERIFIED。"""
+    scenario_meta = agents.get("_scenario") or {}
+    agenda = [
+        item for item in (scenario_meta.get("agenda") or []) if isinstance(item, str)
+    ]
+    player = scenario_meta.get("player") or {}
+    opponent = agents.get("us") or {}
+
+    for party, source in (("cn", player), ("us", opponent)):
+        for field, expected in _DESIGN_TABLE_INDICES[party].items():
+            actual = source.get(field)
+            if actual != expected:
+                warnings.append(
+                    _warning(
+                        "DESIGN_TABLE_UNVERIFIED",
+                        f"agents.{party}.{field}",
+                        f"设计表声明 {party}.{field}={expected!r}，"
+                        f"agents.json 实际为 {actual!r}；请以 agents.json 为准并同步常量表。",
+                    )
+                )
+
+    for design in (*_ENUM_CLAUSES, *_NUMERIC_CLAUSES):
+        name = design["name"]
+        matched = any(name in item or item in name for item in agenda)
+        if not matched:
+            warnings.append(
+                _warning(
+                    "DESIGN_TABLE_UNVERIFIED",
+                    f"clauses.{name}",
+                    f"设计表条款「{name}」在 agents.json 的 agenda 中找不到对应议题，"
+                    "偏好分与理想点均为人工设定，待 A/B 补结构化立场数据。",
+                )
+            )
 
 
 def _borrowed_index_rules() -> Tuple[dict, List[dict]]:
@@ -291,12 +391,26 @@ def make_scenario_with_warnings(
     agents_path: Optional[str | Path] = None,
 ) -> Tuple[dict, List[dict]]:
     """从 agents.json 组装 ai_governance 场景，并返回结构化 warning 列表。"""
-    source_path = Path(agents_path) if agents_path is not None else AGENTS_PATH
+    if agents_path is not None:
+        source_path = Path(agents_path)
+        agents_fallback = False
+    else:
+        source_path, agents_fallback = _resolve_agents_path()
     agents = json.loads(source_path.read_text(encoding="utf-8-sig"))
     player = agents["_scenario"]["player"]
     opponent = agents["us"]
 
     warnings: List[dict] = []
+    if agents_fallback:
+        warnings.append(
+            _warning(
+                "AGENTS_FALLBACK_COPY",
+                "agents.json",
+                "未找到成员A 的完整 agents.json，已回落到 C 侧精简副本；"
+                "A 扩展字段时需同步该副本或提供完整注册表。",
+            )
+        )
+    _verify_design_table(agents, warnings)
     # 条款顺序固定跟随 CLAUSE_NAMES（A 侧 API 的 open_issues 等输出以此为口径），
     # 与 _ENUM_CLAUSES / _NUMERIC_CLAUSES 的分组顺序解耦。
     clause_by_name: Dict[str, dict] = {}
