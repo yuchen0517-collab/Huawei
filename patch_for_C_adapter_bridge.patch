@@ -1,0 +1,135 @@
+diff --git "a/C 11.12 \344\270\211\346\214\207\346\225\260/adapter/scenario_adapter.py" "b/C 11.12 \344\270\211\346\214\207\346\225\260/adapter/scenario_adapter.py"
+index e876d7d..73f3d20 100644
+--- "a/C 11.12 \344\270\211\346\214\207\346\225\260/adapter/scenario_adapter.py"	
++++ "b/C 11.12 \344\270\211\346\214\207\346\225\260/adapter/scenario_adapter.py"	
+@@ -107,6 +107,20 @@ def _as_dict(value) -> dict:
+     return value if isinstance(value, dict) else {}
+ 
+ 
++def _normalized_private_state(raw) -> dict:
++    """private_state_by_party 的键按小写归一。
++
++    parties[].party_id 在本层一律小写归一（见 validate_b_contract），
++    但 B 的交付文件可能使用 P1/P2 等大写 id 作为私有状态的键；
++    不归一时校验与映射会漏配。重复键（大小写不同）保留先出现者。
++    """
++    normalized: Dict[str, object] = {}
++    for key, value in _as_dict(raw).items():
++        if isinstance(key, str):
++            normalized.setdefault(key.lower(), value)
++    return normalized
++
++
+ def validate_b_contract(b_scenario) -> List[str]:
+     """校验 B 侧必填字段与枚举合法性，返回错误列表（不抛异常）。"""
+     errors: List[str] = []
+@@ -258,6 +272,7 @@ def validate_b_contract(b_scenario) -> List[str]:
+         if not isinstance(private_state, dict):
+             errors.append("$.private_state_by_party: 必须是对象。")
+         else:
++            private_state = _normalized_private_state(private_state)
+             for party_id in party_ids:
+                 path = f"$.private_state_by_party.{party_id}"
+                 if party_id not in private_state:
+@@ -626,7 +641,7 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
+ 
+     parties_source = b_scenario["parties"]
+     party_ids = [party["party_id"].lower() for party in parties_source]
+-    private_state = b_scenario["private_state_by_party"]
++    private_state = _normalized_private_state(b_scenario["private_state_by_party"])
+ 
+     parties: List[dict] = []
+     for party in parties_source:
+diff --git "a/C 11.12 \344\270\211\346\214\207\346\225\260/load_scenario_bridge.py" "b/C 11.12 \344\270\211\346\214\207\346\225\260/load_scenario_bridge.py"
+index b2be1b1..a66b442 100644
+--- "a/C 11.12 \344\270\211\346\214\207\346\225\260/load_scenario_bridge.py"	
++++ "b/C 11.12 \344\270\211\346\214\207\346\225\260/load_scenario_bridge.py"	
+@@ -30,7 +30,19 @@ from typing import Any, Dict, List, Optional, Tuple
+ from adapter import adapt_scenario
+ 
+ BASE_DIR = Path(__file__).resolve().parent
+-AGENTS_PATH = BASE_DIR / "agents.json"
++
++
++def _resolve_agents_path() -> Path:
++    """agents.json 的唯一真源在成员A 仓库根目录（含全部国家席位）；
++    引擎目录内的同名文件若是 C 自带的精简版则不优先使用。"""
++    candidates = (BASE_DIR.parent / "agents.json", BASE_DIR / "agents.json")
++    for candidate in candidates:
++        if candidate.is_file():
++            return candidate
++    return candidates[0]
++
++
++AGENTS_PATH = _resolve_agents_path()
+ SCENARIO_ID = "ai_governance"
+ ENGINE_DIR_NAME = "C 11.12 三指数"
+ CLAUSE_NAMES = (
+@@ -157,9 +169,44 @@ def is_b_scenario(data: Any) -> bool:
+     return isinstance(data, dict) and "issues" in data and "private_state_by_party" in data
+ 
+ 
++def _alias_party_ids(scenario: dict) -> dict:
++    """把适配结果的参与方 id 归一为 A 侧会话约定 cn/us。
++
++    字段翻译全部由 adapter 完成；这里只按 parties 声明顺序重命名 id
++    （第一方→cn，第二方→us），因为 A 侧的 index_rules 结算表、api.py
++    （MY_ACTOR="cn"）与既有测试都以 cn/us 为口径。已经是 cn/us 时原样返回。
++    """
++    parties = scenario.get("parties") or []
++    ids = [party.get("id") for party in parties if isinstance(party, dict)]
++    if len(ids) != 2 or set(ids) == {"cn", "us"}:
++        return scenario
++    alias = dict(zip(ids, ("cn", "us")))
++
++    def rekey(table: Any) -> Any:
++        if not isinstance(table, dict):
++            return table
++        return {alias.get(key, key): value for key, value in table.items()}
++
++    for party in parties:
++        party["id"] = alias[party["id"]]
++    for clause in scenario.get("clauses") or []:
++        clause["weights"] = rekey(clause.get("weights"))
++        clause["positions"] = rekey(clause.get("positions"))
++        clause["redlines"] = rekey(clause.get("redlines"))
++        clause["soft_redlines"] = rekey(clause.get("soft_redlines"))
++        for option in clause.get("options") or []:
++            option["score"] = rekey(option.get("score"))
++    rules = scenario.get("index_rules") or {}
++    for key in ("initial", "sensitivity"):
++        if key in rules:
++            rules[key] = rekey(rules[key])
++    return scenario
++
++
+ def convert_b_scenario(data: dict) -> dict:
+-    """B 格式 → C 格式。唯一实现是 adapter.adapt_scenario，本函数只做转发。"""
+-    return adapt_scenario(data)
++    """B 格式 → C 格式。字段翻译唯一实现是 adapter.adapt_scenario；
++    本函数只做转发 + 参与方 id 的 cn/us 会话约定归一。"""
++    return _alias_party_ids(adapt_scenario(data))
+ 
+ 
+ def _borrowed_index_rules() -> Tuple[dict, List[dict]]:
+@@ -250,8 +297,18 @@ def make_scenario_with_warnings(
+     opponent = agents["us"]
+ 
+     warnings: List[dict] = []
+-    clauses: List[dict] = [_enum_clause(design, warnings) for design in _ENUM_CLAUSES]
+-    clauses.extend(_numeric_clause(design, warnings) for design in _NUMERIC_CLAUSES)
++    # 条款顺序固定跟随 CLAUSE_NAMES（A 侧 API 的 open_issues 等输出以此为口径），
++    # 与 _ENUM_CLAUSES / _NUMERIC_CLAUSES 的分组顺序解耦。
++    clause_by_name: Dict[str, dict] = {}
++    for design in _ENUM_CLAUSES:
++        clause = _enum_clause(design, warnings)
++        clause_by_name[clause["name"]] = clause
++    for design in _NUMERIC_CLAUSES:
++        clause = _numeric_clause(design, warnings)
++        clause_by_name[clause["name"]] = clause
++    clauses: List[dict] = [
++        clause_by_name[name] for name in CLAUSE_NAMES if name in clause_by_name
++    ]
+     index_rules, index_warnings = _make_index_rules(player, opponent)
+     warnings.extend(index_warnings)
+ 
