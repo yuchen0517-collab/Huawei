@@ -199,6 +199,12 @@ button:disabled{cursor:not-allowed}
   color:var(--ink);font-family:inherit;font-size:12px;padding:5px 7px;outline:none;min-width:0}
 .bd-row select:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px var(--gold-glow)}
 .bd-row select.changed{border-color:var(--warn);background:rgba(var(--warn-rgb),.08)}
+.bd-row .ctrl{display:flex;align-items:center;gap:6px;min-width:0}
+.bd-row input[type=number]{width:100%;background:var(--panel3);border:1px solid var(--line2);border-radius:5px;
+  color:var(--ink);font-family:inherit;font-size:12px;padding:5px 7px;outline:none;min-width:0}
+.bd-row input[type=number]:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px var(--gold-glow)}
+.bd-row input[type=number].changed{border-color:var(--warn);background:rgba(var(--warn-rgb),.08)}
+.bd-row .ctrl .unit{font-size:9.5px;color:var(--ink-mute);white-space:nowrap}
 .bd-row .opp{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-dim);min-width:0}
 .bd-row .opp .val{display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bd-row .opp .val .est-tag{font-size:8.5px;letter-spacing:.06em;color:var(--gold-dim);
@@ -239,6 +245,12 @@ button:disabled{cursor:not-allowed}
 .rh-cell .v.bad{color:var(--danger)}
 .est-tag{font-size:8.5px;letter-spacing:.06em;color:var(--gold-dim);border:1px solid rgba(var(--gold-rgb),.3);
   border-radius:2px;padding:0 4px}
+.conf-level{font-size:9px;letter-spacing:.04em;border:1px solid var(--line2);border-radius:2px;
+  padding:0 4px;white-space:nowrap;color:var(--ink-mute)}
+.conf-level.high{color:var(--ok);border-color:rgba(var(--ok-rgb),.4)}
+.conf-level.mid{color:var(--warn);border-color:rgba(var(--warn-rgb),.4)}
+.conf-level.low{color:var(--danger);border-color:rgba(var(--danger-rgb),.4)}
+.conf-level.unknown{color:var(--ink-mute)}
 
 /* --- 对话视图 --- */
 #dlg{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}

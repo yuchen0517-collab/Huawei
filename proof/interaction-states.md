@@ -37,6 +37,7 @@
 |---|---|
 | 触发（真实模式） | 注入 `{adapter:"http", httpBase:"http://127.0.0.1:9999"}` → 提交 |
 | 触发（远程停服） | 后端停止后提交；或把 `httpBase` 指向返回 HTML 的地址 |
+| 触发（500） | 后端未捕获异常返回 `{"error":"INTERNAL_ERROR","detail":"服务内部错误，请稍后重试。"}` → 走服务不可用通道，不自动重试 |
 | 屏幕表现 | 连接灯「服务不可用」；行内红条「服务暂不可用，草稿已保留 · status … · 片段」；toast 同文案 + JSON；**只有 1 次请求，不自动重试**；草稿与选中卡保留 |
 | 截图点 | 顶栏连接灯 + 行内红条 + Network 请求数 + 草稿徽标 |
 | 文件名 | `state-04-service-down.png` / `state-04-network.png` |
@@ -98,6 +99,25 @@
 | 屏幕表现 | 提示「会话不存在或服务已重启」+「重新开局」按钮；不白屏 |
 | 截图点 | 失效提示条 + 重新开局按钮 |
 | 文件名 | `state-10-session-lost.png` |
+
+## 11. 接受协议（A 第二轮 Q1）
+
+| 项 | 内容 |
+|---|---|
+| 触发 | 查看协议 → 接受协议（未决条款先清零；若仍有未决，引擎 400 `INVALID_ACTION`） |
+| 请求 | `POST /session/{id}/action`，`action_type:"accept"`、`offer_patch:{}`、`expected_effect/public_message` 非空 |
+| 屏幕表现 | 成功后 `status:"ended"` → 终局；`speaker_score` 为 null 时按 null 态，不填零分 |
+| 截图点 | Network 请求体 + 终局覆盖层 |
+| 文件名 | `state-11-accept.png` |
+
+## 12. 数值型条款输入（A 第三轮 Q1）
+
+| 项 | 内容 |
+|---|---|
+| 触发 | 真实模式投影含 numeric 条款（如 `芯片算力门槛` 100–5000 / step 100 / 初始 800） |
+| 屏幕表现 | 该行显示 number 输入 + 单位，min/max/step 生效；改动后草稿计数 +1；提交的 `offer_patch.option` 为数值 |
+| 截图点 | 数值输入行 + 草稿徽标 + Network 请求体 |
+| 文件名 | `state-12-numeric-clause.png` |
 
 ## 采集顺序建议
 

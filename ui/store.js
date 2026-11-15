@@ -36,7 +36,20 @@
   function setDraft(clauseId, value) {
     if (state.ui.finaleOpen) return;
     var c = state.clauses.filter(function (x) { return x.id === clauseId; })[0];
-    if (!c || value == null || value === "" || value === c.mine) delete state.draft[clauseId];
+    if (!c) { delete state.draft[clauseId]; notify(); return; }
+    // A 第三轮 Q1：numeric 型按数值比较，避免 "800" 与 800 不相等
+    if (c.type === "numeric") {
+      if (value === "" || value == null || isNaN(Number(value))) {
+        delete state.draft[clauseId];
+      } else if (Number(value) === Number(c.mine)) {
+        delete state.draft[clauseId];
+      } else {
+        state.draft[clauseId] = Number(value);
+      }
+      notify();
+      return;
+    }
+    if (value == null || value === "" || value === c.mine) delete state.draft[clauseId];
     else state.draft[clauseId] = value;
     notify();
   }
@@ -276,23 +289,87 @@
       state.serviceDown = null;
       state.currentState = null;
       state.sessionLost = false;
+      state.acceptRetryCount = 0;
       state.demoError = null;
       notify();
       D.overlays.toast(null, "已拉取服务端 v" + state.version + "，草稿保留，请确认后重提");
     });
   }
 
-  function accept() {
+  function applyAcceptError(key, res) {
+    if (res.transport) { reportServiceDown(res.transport); return; }
+    if (res.sessionLost) {
+      state.sessionLost = true;
+      state.inlineError = null;
+      state.phase = "ready";
+      notify();
+      D.overlays.toast(null, "会话不存在或服务已重启，请重新开局");
+      return;
+    }
+    if (res.retryAfter && state.acceptRetryCount < 1) {
+      state.acceptRetryCount += 1;
+      state.phase = "submitting";
+      notify();
+      setTimeout(function () { D.store.accept(true); }, res.retryAfter);
+      return;
+    }
+    if (res.retryAfter) {
+      state.phase = "ready";
+      notify();
+      D.overlays.toast("SESSION_BUSY", res.error && res.error.detail, JSON.stringify(res.error));
+      return;
+    }
+    if (res.error && res.error.error === "VERSION_CONFLICT") {
+      state.conflict = true;
+      state.serverVersion = (res.patch && res.patch.serverVersion) || state.version + 1;
+      state.currentState = (res.patch && res.patch.currentState) || null;
+      state.phase = "ready";
+      notify();
+      D.overlays.toast("VERSION_CONFLICT", res.error.detail, JSON.stringify(res.error));
+      return;
+    }
+    if (res.error) {
+      state.inlineError = res.error;
+      state.phase = "ready";
+      notify();
+      D.overlays.toast(res.error.error, res.error.detail, JSON.stringify(res.error));
+    }
+  }
+
+  // A 第二轮 Q1：接受协议 = action_type="accept"，同一幂等键可重试
+  function accept(isRetry) {
     var pending = pendingClauses(state);
-    if (pending.length || state.roundLocked || state.ui.finaleOpen) return Promise.resolve();
-    return D.adapters.current.accept(state).then(function (res) {
-      if (!res.ok) {
-        reportFailure(res);
+    if (pending.length || state.roundLocked || state.ui.finaleOpen ||
+        state.sessionLost || state.inflight) return Promise.resolve();
+
+    if (!isRetry) state.acceptRetryCount = 0;
+    state.acceptRetryCount = state.acceptRetryCount || 0;
+
+    var key = state.acceptKey || D.util.newKey();
+    state.acceptKey = key;
+    state.inflight = key;
+    state.phase = "submitting";
+    notify();
+
+    return D.adapters.current.accept(state, { key: key }).then(function (res) {
+      state.inflight = null;
+      if (res && res.aborted) {
+        state.phase = "ready";
+        notify();
         return;
       }
-      state.audit = res.audit;
+      if (!res.ok) {
+        applyAcceptError(key, res);
+        return;
+      }
+      Object.assign(state, res.patch || {});
+      state.acceptKey = null;
+      state.acceptRetryCount = 0;
+      state.serviceDown = null;
+      state.phase = "ready";
       state.ui.finaleOpen = true;
       notify();
+      D.overlays.toast(null, "协议已接受 · 进入终局");
     });
   }
 

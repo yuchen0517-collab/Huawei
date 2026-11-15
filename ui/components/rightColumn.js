@@ -21,6 +21,7 @@
 
     var doneCount = s.hiddenTasks.filter(function (t) { return t.done; }).length;
     var readyChans = s.channels.filter(function (c) { return c.status === "ready"; }).length;
+    var conf = D.util.confidenceLevel(s.them.confidence);
 
     return '<aside class="col" id="right">' +
       '<section class="panel"><div class="ph"><h3>我方态势</h3><span class="meta">真实值</span></div>' +
@@ -37,7 +38,7 @@
           '<div class="kv">' +
             '<div class="meter"><div class="lab"><span>让步意愿 <span class="est-tag">估计</span></span><b>' + (s.them.concessionIntent == null ? "—" : s.them.concessionIntent + "%") + '</b></div><div class="track"><i style="width:' + pctWidth(s.them.concessionIntent) + '%"></i></div></div>' +
             '<div class="meter"><div class="lab"><span>决策链长度 <span class="est-tag">估计</span></span><b>' + (s.them.decisionChain == null ? "—" : s.them.decisionChain + " 层") + '</b></div><div class="track"><i style="width:' + (s.them.decisionChain == null ? 0 : 45) + '%"></i></div></div>' +
-            '<div class="kv-row"><span class="k">数据可信度</span><span class="v">' + (s.them.confidence == null ? "—" : s.them.confidence + "%") + '</span></div>' +
+            '<div class="kv-row"><span class="k">数据可信度</span><span class="v"><span class="conf-level ' + conf.cls + '" title="' + D.dom.esc(conf.tip) + '">估计 · ' + conf.label + '</span></span></div>' +
             '<div class="kv-row"><span class="k">最近动作</span><span class="v">' + D.dom.esc(s.them.lastMove || "—") + '</span></div>' +
           '</div>' +
         '</div>' +

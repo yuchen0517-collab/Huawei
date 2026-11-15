@@ -89,6 +89,29 @@ ui/
 
 提交后 10 秒出现「上游仍在处理，已等待 Ns…」+「取消等待」；点取消立即清等待、草稿保留。验证完删除这行。
 
+### 第二轮答复口径（2026-11-15）
+
+| 项 | 结论 | 前端处理 |
+|---|---|---|
+| 接受协议 | `POST /session/{id}/action`，`action_type:"accept"`，`offer_patch:{}`，`expected_effect/public_message` 必填 | `httpAdapter.accept()`；成功后按投影 `status:"ended"` 进终局 |
+| 条款可选值 | 投影 9 字段暂无 options；计划第 5 天补 `clauses[{name,type,options,initial}]` | 优先 `payload.clauses`；过渡用 `DIPLOMAT_CONFIG.clauseOptions` |
+| 行动点 | 投影未暴露；计划 `{current,max}`；未补入前每轮 3 点、每行动 1 点 | 已裁决 K4=3：mock/空态 `3/3`；投影存在时以 max 覆盖 |
+| speaker_score | 服务端未实现；终局 null 态 | 不本地算分；`null` 显示不计分 |
+| debrief | 202 纯受理，无复盘/教练内容 | 提示「已受理，内容本轮不返回」 |
+| 开局 | `{scenario_id:"ai_governance", agent:"us", scenario_path:null}`；agent 只能 `us` | `openSession` 默认，可配置覆盖 |
+| offers | 只含 `option` + `note` | 只读；选项来自 `clauses`/`clauseOptions` |
+| 500 | `INTERNAL_ERROR` 按服务不可用、不重试、保留草稿 | 走 G2 通道 |
+
+### 第三轮答复口径（2026-11-15）
+
+| 项 | 结论 | 前端处理 |
+|---|---|---|
+| clauses | enum + numeric（`unit`/`range{min,max,step}`/`initial`），11-16 上午联调前补入 | 已支持 numeric 数值输入；enum 仍用下拉 |
+| action_points | `{current,max}`；每行动扣 1；**D 已裁决 `max=3`（2026-11-15）** | mock/空态 `3/3`；投影存在时以 `max` 覆盖 |
+| speakerScore | 产出方 C＋B，A 透传，**不由 D**；外层 camelCase | 先读 `payload.speakerScore`，兼容 `speaker_score`；只展示 |
+| C 单复数 | C 已澄清：B 契约单数、引擎复数，适配层双读，不是 bug | 前端不读该字段 |
+| 对方可信度 | C 回 D（2026-11-15）：百分比改为定性分级 | 高 ≥70／中 40–69／低 1–39／未知；规则写 tooltip，不显示百分比 |
+
 ## 控制台快照与双断点测量
 
 打开页面后控制台自动打印一次完整状态快照。随时手动执行：
@@ -122,7 +145,7 @@ DIPLOMAT.adapters.current.id // "mock" 或 "http"
 | 编号 | 结论 |
 |---|---|
 | K3 | **B**：按钮为「提交本轮总结」，不推进轮次；轮次仅由报价提交推进 |
-| K5 | **A**：`speaker_score` 由 A 终局端点提供，D 生成四维；当前 mock |
+| K5 | **C＋B**：C 口径/落库、B 模型分/feedback、A 透传；D 不生成（2026-11-15 裁决） |
 | K1/K2/K4/K6/K7/K8 | 按 `docs/state-contract.md` §0.3 默认值执行，代码内留 K/P 注释 |
 
 ## 不提交

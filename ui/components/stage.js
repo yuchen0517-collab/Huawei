@@ -27,16 +27,32 @@
     var statusClass = c.status === "decided" ? "agreed" : c.status;
     var label = statusClass === "agreed" ? "已决" : (statusClass === "open" ? "待确认" : "未决");
     var dis = !!s.inflight || s.roundLocked;
+    var conf = D.util.confidenceLevel(c.conf);
+    var control;
 
-    return '<div class="bd-row">' +
-      '<div class="cl"><span class="no">' + esc(c.no) + '</span><span class="nm">' + esc(c.name) + '</span></div>' +
-      '<div><select data-clause="' + esc(c.id) + '"' + (dis ? " disabled" : "") + (changed ? ' class="changed"' : "") + '>' +
+    // A 第三轮 Q1：numeric 型用数值输入，enum 型用下拉
+    if (c.type === "numeric") {
+      var r = c.range || {};
+      control = '<input type="number" data-clause="' + esc(c.id) + '" value="' + esc(cur) + '"' +
+        (r.min != null ? ' min="' + r.min + '"' : '') +
+        (r.max != null ? ' max="' + r.max + '"' : '') +
+        (r.step != null ? ' step="' + r.step + '"' : '') +
+        (dis ? " disabled" : "") + (changed ? ' class="changed"' : "") + '>' +
+        (c.unit ? '<span class="unit">' + esc(c.unit) + '</span>' : '');
+    } else {
+      control = '<select data-clause="' + esc(c.id) + '"' + (dis ? " disabled" : "") + (changed ? ' class="changed"' : "") + '>' +
         (c.opts || []).map(function (o) {
           return '<option value="' + esc(o) + '"' + (o === cur ? " selected" : "") + '>' + esc(o) + '</option>';
         }).join("") +
-      '</select></div>' +
+      '</select>';
+    }
+
+    return '<div class="bd-row">' +
+      '<div class="cl"><span class="no">' + esc(c.no) + '</span><span class="nm">' + esc(c.name) + '</span></div>' +
+      '<div class="ctrl">' + control + '</div>' +
       '<div class="opp"><div class="val"><span class="est-tag">估计</span>' + esc(c.theirs == null ? "—" : c.theirs) + '</div>' +
-        '<div class="conf"><span class="bar"><i style="width:' + (c.conf == null ? 0 : c.conf) + '%"></i></span>' + (c.conf == null ? "—" : c.conf + "%") + ' 可信</div></div>' +
+        '<div class="conf"><span class="bar"><i style="width:' + conf.pct + '%"></i></span>' +
+        '<span class="conf-level ' + conf.cls + '" title="' + esc(conf.tip) + '">可信 · ' + conf.label + '</span></div></div>' +
       '<div class="st"><span class="st-tag ' + statusClass + '">' + label + '</span></div>' +
       '</div>';
   }
@@ -103,10 +119,11 @@
         '</div></div>';
     }
     var cards = s.intelCards.map(function (c) {
+      var conf = D.util.confidenceLevel(c.conf);
       return '<div class="icard"><div class="ih"><h5>' + esc(c.h) + '</h5><span class="est-tag">' + esc(c.tag) + '</span></div>' +
         '<div class="ib">' + esc(c.b) + '</div>' +
-        '<div class="if"><span>可信度</span><span class="bar"><i style="width:' + c.conf + '%"></i></span><span>' +
-        (c.conf ? c.conf + "%" : "无") + '</span></div></div>';
+        '<div class="if"><span>可信度</span><span class="bar"><i style="width:' + conf.pct + '%"></i></span>' +
+        '<span class="conf-level ' + conf.cls + '" title="' + esc(conf.tip) + '">' + conf.label + '</span></div></div>';
     }).join("");
     return '<div class="view' + (s.ui.view === "intel" ? " on" : "") + '" id="view-intel"><div id="intelScroll">' +
       (s.intelCards.length ? cards : '<div class="empty compact" style="grid-column:1/-1"><b>暂无情报条目</b><span class="hint">模型未返回内容时不生成替代结论</span></div>') +

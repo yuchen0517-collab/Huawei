@@ -32,9 +32,9 @@
 |---|---|---|---|---|---|
 | K1 | `VERSION_CONFLICT` 响应形状 | A：409 额外携带 `current_state` 全量投影 | 错误对象只有 `error`/`detail` | 前端**不依赖** `current_state`，合并数据改从 `GET /state` 拉取 | 若按 A 实现，错误契约出现第三字段，评审可被抓“自造字段” |
 | K2 | 错误码全集 | A：真实 17 码 + API 层码，6 码只是专门 UI | 前端错误码仅 6 个 | 其他码**统一映射为 `INVALID_ACTION` 行内红条 + 原文 `detail`**，不新增码、禁止静默 | 若直接把 17 码写进 UI，违反“不新增错误码” |
-| K3 | 「结束本轮」按钮 | A：无独立接口，轮次随一轮完整提交自动推进 | UI 必须有「结束本轮」（`index.html:643`）且 `3/5` 可重置 | **D 已裁决 B（2026-11-13）**：按钮文案改为「提交本轮总结」，点击只记录、**不推进轮次**；轮次仅由报价提交推进；同步改 demo-storyboard 镜头 04/06 旁白 | —（已裁决；若不改，按钮语义与 A 接口冲突） |
-| K4 | 行动点口径 | A：引擎每行动固定 1 点、每轮 3 点（场景可配），卡牌差异化未接 | 写死上限 5、显示 `3/5` | UI 维持 `3/5` 演示口径；第 5 天以 A 补入的 `action_points` 投影为准；**若投影是 3 点制，必须当轮调整展示，不得静默改成 `3/3`** | 不裁决 → 预演“消耗 2 点”与真实结算 1 点不一致 |
-| K5 | `speaker_score` 归属 | C：C 无此字段，只有 `interest/image/trust` 三指数；建议归 A 调用或 D 学习评价 | 四维权重与五档评级写死，`speaker_score` 必须存在，首轮 `null` | **D 已裁决 A（2026-11-13）**：A 的终局端点提供 `speaker_score`；四维口径与 `feedback` 由 D（教练 Agent 负责人）生成；C 不参与四维。T2 先用 mock 分，接口就绪后只换 adapter。C 三指数**不得进入 UI 四维条** | —（已裁决；A 需在终局响应补该字段） |
+| K3 | 「结束本轮」按钮 | A：无独立接口，轮次随一轮完整提交自动推进 | UI 必须有「结束本轮」（`index.html:643`）且 `3/3` 可重置 | **D 已裁决 B（2026-11-13）**：按钮文案改为「提交本轮总结」，点击只记录、**不推进轮次**；轮次仅由报价提交推进；同步改 demo-storyboard 镜头 04/06 旁白 | —（已裁决；若不改，按钮语义与 A 接口冲突） |
+| K4 | 行动点口径 | A：引擎每行动固定 1 点、每轮 3 点（场景可配），卡牌差异化未接 | 写死上限 5、显示 `3/5` | **D 已裁决 3（2026-11-15）**：引擎/B/默认场景统一 3；UI 改 `3/3`；A 改 `load_scenario_bridge.py` 的 5→3。投影 `action_points.max` 到位后仍以投影为准 | —（已裁决） |
+| K5 | `speaker_score` 归属 | C：C 无此字段，只有 `interest/image/trust` 三指数；A 第三轮定 C＋B | 四维权重与五档评级写死，`speaker_score` 必须存在，首轮 `null` | **D 已裁决（2026-11-15）：接受 A 第三轮 C＋B**——C 口径/落库、B 模型分与 `feedback`、A 透传；**D 不生成**。前端只展示；外层 `speakerScore`、内层 snake_case。C 三指数**不得进入 UI 四维条** | —（已裁决；服务端未实现，终局 null） |
 | K6 | 条款状态 | C：无 `status` 枚举；`pending/decided` 由 `open_issues` 派生；`locked` 是场景布尔、与两态正交 | 约束 9 用 `status=pending` 禁用接受按钮 | 保留 `status` 作为**前端适配层派生态**，真值来自 `open_issues`；`locked` 单列布尔，不塞进 `status` | 不裁决 → 接受按钮禁用逻辑失去真值依据，或把 locked 当第三态 |
 | K7 | BATNA 字段名与泄露 | C：`batna_comparison` 当前未按 viewer 过滤，会把对方真值与 `net_gain` 一起返回；C 承诺改 | 对方 BATNA 恒显示「未知」 | 前端只接收己方 `batna_comparison`（四项全量）；对方视角同一结构**四项全 `null`**（含 `batna`），前端不读取、固定渲染「未知」，并断言对方 `batna` 为 `null` | 不裁决 → 对方 BATNA 真值上屏，违反“机密零泄漏” |
 | K8 | `action_schema.json` 与 A 冻结请求体不一致 | A：请求体不传 `action_id`/`actor`/`card_id`，传 `client_action_id`/`base_version` | `action_schema.json` 把 `action_id`/`actor`/`card_id` 列为 **required** | 以 A 的 `api.py` 已测行为为准；**A 必须更新 `action_schema.json`**，否则 B/C 按 schema 生成的行动会被前端适配层丢弃 | 不裁决 → schema 校验与真实接口二选一必然失败 |
@@ -52,7 +52,7 @@
 | `round` | number（整数） | `1..maxRound`，当前 `3` | A | **否**；请求体不传（A 回签 P4）；**仅由报价提交推进，`提交本轮总结`不推进（K3=B）** | 不可为空；顶栏渲染 `R{round} / {maxRound}` | `index.html:733`；`805` |
 | `maxRound` | number（整数） | 固定 `6` | A（会话配置） | 否 | 缺失 → `R{round} / —`，视为配置错误 | `index.html:733`；`805` |
 | `ap` | number（整数） | `0..apMax`；UI 演示 `3`（K4） | A（`action_points` 投影，第 5 天前补） | **否** | 为 `0` → 卡牌全 `disabled`，`提交本轮总结`仍可用 | `index.html:734`；`900`、`907-912` |
-| `apMax` | number（整数） | UI 写死 `5`；真实以场景配置为准（K4） | A（会话配置） | 否 | 缺失 → 行动点不渲染 | `index.html:734` |
+| `apMax` | number（整数） | UI 写死 `3`（K4 裁决）；真实以投影 `max` 为准 | A（会话配置） | 否 | 缺失 → 行动点不渲染 | `index.html:734` |
 | `phase` | string（枚举） | 现状只用 `loading`／`ready`；目标取 ia-design §3 #7 与 §4 并集：`loading`／`ready`／`dirty`／`submitting`／`error`／`conflict`／`degraded`／`locked`／`finale` | D（流程派生） | **是**（仅流程态） | `loading` → 报价板 5 行骨架（`839`）、手牌禁用；`ready` → 正常 | `index.html:735`；`837-842`、`1184-1193` |
 | `modelDown` | boolean | `false`／`true` | B（经 A 以 `MODEL_UNAVAILABLE` 送达） | 是（仅置位） | `true` → 左栏解说与情报视图空态，**报价板与预演不变** | `index.html:736`；`1035-1043` |
 | `roundLocked` | boolean | `false`／`true` | A（**暂不下发** `ROUND_LOCKED`，保留码位） | 是（仅置位） | `true` → 顶栏「本轮锁定」、手牌/提交总结/条款下拉/接受按钮全禁用 | `index.html:737`；`812-813`、`856`、`900`、`913`、`962` |
@@ -89,7 +89,7 @@
 | `mine` | string | 必须属于 `opts` | A | 否 | — | 未改动时渲染此值 |
 | `opts` | string[] | ≥2 项 | B（场景） | 否 | 空 → 下拉不可用并标「选项缺失」 | 禁止自由输入 |
 | `theirs` | string | 对方立场**估计值**，可「未表态」 | B | 否 | 空 → 「未知」，不得填估造值 | 必须带「估计」标签 + `conf` |
-| `conf` | number | `0..100` | B | 否 | 0 → 可信度条空、显示「无」 | 可信度百分比 |
+| `conf` | number | `0..100`，仅作前端分级输入 | B | 否 | 0 → 显示「未知」 | UI 显示 高/中/低/未知，tooltip 写阈值（C 回 D 2026-11-15） |
 | `status` | string（**派生态**） | `pending`（`name ∈ open_issues`）／`decided`（不在列表）；`open`（待确认）**缺真值来源（P16）** | A 适配层派生（真值 C 的 `open_issues`） | 否 | 两条都缺失 → 显示「状态未知」，不得默认 `agreed` | 见 K6；C 明确无 `status` 枚举 |
 | `locked` | boolean | 场景锁定（与 `status` 正交） | C／场景 | 否 | `false` → 不显示锁标；`true` → 行内「已锁定」，但**不影响未决判定** | C 答复 #6（`TERM_LOCKED` 是内部码，不上面） |
 
@@ -120,9 +120,9 @@
 | `us.leverage` | number | `0..100` | A（真实值） | 否 | 「—」，**不得填估计值** | `586-588` |
 | `us.timePressure` | number + label | `0..100`；「低／中／高」 | A | 否 | 「—」 | `588` |
 | `us.gains` | number | ≥0，当前 `2` | A | 否 | 「0 项」 | `589` |
-| `them.concessionIntent` | number | `0..100` | B（估计） | 否 | 「未知 · 0% 可信」，**不得补值** | `599` |
+| `them.concessionIntent` | number | `0..100` | B（估计） | 否 | 「未知 · 可信度未知」，**不得补值** | `599` |
 | `them.decisionChain` | number | 层数 | B（估计） | 否 | 「未知」 | `600` |
-| `them.confidence` | number | `0..100` | B | 否 | 0 → 条空 | `601` |
+| `them.confidence` | number | `0..100`，仅作前端分级输入 | B | 否 | 0 → 「未知」 | `601`；UI 分级 高/中/低/未知 |
 | `them.lastMove` | string | 如「R2 单向让步」 | B | 否 | 「无记录」 | `602` |
 | `channels[]` | array | `{id, name, status:"ready"｜"cooldown"}`；3 条 | B（清单）＋C（冷却） | 否 | 空 → 「暂无可用渠道」+ 选卡前置提示 | `607-613` |
 | `hiddenTasks[]` | array | `{id, text, done}`；2 条 | C | 否 | 空 → 「本场无隐藏任务」，**不隐藏整块** | `616-621` |
@@ -153,8 +153,8 @@
 
 | 字段名 | 类型 | 取值 | 产出方 | 前端可写 | 为空时 UI | 依据 |
 |---|---|---|---|---|---|---|
-| `speaker_score` | object \| **null** | 对方未发言时必须 `null` | **A 的终局端点**（C 不产出，K5） | 否 | `null` → 徽章 `—` +「首轮不计分…不填零分，不生成替代分数」，四维条不渲染 | ia-design §6.1；`1099-1108` |
-| `speaker_score.total` | number（整数） | `0..100`，服务端**取整后**返回 | A（建议由 D 学习评价生成） | 否 | — | `762`；`1111` |
+| `speaker_score` | object \| **null** | 对方未发言时必须 `null` | **C（口径/落库）＋B（模型分/feedback），A 透传；D 不生成（K5 2026-11-15）** | 否 | `null` → 徽章 `—` +「首轮不计分…不填零分，不生成替代分数」，四维条不渲染 | ia-design §6.1；`1099-1108` |
+| `speaker_score.total` | number（整数） | `0..100`，服务端**取整后**返回 | C（口径/落库） | 否 | — | `762`；`1111` |
 | `position_clarity` | number | `0..100`，权重 30% | 同上 | 否 | — | `1089-1094` |
 | `diplomatic_tact` | number | `0..100`，权重 30% | 同上 | 否 | — | 同上 |
 | `emotional_control` | number | `0..100`，权重 20% | 同上 | 否 | — | 同上 |
@@ -298,7 +298,7 @@ A 回签：无独立「结束本轮」接口，轮次随一轮完整提交自动
 | I4 | `conflict=true` 时提交按钮 `disabled`，合并后恢复 | 冲突条与按钮联动 |
 | I5 | `modelDown=true` 时条款下拉仍可用、提交仍可成功 | 模型故障不阻塞报价 |
 | I6 | `open_issues.length > 0` 或 `audit.summary.blocking > 0` 时 `#acceptBtn.disabled === true`，且上方列出条款名 | 抽屉打开即判定 |
-| I7 | 右栏对方数值全部带「估计」+ 可信度；对方视角 `batna_comparison` 四项全 `null` 且显示「未知」 | 目视 + DOM 断言 |
+| I7 | 右栏对方数值全部带「估计」+ 可信度分级（高/中/低/未知），tooltip 写阈值；对方视角 `batna_comparison` 四项全 `null` 且显示「未知」 | 目视 + DOM 断言 |
 | I8 | 预演四格无任何数值被表述为实际收益 | 文案检查「预计／预演」 |
 | I9 | 6 码以外的响应不静默：必进行内红条并原文展示 `detail` | 注入 `TERM_LOCKED` 验证 |
 | I10 | 前端四维条只读 `speaker_score` 四项，不出现 `interest/image/trust` | DOM 检查 |
@@ -347,9 +347,9 @@ A 回签：无独立「结束本轮」接口，轮次随一轮完整提交自动
 | P15 | `coachAdvice` 是否本轮补 | 只留占位 | **未回签（A 未答，B 未回）** | T2 只做折叠占位 |
 | P16 | `open`（待确认）态的真值来源 | 不出现该态，只显示 `decided/pending` | **未回签** | 需 C 或 A 给派生规则；否则 T2 mock 保留三态仅为视觉 |
 | P17 | K1 `current_state` 是否进入错误契约 | 不进入 | **待 D 裁决** | 裁决后改 6.3 |
-| P18 | K5 `speaker_score` 由谁产出 | A 终局端点 | **D 裁决 A：A 终局端点出分，D 生成四维与 feedback；C 不参与** | T2 用 mock，接口就绪后只换 adapter |
+| P18 | K5 `speaker_score` 由谁产出 | A 终局端点 | **D 裁决（2026-11-15）：接受 C＋B，A 透传，D 不生成** | 前端只展示；服务端未实现，终局 null |
 | P19 | K3 结束本轮按钮语义 | `statement` 空变更 | **D 裁决 B：改为「提交本轮总结」，只记录不推轮次；轮次仅由报价推进** | 改 `#endRound` 文案 + §6.6 + demo-storyboard 04/06 |
-| P20 | K4 真实行动点 3 点 vs UI 5 点 | UI 维持 5，联调按投影 | **待 D 裁决** | 裁决后改表 A + 预演 |
+| P20 | K4 真实行动点 3 点 vs UI 5 点 | UI 维持 5，联调按投影 | **D 裁决 3（2026-11-15）**：UI/mock 改 `3/3`；A 改 bridge 5→3 | 已改 mock/空态；待投影补入 |
 
 ---
 
@@ -386,4 +386,49 @@ A 回签：无独立「结束本轮」接口，轮次随一轮完整提交自动
 | CORS | `api.py` 已配 `allow_origins=["*"]` | 前端不处理 |
 | G5/G6/G7 | 无 summary/reset/topic 接口；summary=`debrief` 202；reset=重新 `POST /session`；切题=重开一局 | `summary` 处理 202 受理；`reset` 重新开局；`nextTopic/randomCheck` 明确提示不支持 |
 
-**仍未回签**：P15 教练建议、P16 `open` 态、P20 行动点 3 vs 5；B 的 P7/P12/P15。
+**仍未回签**：P15 教练建议、P16 `open` 态；B 的 P7/P12/P15。P20（K4）已于 2026-11-15 裁决为 3。
+---
+
+## 13. A 第二轮答复同步（2026-11-15）
+
+> 依据：`A答复C接口问题_2026-11-15_第二轮.md`。与本文冲突处，以第二轮为准；已在 T3 收口中落地。
+
+| 项 | 结论 | 前端落地 |
+|---|---|---|
+| accept | `POST /session/{id}/action`，`action_type:"accept"`，`offer_patch:{}`，`expected_effect/public_message` 必填；未决时 400 `INVALID_ACTION`；终局读 `status:"ended"` | `httpAdapter.accept()`；store 同键重试仅 1 次；成功后按投影开终局 |
+| 条款 options | 投影固定 9 字段，**暂无 options**；计划补 `clauses[{name,type,options,initial}]`；过渡按场景静态映射 | `projectState` 优先 `payload.clauses`，其次 `CONFIG.clauseOptions`，最后现有 opts |
+| action_points | 投影未暴露；计划 `{current,max}`；未补入前每轮 3 点、每行动 1 点；`apMax=5` 旧假设作废 | 已裁决 K4=3：mock/空态 `3/3`；投影存在时以 `max` 覆盖 |
+| speaker_score | 服务端未实现；终局 null 态 | 不本地算分，不填零 |
+| debrief | 202 纯受理，无复盘/教练内容 | 提示已受理，内容不返回 |
+| 开局 | `{scenario_id:"ai_governance", agent:"us", scenario_path:null}`；agent 仅 `us` | `openSession` 默认；可配置覆盖 |
+| offers | 只含 `option` + `note`，不含 options | 只读；选项来源为 `clauses`/`clauseOptions` |
+| 500 | `INTERNAL_ERROR` 按服务不可用、不重试、保留草稿 | G2 通道 |
+
+**C 已澄清（2026-11-15）**：单数 `accept_requires_no_open_issue` 是 B 契约的正式字段名（`scenario.schema.json` required），复数 `accept_requires_no_open_issues` 是 C 引擎内部键名；C 适配层已双读兼容（单数优先，同时出现且冲突时报契约错误），B 真实场景实测可正常进引擎。**前端不读该字段**（只消费 A 的 API 投影），无需处理本项。
+
+**仍需第 5 天前补入投影**：条款 `options` 与 `action_points`。
+---
+
+## 14. A 第三轮答复同步（2026-11-15）
+
+> 依据：`A答复C接口问题_2026-11-15_第三轮.md`。与本文冲突处，以第三轮为准。
+
+| 项 | 结论 | 前端落地 |
+|---|---|---|
+| clauses 形状 | 冻结 enum `{name,type,options,initial}` 与 numeric `{name,type,unit,range{min,max,step},initial}`；11-16 上午联调前补入 | `clauseFrom()` 支持两种；numeric 渲染数值输入，`setDraft` 按数值比较 |
+| action_points | `{current,max}`；每行动扣 1、每轮重置 max；max 取场景 `action_points_per_round` | 投影存在才覆盖 `ap/apMax` |
+| K4 | 默认 `ai_governance` 线上实际 5（bridge 硬编码），引擎/B/默认场景为 3；**D 已裁决 3（2026-11-15）** | mock/空态改 `3/3`；A 改 bridge 5→3；投影到位后以 `max` 为准 |
+| speakerScore | 产出方 **C（口径/落库）＋B（模型分/feedback），A 透传，不由 D**；外层 camelCase `speakerScore`，内层 snake_case；当前未实现，终局 null | `projectState` 优先 `payload.speakerScore`，兼容 `speaker_score`；前端只展示 |
+| C 单复数 | 第三轮附 4 仍列待确认；C 已于 2026-11-15 澄清为跨模块命名差异，适配层双读，不是 bug | 前端不读该字段 |
+
+> **K5 已确认（2026-11-15）**：接受 A 第三轮 C＋B（C 口径/落库、B 模型分/feedback、A 透传，D 不生成）；§5 与 §9 P18 已同步。前端只展示，无本地评分。
+---
+
+## 15. C 回 D：可信度定性分级（2026-11-15）
+
+| 项 | 结论 |
+|---|---|
+| 展示 | 右栏对方态势、报价板对方列、情报卡的可信度只显示「高／中／低／未知」，**不显示百分比** |
+| 规则 | 高 ≥70；中 40–69；低 1–39；未知：null／0／无数据 |
+| 归属 | **D 前端按透明规则推导**；非业务真值，不影响数字同源（金额/版本/评分仍全来自服务端） |
+| 审计 | 规则写入 tooltip，可截图；C 零改动 |

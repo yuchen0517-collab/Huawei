@@ -23,7 +23,7 @@
         '原因：尚未被任一方报价覆盖。'
       : "";
     var whyInline = pending.length ? "未决条款未清零" : (s.roundLocked ? "本轮已锁定" : "");
-    var acceptDisabled = pending.length > 0 || s.roundLocked || !s.clauses.length;
+    var acceptDisabled = pending.length > 0 || s.roundLocked || s.inflight || s.sessionLost || !s.clauses.length;
 
     return '<div class="dh"><h2>协议</h2><span class="ver" id="drVer">v' + s.version + '</span>' +
       '<button class="x" id="drawerClose" data-act="closeDrawer">✕</button></div>' +

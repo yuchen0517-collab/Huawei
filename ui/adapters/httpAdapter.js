@@ -59,13 +59,15 @@
       round: null,
       maxRound: 6,
       ap: null,
-      apMax: 5,
+      apMax: 3,
       phase: "loading",
       serviceDown: null,
       sessionLost: false,
       slowSeconds: 0,
       slowHint: false,
       currentState: null,
+      acceptKey: null,
+      acceptRetryCount: 0,
       modelDown: false,
       roundLocked: false,
       conflict: false,
@@ -159,50 +161,83 @@
     return { error: "INVALID_ACTION", detail: payload.detail || payload.error };
   }
 
+  // A 第三轮 Q1：clauses 支持 enum 与 numeric 两种形状
+  function clauseFrom(def, offer, i, openIssues) {
+    var type = def && def.type === "numeric" ? "numeric" : "enum";
+    var opts = type === "numeric" ? [] : ((def && def.options) || []).slice();
+    var mine = offer && offer.option != null
+      ? offer.option
+      : (def && def.initial != null ? def.initial : (opts[0] != null ? opts[0] : "—"));
+    if (type === "enum" && mine != null && opts.indexOf(mine) < 0) opts.unshift(mine);
+    if (type === "enum" && !opts.length) opts = [mine == null ? "—" : mine];
+    var name = (def && def.name) || "—";
+    return {
+      id: "c" + (i + 1),
+      no: ("0" + (i + 1)).slice(-2),
+      name: name,
+      type: type,
+      unit: (def && def.unit) || "",
+      range: (def && def.range) || null,
+      mine: mine,
+      opts: opts,
+      theirs: null,
+      conf: 0,
+      status: openIssues.indexOf(name) >= 0 ? "pending" : "decided"
+    };
+  }
+
   // A 答复：所有成功响应都是同一份全量投影，前端整棵替换
   function projectState(state, payload) {
     var my = payload.my_offer || {};
     var opp = payload.opponent_offer || {};
     var offers = my.offers || {};
     var openIssues = Array.isArray(payload.open_issues) ? payload.open_issues : (state.openIssues || []);
-    var clauses = state.clauses.slice();
+    var defs = Array.isArray(payload.clauses) ? payload.clauses : null;
+    if (!defs && CONFIG.clauseOptions) {
+      defs = Object.keys(CONFIG.clauseOptions).map(function (name) {
+        return { name: name, type: "enum", options: CONFIG.clauseOptions[name] };
+      });
+    }
+    var defByName = {};
+    if (defs) defs.forEach(function (d) { if (d && d.name) defByName[d.name] = d; });
 
-    if (!clauses.length && Object.keys(offers).length) {
-      clauses = Object.keys(offers).map(function (name, i) {
-        var o = offers[name] || {};
-        return {
-          id: "c" + (i + 1),
-          no: ("0" + (i + 1)).slice(-2),
-          name: name,
-          mine: o.option || "—",
-          opts: [o.option || "—"],
-          theirs: null,
-          conf: 0,
-          status: openIssues.indexOf(name) >= 0 ? "pending" : "decided"
+    var clauses;
+    if (defs && defs.length) {
+      clauses = defs.map(function (d, i) { return clauseFrom(d, offers[d.name], i, openIssues); });
+    } else if (state.clauses.length) {
+      clauses = state.clauses.map(function (c, i) {
+        var d = defByName[c.name] || {
+          name: c.name, type: c.type, options: c.opts,
+          initial: c.mine, unit: c.unit, range: c.range
         };
+        return clauseFrom(d, offers[c.name], i, openIssues);
+      });
+    } else if (Object.keys(offers).length) {
+      clauses = Object.keys(offers).map(function (name, i) {
+        return clauseFrom({ name: name }, offers[name], i, openIssues);
       });
     } else {
-      clauses = clauses.map(function (c) {
-        var o = offers[c.name] || {};
-        return Object.assign({}, c, {
-          mine: o.option || c.mine,
-          status: openIssues.indexOf(c.name) >= 0 ? "pending" : "decided"
-        });
-      });
+      clauses = [];
     }
 
     var ap = state.ap;
+    var apMax = state.apMax;
     if (payload.action_points != null) {
       ap = typeof payload.action_points === "object" ? payload.action_points.current : payload.action_points;
+      if (typeof payload.action_points === "object" && payload.action_points.max != null) {
+        apMax = payload.action_points.max;
+      }
     }
 
     return {
       version: Math.max(my.version || 0, opp.version || 0) || state.version,
       round: payload.round != null ? payload.round : state.round,
       ap: ap,
+      apMax: apMax,
       clauses: clauses,
       openIssues: openIssues,
-      speakerScore: payload.speaker_score !== undefined ? payload.speaker_score : state.speakerScore,
+      speakerScore: payload.speakerScore !== undefined ? payload.speakerScore
+        : (payload.speaker_score !== undefined ? payload.speaker_score : state.speakerScore),
       ended: payload.status === "ended" ? true : state.ended,
       serviceDown: null,
       sessionLost: false
@@ -293,7 +328,8 @@
       agent: (config && config.agent) || CONFIG.agent || "us"
     };
     var scenarioPath = (config && config.scenarioPath) || CONFIG.scenarioPath;
-    if (scenarioPath) body.scenario_path = scenarioPath;
+
+    body.scenario_path = scenarioPath || null;
 
     return request("/session", {
       method: "POST",
@@ -367,7 +403,7 @@
       patch.submittedKeys = Object.assign({}, state.submittedKeys, (function () { var o = {}; o[ctx.key] = true; return o; })());
       patch.actions = Object.assign({}, state.actions, (function () {
         var o = {};
-        o[ctx.key] = { key: ctx.key, round: state.round, at: new Date().toISOString(), ap: 2 };
+        o[ctx.key] = { key: ctx.key, round: state.round, at: new Date().toISOString(), ap: 1 };
         return o;
       })());
       return { ok: true, patch: patch };
@@ -406,11 +442,68 @@
     });
   }
 
-  // A 答复：当前没有 accept 接口，待确认后接入；不猜 action_type
-  function accept(state) {
-    return Promise.resolve({
-      ok: false,
-      error: { error: "INVALID_ACTION", detail: "A 答复未提供接受协议接口，待确认后再接入（TODO）。" }
+  // A 第二轮 Q1：accept 走 /action，action_type="accept"，offer_patch 必须 {}
+  function accept(state, ctx) {
+    if (!SESSION_ID) {
+      return Promise.resolve({
+        ok: false,
+        error: { error: "INVALID_ACTION", detail: "尚未开局（缺少 session_id），请先重新开局。" }
+      });
+    }
+    var key = (ctx && ctx.key) || D.util.newKey();
+    var body = {
+      client_action_id: key,
+      base_version: state.version,
+      action_type: "accept",
+      offer_patch: {},
+      conditions: [],
+      expected_effect: "我方接受当前已达成的条款框架。",
+      public_message: "我方正式接受本轮协议安排。"
+    };
+
+    return request(withSession("/action"), {
+      method: "POST",
+      headers: buildHeaders(),
+      body: JSON.stringify(body),
+      signal: ctx && ctx.signal
+    }).then(function (r) {
+      if (r.aborted) return { ok: false, aborted: true };
+      if (isTransport(r)) return { ok: false, transport: r.transport };
+
+      if (r.status === 409) {
+        if (r.body && r.body.error === "SESSION_BUSY") {
+          return {
+            ok: false,
+            retryAfter: 700,
+            error: { error: "SESSION_BUSY", detail: r.body.detail || MESSAGES.SESSION_BUSY }
+          };
+        }
+        return {
+          ok: false,
+          patch: {
+            serverVersion: newestVersion(r.body && r.body.current_state, state.version + 1),
+            currentState: (r.body && r.body.current_state) || null
+          },
+          error: mapError(Object.assign({ error: "VERSION_CONFLICT" }, r.body || {})) ||
+            { error: "VERSION_CONFLICT", detail: MESSAGES.VERSION_CONFLICT }
+        };
+      }
+
+      if (!r.ok) return failure(r, state);
+      if (!r.body) return { ok: false, transport: transport("invalid-payload", r.status, "空响应体") };
+
+      var patch = projectState(state, r.body);
+      patch.draft = {};
+      patch.selectedCard = null;
+      patch.retryKey = null;
+      patch.demoError = null;
+      patch.submittedKeys = Object.assign({}, state.submittedKeys, (function () { var o = {}; o[key] = true; return o; })());
+      patch.actions = Object.assign({}, state.actions, (function () {
+        var o = {};
+        o[key] = { key: key, round: state.round, at: new Date().toISOString(), ap: 0 };
+        return o;
+      })());
+      return { ok: true, patch: patch };
     });
   }
 
