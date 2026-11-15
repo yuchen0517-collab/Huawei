@@ -1,3 +1,4 @@
 .codeartsdoer/
 logs/
 __pycache__/
+runtime/sessions/

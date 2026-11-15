@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 import importlib.util
 import json
 import sys
@@ -35,6 +36,10 @@ def flow_action(step):
 
 def restore(engine):
     archive = copy.deepcopy(engine.state.to_archive_dict())
+    # to_archive_dict() 会带 `_visibility` 等存档标记键，不是 NegotiationState 字段，
+    # 重建前必须剔除（与 api.restore_engine_from_archive 同一口径）。
+    state_fields = {f.name for f in dataclasses.fields(NegotiationState)}
+    archive = {k: v for k, v in archive.items() if k in state_fields}
     archive["offers"] = [Offer(**offer) for offer in archive["offers"]]
     archive["agreement"] = Offer(**archive["agreement"]) if archive["agreement"] else None
     candidate = RulesEngine(copy.deepcopy(engine.scenario), engine.session_id)

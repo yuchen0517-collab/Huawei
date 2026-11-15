@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import json
+import math
 import os
 import re
 import sys
@@ -11,9 +12,10 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import neg_cli as neg
+import session_store
 from fastapi import Body, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +44,9 @@ from load_scenario_bridge import (
 
 from engine.core import IllegalDebriefAccess, RulesEngine
 from engine.state import NegotiationState, Offer
+from engine.terminal import TERMINAL_TYPES
 from engine.validator import ERRORS as ENGINE_ERRORS
+from engine.validator import validate_action as validate_engine_action
 
 SCENARIO_ID = "ai_governance"
 MY_ACTOR = "cn"
@@ -82,6 +86,16 @@ SYSTEM_PROMPTS = {
 }
 
 MODEL_ERROR_DETAIL = "AI 对手暂时不可用或返回内容不合规，本轮未推进，请稍后重试。"
+INTERNAL_ERROR_DETAIL = "服务内部错误，请稍后重试。"
+SESSION_RECORD_ERROR_DETAIL = "会话记录无法恢复，自动推演已停止。"
+AUTO_RECORD_INVALID_DETAIL = "自动推演会话记录不一致，已禁止自动推进。"
+AUTO_INTERRUPTED_DETAIL = "上次自动推演在完成前中断，已恢复到最后已提交状态。"
+AUTO_PAUSED_PERSISTENCE_DETAIL = "会话持久化失败，本轮未推进，可重试自动推演。"
+AUTO_ERROR_PERSISTENCE_DETAIL = "会话持久化结果无法确认，已禁止自动推进。"
+AUTO_STATUS_ERROR_DETAIL = "自动推演记录不可安全恢复，已禁止自动推进。"
+PHASE_CLOSED_DETAIL = "谈判已结束，不能继续自动推进。"
+AUTO_FIELDS = ("auto_status", "auto_terminal_type", "auto_last_error")
+AutoStatus = Literal["running", "paused", "done", "error"]
 
 
 class ApiError(Exception):
@@ -96,6 +110,27 @@ class ApiError(Exception):
 class ModelUnavailable(ApiError):
     def __init__(self, detail: str = MODEL_ERROR_DETAIL):
         super().__init__(503, "MODEL_UNAVAILABLE", detail)
+
+
+@dataclass(frozen=True)
+class AutoError:
+    code: str
+    detail: str
+
+
+class AutoErrorResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str
+    detail: str
+
+
+class AutoStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str
+    status: AutoStatus
+    current_round: int
+    terminal_type: str | None
+    last_error: AutoErrorResponse | None
 
 
 @dataclass(frozen=True)
@@ -121,6 +156,9 @@ class SessionRecord:
     engine: RulesEngine
     runtime: RuntimeMetadata
     idempotency_ledger: dict = field(default_factory=dict)
+    auto_status: AutoStatus = "paused"
+    auto_terminal_type: str | None = None
+    auto_last_error: AutoError | None = None
 
 
 SESSIONS: dict[str, SessionRecord] = {}
@@ -135,32 +173,442 @@ def detect_mode() -> str:
     return "online"
 
 
+def get_session_store() -> session_store.SessionStore:
+    configured = os.environ.get("NEG_SESSION_STORE_DIR", "").strip()
+    root = Path(configured) if configured else BASE_DIR / "runtime" / "sessions"
+    return session_store.SessionStore(root)
+
+
+def internal_api_error() -> ApiError:
+    return ApiError(500, "INTERNAL_ERROR", INTERNAL_ERROR_DETAIL)
+
+
 def get_session(session_id: str) -> SessionRecord:
     with SESSIONS_LOCK:
         rec = SESSIONS.get(session_id)
-    if rec is None:
-        raise ApiError(404, "SESSION_NOT_FOUND", "会话不存在或服务已重启，请重新开局。")
-    return rec
+    if rec is not None:
+        return rec
+    with SESSIONS_LOCK:
+        rec = SESSIONS.get(session_id)
+        if rec is not None:
+            return rec
+        try:
+            document = get_session_store().read(session_id)
+        except (session_store.SessionStoreNotFound, session_store.InvalidSessionId):
+            raise ApiError(404, "SESSION_NOT_FOUND", "会话不存在或服务已重启，请重新开局。")
+        except session_store.SessionStoreError:
+            raise internal_api_error()
+        rec = decode_session_document(document)
+        if rec.session_id != session_id:
+            raise internal_api_error()
+        if (
+            document.get("auto_status") == "running"
+            and rec.auto_status == "paused"
+            and rec.auto_last_error is not None
+            and rec.auto_last_error.code == "AUTO_INTERRUPTED"
+        ):
+            try:
+                persist_session(
+                    rec,
+                    rec.engine,
+                    rec.runtime,
+                    rec.idempotency_ledger,
+                    "paused",
+                    None,
+                    rec.auto_last_error,
+                )
+            except Exception:
+                raise internal_api_error()
+        SESSIONS[session_id] = rec
+        return rec
 
 
 def make_action_id(seq: int) -> str:
     return f"a{seq:06d}"
 
 
-def restore_engine(engine: RulesEngine) -> RulesEngine:
-    archive = copy.deepcopy(engine.state.to_archive_dict())
-    restored = copy.deepcopy(archive)
-    # to_archive_dict() 会带 `_visibility="god_view"` 等存档标记键，
-    # 不是 NegotiationState 字段，重建前必须剔除（标记会在重新导出时再生成）。
-    state_fields = {f.name for f in dataclasses.fields(NegotiationState)}
-    restored = {k: v for k, v in restored.items() if k in state_fields}
-    restored["offers"] = [Offer(**offer) for offer in restored["offers"]]
-    restored["agreement"] = Offer(**restored["agreement"]) if restored["agreement"] else None
-    candidate = RulesEngine(copy.deepcopy(engine.scenario), engine.session_id)
-    candidate.state = NegotiationState(**restored)
-    if candidate.state.to_archive_dict() != archive:
+def restore_engine_from_archive(scenario: dict, session_id: str, archive: dict) -> RulesEngine:
+    try:
+        if not isinstance(scenario, dict) or not isinstance(archive, dict):
+            raise ValueError()
+        original = copy.deepcopy(archive)
+        restored = copy.deepcopy(original)
+        # to_archive_dict() 会带 `_visibility="god_view"` 等存档标记键，
+        # 不是 NegotiationState 字段，重建前必须剔除（标记会在重新导出时再生成）。
+        state_fields = {f.name for f in dataclasses.fields(NegotiationState)}
+        restored = {k: v for k, v in restored.items() if k in state_fields}
+        restored["offers"] = [Offer(**offer) for offer in restored["offers"]]
+        restored["agreement"] = Offer(**restored["agreement"]) if restored["agreement"] else None
+        candidate = RulesEngine(copy.deepcopy(scenario), session_id)
+        candidate.state = NegotiationState(**restored)
+        if candidate.state.to_archive_dict() != original:
+            raise ValueError()
+        if candidate.state.session_id != session_id:
+            raise ValueError()
+        if candidate.state.scenario_id != scenario.get("scenario_id"):
+            raise ValueError()
+        if (
+            isinstance(candidate.state.round, bool)
+            or not isinstance(candidate.state.round, int)
+            or candidate.state.round < 1
+        ):
+            raise ValueError()
+        return candidate
+    except Exception:
         raise ApiError(500, "INTERNAL_ERROR", "规则引擎快照恢复失败，本轮未推进。")
-    return candidate
+
+
+def restore_engine(engine: RulesEngine) -> RulesEngine:
+    return restore_engine_from_archive(
+        engine.scenario,
+        engine.session_id,
+        engine.state.to_archive_dict(),
+    )
+
+
+def engine_record_facts(engine: RulesEngine) -> tuple[str, str | None, bool]:
+    state = engine.state
+    if state.status == "active" and state.phase != "ended" and state.terminal is None:
+        return "active", None, True
+    if state.status == "ended" and state.phase == "ended" and isinstance(state.terminal, dict):
+        terminal_type = state.terminal.get("type")
+        if isinstance(terminal_type, str) and terminal_type in TERMINAL_TYPES:
+            return "ended", terminal_type, True
+    return "invalid", None, False
+
+
+def auto_error_dict(error: AutoError | dict | None) -> dict | None:
+    if error is None:
+        return None
+    if isinstance(error, AutoError):
+        code, detail = error.code, error.detail
+    elif isinstance(error, dict) and set(error) == {"code", "detail"}:
+        code, detail = error.get("code"), error.get("detail")
+    else:
+        raise ValueError()
+    if not isinstance(code, str) or re.fullmatch(r"[A-Z][A-Z0-9_]*", code) is None:
+        raise ValueError()
+    if not isinstance(detail, str) or not detail.strip():
+        raise ValueError()
+    return {"code": code, "detail": detail}
+
+
+def invalid_auto_error() -> AutoError:
+    return AutoError("AUTO_RECORD_INVALID", AUTO_RECORD_INVALID_DETAIL)
+
+
+def normalize_auto_fields(document: dict, engine: RulesEngine) -> tuple[AutoStatus, str | None, AutoError | None]:
+    fact_status, fact_terminal, facts_valid = engine_record_facts(engine)
+    if not facts_valid:
+        return "error", None, invalid_auto_error()
+    if not any(key in document for key in AUTO_FIELDS):
+        if fact_status == "ended":
+            return "done", fact_terminal, None
+        return "paused", None, None
+    try:
+        status = document["auto_status"]
+        terminal_type = document["auto_terminal_type"]
+        error_data = auto_error_dict(document["auto_last_error"])
+        error = AutoError(**error_data) if error_data is not None else None
+        if status not in ("running", "paused", "done", "error"):
+            raise ValueError()
+        if terminal_type is not None and (
+            not isinstance(terminal_type, str) or terminal_type not in TERMINAL_TYPES
+        ):
+            raise ValueError()
+    except (KeyError, TypeError, ValueError):
+        return "error", fact_terminal, invalid_auto_error()
+    if status == "error":
+        if error is None:
+            return "error", fact_terminal, invalid_auto_error()
+        if fact_status == "active" and terminal_type is None:
+            return "error", None, error
+        if fact_status == "ended" and terminal_type in (None, fact_terminal):
+            return "error", fact_terminal, error
+        return "error", fact_terminal, invalid_auto_error()
+    if fact_status == "ended":
+        if status == "done" and terminal_type == fact_terminal and error is None:
+            return "done", fact_terminal, None
+        return "error", fact_terminal, invalid_auto_error()
+    if status == "paused" and terminal_type is None:
+        return "paused", None, error
+    if status == "running" and terminal_type is None and error is None:
+        return "paused", None, AutoError("AUTO_INTERRUPTED", AUTO_INTERRUPTED_DETAIL)
+    return "error", None, invalid_auto_error()
+
+
+def validate_auto_combination(
+    engine: RulesEngine,
+    status: str,
+    terminal_type: str | None,
+    error: AutoError | dict | None,
+) -> dict | None:
+    error_data = auto_error_dict(error)
+    fact_status, fact_terminal, facts_valid = engine_record_facts(engine)
+    if not facts_valid:
+        raise ValueError()
+    if status == "done":
+        valid = fact_status == "ended" and terminal_type == fact_terminal and error_data is None
+    elif status == "paused":
+        valid = fact_status == "active" and terminal_type is None
+    elif status == "running":
+        valid = fact_status == "active" and terminal_type is None and error_data is None
+    elif status == "error":
+        valid = error_data is not None and (
+            (fact_status == "active" and terminal_type is None)
+            or (fact_status == "ended" and terminal_type == fact_terminal)
+        )
+    else:
+        valid = False
+    if not valid:
+        raise ValueError()
+    return error_data
+
+
+def validate_idempotency_ledger(ledger: dict, session_id: str, mode: str) -> dict:
+    if not isinstance(ledger, dict):
+        raise ValueError()
+    validated = {}
+    for client_action_id, state in ledger.items():
+        if not isinstance(client_action_id, str) or not client_action_id:
+            raise ValueError()
+        if not isinstance(state, dict) or set(state) != set(PUBLIC_STATE_KEYS):
+            raise ValueError()
+        if state.get("session_id") != session_id or state.get("mode") != mode:
+            raise ValueError()
+        validated[client_action_id] = copy.deepcopy(state)
+    return validated
+
+
+def encode_session_document(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    idempotency_ledger: dict,
+    auto_status: AutoStatus,
+    auto_terminal_type: str | None,
+    auto_last_error: AutoError | dict | None,
+) -> dict:
+    try:
+        error_data = validate_auto_combination(
+            engine,
+            auto_status,
+            auto_terminal_type,
+            auto_last_error,
+        )
+        ledger = validate_idempotency_ledger(idempotency_ledger, rec.session_id, rec.mode)
+        return {
+            "schema_version": 1,
+            "session_id": rec.session_id,
+            "scenario_id": rec.scenario_id,
+            "my_actor": rec.my_actor,
+            "opponent_actor": rec.opponent_actor,
+            "mode": rec.mode,
+            "system_prompt": rec.system_prompt,
+            "initial_indexes": copy.deepcopy(rec.initial_indexes),
+            "model_options": {
+                "no_json_mode": rec.model_options.no_json_mode,
+                "temperature": rec.model_options.temperature,
+            },
+            "scenario": copy.deepcopy(engine.scenario),
+            "engine_state": engine.state.to_archive_dict(),
+            "runtime": {
+                "messages": copy.deepcopy(list(runtime.messages)),
+                "offline_cursor": runtime.offline_cursor,
+                "action_seq": runtime.action_seq,
+                "action_meta": [
+                    [action_id, origin, list(warnings)]
+                    for action_id, origin, warnings in runtime.action_meta
+                ],
+            },
+            "idempotency_ledger": ledger,
+            "auto_status": auto_status,
+            "auto_terminal_type": auto_terminal_type,
+            "auto_last_error": error_data,
+        }
+    except (AttributeError, TypeError, ValueError):
+        raise internal_api_error()
+
+
+def decode_session_document(document: dict) -> SessionRecord:
+    required = {
+        "session_id",
+        "scenario_id",
+        "my_actor",
+        "opponent_actor",
+        "mode",
+        "system_prompt",
+        "initial_indexes",
+        "model_options",
+        "scenario",
+        "engine_state",
+        "runtime",
+        "idempotency_ledger",
+    }
+    try:
+        if not isinstance(document, dict) or not required.issubset(document):
+            raise ValueError()
+        if set(document) - required - set(AUTO_FIELDS) - {"schema_version"}:
+            raise ValueError()
+        if "schema_version" in document and (
+            isinstance(document["schema_version"], bool) or document["schema_version"] != 1
+        ):
+            raise ValueError()
+        session_id = document["session_id"]
+        scenario_id = document["scenario_id"]
+        my_actor = document["my_actor"]
+        opponent_actor = document["opponent_actor"]
+        mode = document["mode"]
+        system_prompt = document["system_prompt"]
+        if not all(isinstance(value, str) and value for value in (
+            session_id, scenario_id, my_actor, opponent_actor
+        )):
+            raise ValueError()
+        if my_actor == opponent_actor or mode not in ("offline", "online"):
+            raise ValueError()
+        if not isinstance(system_prompt, str):
+            raise ValueError()
+        initial_indexes = document["initial_indexes"]
+        if not isinstance(initial_indexes, dict) or set(initial_indexes) != set(neg.INDEX_KEYS):
+            raise ValueError()
+        if any(isinstance(value, bool) or not isinstance(value, int) for value in initial_indexes.values()):
+            raise ValueError()
+        options = document["model_options"]
+        if not isinstance(options, dict) or set(options) != {"no_json_mode", "temperature"}:
+            raise ValueError()
+        if not isinstance(options["no_json_mode"], bool):
+            raise ValueError()
+        temperature = options["temperature"]
+        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+            raise ValueError()
+        if not math.isfinite(float(temperature)):
+            raise ValueError()
+        scenario = document["scenario"]
+        if not isinstance(scenario, dict) or scenario.get("scenario_id") != scenario_id:
+            raise ValueError()
+        parties = scenario.get("parties")
+        if not isinstance(parties, list):
+            raise ValueError()
+        party_ids = {party.get("id") for party in parties if isinstance(party, dict)}
+        if my_actor not in party_ids or opponent_actor not in party_ids:
+            raise ValueError()
+        runtime_data = document["runtime"]
+        if not isinstance(runtime_data, dict) or set(runtime_data) != {
+            "messages", "offline_cursor", "action_seq", "action_meta"
+        }:
+            raise ValueError()
+        messages = runtime_data["messages"]
+        if not isinstance(messages, list):
+            raise ValueError()
+        for message in messages:
+            if not isinstance(message, dict) or set(message) != {"role", "content"}:
+                raise ValueError()
+            if message["role"] not in ("system", "user", "assistant"):
+                raise ValueError()
+            if not isinstance(message["content"], str):
+                raise ValueError()
+        offline_cursor = runtime_data["offline_cursor"]
+        action_seq = runtime_data["action_seq"]
+        for value in (offline_cursor, action_seq):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError()
+        action_meta = []
+        for item in runtime_data["action_meta"]:
+            if not isinstance(item, list) or len(item) != 3:
+                raise ValueError()
+            action_id, origin, warnings = item
+            if not all(isinstance(value, str) and value for value in (action_id, origin)):
+                raise ValueError()
+            if not isinstance(warnings, list) or any(not isinstance(value, str) for value in warnings):
+                raise ValueError()
+            action_meta.append((action_id, origin, tuple(warnings)))
+        runtime = RuntimeMetadata(
+            messages=tuple(copy.deepcopy(messages)),
+            offline_cursor=offline_cursor,
+            action_seq=action_seq,
+            action_meta=tuple(action_meta),
+        )
+        engine = restore_engine_from_archive(scenario, session_id, document["engine_state"])
+        if engine.state.scenario_id != scenario_id:
+            raise ValueError()
+        ledger = validate_idempotency_ledger(document["idempotency_ledger"], session_id, mode)
+        rec = SessionRecord(
+            session_id=session_id,
+            scenario_id=scenario_id,
+            my_actor=my_actor,
+            opponent_actor=opponent_actor,
+            mode=mode,
+            system_prompt=system_prompt,
+            initial_indexes=copy.deepcopy(initial_indexes),
+            model_options=SimpleNamespace(
+                no_json_mode=options["no_json_mode"],
+                temperature=float(temperature),
+            ),
+            mutation_lock=threading.Lock(),
+            state_lock=threading.Lock(),
+            engine=engine,
+            runtime=runtime,
+            idempotency_ledger=ledger,
+        )
+        status, terminal_type, error = normalize_auto_fields(document, engine)
+        rec.auto_status = status
+        rec.auto_terminal_type = terminal_type
+        rec.auto_last_error = error
+        return rec
+    except ApiError:
+        raise
+    except (AttributeError, KeyError, TypeError, ValueError):
+        raise ApiError(500, "INTERNAL_ERROR", SESSION_RECORD_ERROR_DETAIL)
+
+
+def persist_session(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    idempotency_ledger: dict,
+    auto_status: AutoStatus,
+    auto_terminal_type: str | None,
+    auto_last_error: AutoError | dict | None,
+) -> dict:
+    document = encode_session_document(
+        rec,
+        engine,
+        runtime,
+        idempotency_ledger,
+        auto_status,
+        auto_terminal_type,
+        auto_last_error,
+    )
+    get_session_store().write(document)
+    return document
+
+
+def project_auto_status(rec: SessionRecord) -> AutoStatusResponse:
+    with rec.state_lock:
+        fact_status, fact_terminal, facts_valid = engine_record_facts(rec.engine)
+        status = rec.auto_status
+        terminal_type = rec.auto_terminal_type
+        error = rec.auto_last_error
+        if not facts_valid:
+            status, terminal_type, error = "error", None, invalid_auto_error()
+        elif fact_status == "ended" and status != "error":
+            if status == "done" and terminal_type == fact_terminal and error is None:
+                terminal_type = fact_terminal
+            else:
+                status, terminal_type, error = "error", fact_terminal, invalid_auto_error()
+        elif fact_status == "active" and status != "error":
+            if status == "done" or terminal_type is not None:
+                status, terminal_type, error = "error", None, invalid_auto_error()
+            elif status == "running" and error is not None:
+                status, terminal_type, error = "error", None, invalid_auto_error()
+        error_data = auto_error_dict(error)
+        return AutoStatusResponse(
+            session_id=rec.session_id,
+            status=status,
+            current_round=rec.engine.state.round,
+            terminal_type=terminal_type,
+            last_error=AutoErrorResponse(**error_data) if error_data is not None else None,
+        )
 
 
 def latest_offer(public: dict, actor: str) -> dict:
@@ -242,9 +690,24 @@ def create_session(req: "CreateSessionRequest") -> dict:
             state_lock=threading.Lock(),
             engine=engine,
             runtime=runtime,
+            auto_status="paused",
+            auto_terminal_type=None,
+            auto_last_error=None,
         )
         initial_state = project_engine_state(rec, engine, runtime)
         json.dumps(initial_state, ensure_ascii=False)
+        try:
+            persist_session(
+                rec,
+                engine,
+                runtime,
+                rec.idempotency_ledger,
+                "paused",
+                None,
+                None,
+            )
+        except Exception:
+            raise internal_api_error()
         SESSIONS[session_id] = rec
     return initial_state
 
@@ -322,13 +785,19 @@ def adapt_client_action(payload: Any, rec: SessionRecord, action_id: str) -> tup
     return flat, warns
 
 
-def build_auto_action(rec: SessionRecord, next_round: int, action_id: str) -> tuple[dict, list]:
-    text = neg.CHINA_LINES[(next_round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
+def build_auto_action(rec: SessionRecord, engine: RulesEngine, action_id: str) -> tuple[dict, list]:
+    accepting = not engine.state.open_issues
+    if accepting:
+        text = "我方接受当前协议，确认达成完全一致。"
+        action_type = "accept"
+    else:
+        text = neg.CHINA_LINES[(engine.state.round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
+        action_type = "statement"
     flat = {
         "action_id": action_id,
         "actor": rec.my_actor,
         "card_id": None,
-        "action_type": "statement",
+        "action_type": action_type,
         "offer_patch": {},
         "conditions": [],
         "expected_effect": "",
@@ -340,6 +809,14 @@ def build_auto_action(rec: SessionRecord, next_round: int, action_id: str) -> tu
         "public_message": flat["public_message"],
     }
     warns = run_validate_action(wrapped, opponent=True)
+    if accepting:
+        ok, code, _ = validate_engine_action(
+            copy.deepcopy(flat),
+            engine.state,
+            engine.scenario,
+        )
+        if not ok:
+            raise engine_action_error(code)
     return flat, warns
 
 
@@ -396,12 +873,7 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
     return opp_flat, list(warns), checked
 
 
-def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
-    # 身份收口走 C 侧 submit_for（强制 actor=viewer，丢弃客户端自带 actor），
-    # 与 adapt_client_action 的 flat["actor"] = rec.my_actor 同一口径。
-    ok, code, _, events = submit_for(engine, flat["actor"], copy.deepcopy(flat))
-    if ok:
-        return events
+def engine_action_error(code: str | None) -> ApiError:
     error = code or "INTERNAL_ERROR"
     status_code = 409 if code in {
         "VERSION_CONFLICT", "DUPLICATE_ACTION", "PHASE_CLOSED",
@@ -409,7 +881,104 @@ def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
     if code is None:
         status_code = 500
     detail = ENGINE_ERRORS.get(error, "规则引擎拒绝了该行动，本轮未推进。")
-    raise ApiError(status_code, error, detail)
+    return ApiError(status_code, error, detail)
+
+
+def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
+    # 身份收口走 C 侧 submit_for（强制 actor=viewer，丢弃客户端自带 actor），
+    # 与 adapt_client_action 的 flat["actor"] = rec.my_actor 同一口径。
+    ok, code, _, events = submit_for(engine, flat["actor"], copy.deepcopy(flat))
+    if ok:
+        return events
+    raise engine_action_error(code)
+
+
+def set_auto_fields(
+    rec: SessionRecord,
+    status: AutoStatus,
+    terminal_type: str | None,
+    error: AutoError | None,
+) -> None:
+    with rec.state_lock:
+        rec.auto_status = status
+        rec.auto_terminal_type = terminal_type
+        rec.auto_last_error = error
+
+
+def mark_auto_persistence_error(rec: SessionRecord) -> None:
+    fact_status, fact_terminal, facts_valid = engine_record_facts(rec.engine)
+    terminal_type = fact_terminal if facts_valid and fact_status == "ended" else None
+    set_auto_fields(
+        rec,
+        "error",
+        terminal_type,
+        AutoError("AUTO_PERSISTENCE_FAILED", AUTO_ERROR_PERSISTENCE_DETAIL),
+    )
+
+
+def pause_auto_or_error(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    ledger: dict,
+    error: AutoError,
+) -> None:
+    try:
+        persist_session(rec, engine, runtime, ledger, "paused", None, error)
+    except Exception:
+        mark_auto_persistence_error(rec)
+        raise internal_api_error()
+    set_auto_fields(rec, "paused", None, error)
+
+
+def fail_auto_system(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    ledger: dict,
+) -> None:
+    error = invalid_auto_error()
+    try:
+        persist_session(rec, engine, runtime, ledger, "error", None, error)
+    except Exception:
+        mark_auto_persistence_error(rec)
+    else:
+        set_auto_fields(rec, "error", None, error)
+    raise internal_api_error()
+
+
+def check_auto_gate(rec: SessionRecord, engine: RulesEngine) -> None:
+    fact_status, fact_terminal, facts_valid = engine_record_facts(engine)
+    if rec.auto_status == "error":
+        raise ApiError(409, "AUTO_STATUS_ERROR", AUTO_STATUS_ERROR_DETAIL)
+    if facts_valid and fact_status == "ended":
+        if (
+            rec.auto_status == "done"
+            and rec.auto_terminal_type == fact_terminal
+            and rec.auto_last_error is None
+        ):
+            raise ApiError(
+                409,
+                "PHASE_CLOSED",
+                PHASE_CLOSED_DETAIL,
+                extra={
+                    "auto_status": "done",
+                    "current_round": engine.state.round,
+                    "terminal_type": fact_terminal,
+                },
+            )
+        set_auto_fields(rec, "error", fact_terminal, invalid_auto_error())
+        raise ApiError(409, "AUTO_STATUS_ERROR", AUTO_STATUS_ERROR_DETAIL)
+    if not facts_valid or rec.auto_status == "done":
+        set_auto_fields(rec, "error", None, invalid_auto_error())
+        raise ApiError(409, "AUTO_STATUS_ERROR", AUTO_STATUS_ERROR_DETAIL)
+    if rec.auto_status != "paused":
+        set_auto_fields(rec, "error", None, invalid_auto_error())
+        raise ApiError(409, "AUTO_STATUS_ERROR", AUTO_STATUS_ERROR_DETAIL)
+
+
+def is_ordinary_auto_error(exc: ApiError) -> bool:
+    return exc.status_code < 500 or exc.error == "MODEL_UNAVAILABLE"
 
 
 def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dict:
@@ -420,6 +989,8 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
         action_payload, client_action_id, base_version = extract_transport_fields(payload)
     if not rec.mutation_lock.acquire(blocking=False):
         raise ApiError(409, "SESSION_BUSY", "本会话有另一轮正在处理，请稍后重试；本次未推进。")
+    auto_started = False
+    business_active = False
     try:
         if not auto:
             cached = rec.idempotency_ledger.get(client_action_id)
@@ -428,6 +999,34 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
         with rec.state_lock:
             engine = rec.engine
             runtime = rec.runtime
+            ledger = copy.deepcopy(rec.idempotency_ledger)
+        if auto:
+            check_auto_gate(rec, engine)
+            try:
+                persist_session(
+                    rec,
+                    engine,
+                    runtime,
+                    ledger,
+                    "running",
+                    None,
+                    None,
+                )
+            except session_store.SessionStoreCommitUnknown:
+                mark_auto_persistence_error(rec)
+                raise internal_api_error()
+            except Exception:
+                pause_auto_or_error(
+                    rec,
+                    engine,
+                    runtime,
+                    ledger,
+                    AutoError("AUTO_PERSISTENCE_FAILED", AUTO_PAUSED_PERSISTENCE_DETAIL),
+                )
+                raise internal_api_error()
+            auto_started = True
+            set_auto_fields(rec, "running", None, None)
+            business_active = True
         candidate = restore_engine(engine)
         if not auto and base_version != candidate.state.current_version:
             raise ApiError(
@@ -439,7 +1038,7 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
         my_id = make_action_id(runtime.action_seq + 1)
         opp_id = make_action_id(runtime.action_seq + 2)
         if auto:
-            my_flat, my_warns = build_auto_action(rec, current_round, my_id)
+            my_flat, my_warns = build_auto_action(rec, candidate, my_id)
             origin = "auto_player"
         else:
             my_flat, my_warns = adapt_client_action(action_payload, rec, my_id)
@@ -472,14 +1071,86 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
             action_seq=candidate_seq,
             action_meta=candidate_meta,
         )
+        fact_status, fact_terminal, facts_valid = engine_record_facts(candidate)
+        if not facts_valid:
+            raise ApiError(500, "INTERNAL_ERROR", SESSION_RECORD_ERROR_DETAIL)
+        if fact_status == "ended":
+            final_auto_status = "done"
+            final_terminal_type = fact_terminal
+            final_auto_error = None
+        elif auto:
+            final_auto_status = "paused"
+            final_terminal_type = None
+            final_auto_error = None
+        else:
+            final_auto_status = rec.auto_status
+            final_terminal_type = rec.auto_terminal_type
+            final_auto_error = rec.auto_last_error
         state = project_engine_state(rec, candidate, new_runtime)
         json.dumps(state, ensure_ascii=False)
+        new_ledger = copy.deepcopy(ledger)
+        if not auto:
+            new_ledger[client_action_id] = copy.deepcopy(state)
+        business_active = False
+        try:
+            persist_session(
+                rec,
+                candidate,
+                new_runtime,
+                new_ledger,
+                final_auto_status,
+                final_terminal_type,
+                final_auto_error,
+            )
+        except session_store.SessionStoreCommitUnknown:
+            mark_auto_persistence_error(rec)
+            raise internal_api_error()
+        except Exception:
+            if auto:
+                pause_auto_or_error(
+                    rec,
+                    engine,
+                    runtime,
+                    ledger,
+                    AutoError("AUTO_PERSISTENCE_FAILED", AUTO_PAUSED_PERSISTENCE_DETAIL),
+                )
+            raise internal_api_error()
         with rec.state_lock:
             rec.engine = candidate
             rec.runtime = new_runtime
-        if not auto:
-            rec.idempotency_ledger[client_action_id] = copy.deepcopy(state)
+            rec.idempotency_ledger = new_ledger
+            rec.auto_status = final_auto_status
+            rec.auto_terminal_type = final_terminal_type
+            rec.auto_last_error = final_auto_error
         return state
+    except ApiError as exc:
+        if auto and business_active:
+            business_active = False
+            if is_ordinary_auto_error(exc):
+                pause_auto_or_error(
+                    rec,
+                    engine,
+                    runtime,
+                    ledger,
+                    AutoError(exc.error, exc.detail),
+                )
+                raise
+            fail_auto_system(rec, engine, runtime, ledger)
+        raise
+    except Exception:
+        if auto and business_active:
+            business_active = False
+            pause_auto_or_error(
+                rec,
+                engine,
+                runtime,
+                ledger,
+                AutoError("INTERNAL_ERROR", INTERNAL_ERROR_DETAIL),
+            )
+            raise internal_api_error()
+        if auto and auto_started:
+            mark_auto_persistence_error(rec)
+        raise internal_api_error()
     finally:
         rec.mutation_lock.release()
 
@@ -578,6 +1249,11 @@ def create_session_endpoint(req: CreateSessionRequest) -> dict:
 @app.get("/session/{session_id}/state")
 def state_endpoint(session_id: str) -> dict:
     return project_state(get_session(session_id))
+
+
+@app.get("/session/{session_id}/auto_status")
+def auto_status_endpoint(session_id: str) -> AutoStatusResponse:
+    return project_auto_status(get_session(session_id))
 
 
 @app.post("/session/{session_id}/action")

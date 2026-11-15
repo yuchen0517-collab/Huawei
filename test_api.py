@@ -423,13 +423,14 @@ def test_online_no_fallback_to_offline(monkeypatch):
     assert api.SESSIONS[sid].runtime.offline_cursor == 0
 
 
-def test_debrief_placeholder_and_state_unchanged():
+def test_debrief_not_available_before_terminal_and_state_unchanged():
     sid = new_session()
     client.post(f"/session/{sid}/auto_step")
     before = get_state(sid)
     resp = client.post(f"/session/{sid}/debrief")
-    assert resp.status_code == 202
-    assert resp.json() == {"status": "accepted"}
+    assert resp.status_code == 409
+    assert resp.json()["error"] == "DEBRIEF_NOT_AVAILABLE"
+    assert set(resp.json()) == {"error", "detail"}
     assert get_state(sid) == before
 
 
