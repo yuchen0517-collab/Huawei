@@ -35,9 +35,10 @@ STATEMENT = {
 
 
 @pytest.fixture(autouse=True)
-def clean_env(monkeypatch):
+def clean_env(monkeypatch, tmp_path):
     monkeypatch.setenv("NEG_OFFLINE", "1")
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setenv("NEG_SESSION_STORE_DIR", str(tmp_path))
     api.SESSIONS.clear()
     yield
     api.SESSIONS.clear()

@@ -77,9 +77,10 @@ def _check_engine_snapshots(engine, extra_cn=(), extra_us=()):
 
 
 @pytest.fixture(autouse=True)
-def clean_sessions(monkeypatch):
+def clean_sessions(monkeypatch, tmp_path):
     monkeypatch.setenv("NEG_OFFLINE", "1")
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setenv("NEG_SESSION_STORE_DIR", str(tmp_path))
     api.SESSIONS.clear()
     yield
     api.SESSIONS.clear()
