@@ -59,15 +59,12 @@
         "max": 6,
         "step": 0.5
       },
-      "options": null,
       "description": "对跨境数字服务营业额适用的税率。0 表示不设单边税。现状按 0 计。"
     },
     {
       "issue_id": "I2",
       "name": "征税门槛",
       "type": "enumerated",
-      "unit": null,
-      "range": null,
       "options": [
         {
           "option_id": "O1",
@@ -85,7 +82,8 @@
           "order": 3
         }
       ],
-      "description": "达到门槛才需登记纳税。门槛越低，覆盖面越广。order 按对中方有利程度排序。"
+      "description": "达到门槛才需登记纳税。门槛越低，覆盖面越广。order 按对中方有利程度排序。",
+      "unit": ""
     },
     {
       "issue_id": "I3",
@@ -97,15 +95,12 @@
         "max": 36,
         "step": 6
       },
-      "options": null,
       "description": "税法生效后可向前追溯的月数。追溯越久，企业补税压力越大。"
     },
     {
       "issue_id": "I4",
       "name": "加征关税去留",
       "type": "enumerated",
-      "unit": null,
-      "range": null,
       "options": [
         {
           "option_id": "O1",
@@ -128,7 +123,8 @@
           "order": 4
         }
       ],
-      "description": "order 按对中方有利程度排序，1 最有利。"
+      "description": "order 按对中方有利程度排序，1 最有利。",
+      "unit": ""
     }
   ],
   "public_facts": [

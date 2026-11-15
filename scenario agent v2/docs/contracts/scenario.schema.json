@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:diplomat:schema:scenario:1.0",
+  "$id": "urn:diplomat:schema:scenario:1.1",
   "title": "谈判场景契约",
-  "description": "Diplomat 场景编译 Agent 的场景输入契约。顶层 11 个业务字段（scenario_id 至 terminal_rules）为冻结字段，不得改名、不得增减；negotiability 为编译器回填的只读审计字段，不属于输入侧业务字段。",
+  "description": "Diplomat 场景编译 Agent 的场景输入契约。顶层 11 个业务字段（scenario_id 至 terminal_rules）为冻结字段，不得改名、不得增减；negotiability 为编译器回填的只读审计字段，index_rules 为行为标签结算表，runtime 为引擎运行参数，三者均不属于输入侧业务字段。1.1 为加法式变更：新增 issues[].initial / initial_ref、terminal_rules.deadlock_rounds、顶层 index_rules、runtime，全部可选，1.0 场景仍然合法。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -160,7 +160,24 @@
           },
           "description": {
             "type": "string",
-            "description": "议题补充说明（可选），用于记录现状值、方向偏好或排序口径等背景信息；不参与校验，也不替代 range 与 options。"
+            "description": "议题补充说明（可选），用于记录方向偏好、口径等背景信息；现状值请写入 initial，不要只写在说明里。不参与校验，也不替代 range 与 options。"
+          },
+          "initial": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ],
+            "description": "开局现状值（世界状态，不是任何一方的立场），全场景一个值、双方共用。numeric 填数值，必须落在 range 内且 (value - min) 为 step 的整数倍；enumerated 填合法 option_id。1.1 起编译器必须输出；1.0 老场景缺省时引擎按兼容规则推导（numeric 取双方 target 中点、enumerated 取 order 最小项），该推导仅作兜底。"
+          },
+          "initial_ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "initial 的依据，指向 public_facts[].fact_id 或 assumptions[].assumption_id，用于区分「有据的现状」与「推演假设」。可选；填写时必须能在场景内解析到。"
           },
           "range": {
             "type": "object",
@@ -376,19 +393,26 @@
         "accept_requires_no_open_issue",
         "partial_agreement_allowed"
       ],
-      "description": "终局判定规则，决定何时可以结束谈判以及如何认定结果。",
+      "description": "终局判定规则，决定何时可以结束谈判以及如何认定结果。三个布尔为冻结语义：只接受 JSON true/false，缺失或非布尔一律视为契约错误，引擎不得用 bool() 兜底。终局共五种且互斥：full_agreement / partial_agreement / walk_away / timeout / deadlock；timeout 与 deadlock 不受三个开关影响，始终可终止且不算达成。",
       "properties": {
         "allow_walk_away": {
           "type": "boolean",
-          "description": "是否允许任一方中途退出谈判。"
+          "description": "是否允许任一方在达到 max_rounds 前主动退出。false 时引擎必须拒绝退出动作，不得默认 false。"
         },
         "accept_requires_no_open_issue": {
           "type": "boolean",
-          "description": "为 true 时，只要还存在未决议题，就不得判定为最终达成。"
+          "description": "为 true 时，只要还存在未决议题，accept 动作一律拒绝；为 false 时允许带未决议题 accept，但结果只能记为 partial_agreement。"
         },
         "partial_agreement_allowed": {
           "type": "boolean",
-          "description": "是否允许只就部分议题达成协议并结束谈判。"
+          "description": "是否允许通过独立的「签署部分协议」动作结束（不是 accept 的放宽）。false 时不存在 partial_agreement 终局；与 accept_requires_no_open_issue 同时为 true 不矛盾，前提是引擎有两个独立触发口。优先级高于 accept_requires_no_open_issue：存在未决议题且本字段为 false 时，任何协议终局都不成立。"
+        },
+        "deadlock_rounds": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 10,
+          "default": 2,
+          "description": "连续多少轮无状态变化（议题立场签名不变、无新事件、无新暗线）判定僵局并结束，按非协议终局处理。缺省 2，与三指数引擎 terminal.py / core.py 的现网值一致；不得大于 max_rounds。"
         }
       }
     },
@@ -419,6 +443,49 @@
         "notes": {
           "type": "string",
           "description": "结论说明，应指出缺口、需要收窄的 issue_id 或资料不足的具体原因。"
+        }
+      }
+    },
+    "index_rules": {
+      "type": "object",
+      "description": "行为标签 → 三指数增减的内嵌表，键为 13 个 effect label，每个标签固定 slight / moderate / major 三档；initial 提供 image / trust 初值。整块可选：缺省时引擎使用内置表（docs/contracts/index_rules.v1.json）。适配层「自带则原样保留」，因此这里必须是引擎可直接读取的形状，不放进 runtime，也不用 URN 间接引用。",
+      "properties": {
+        "initial": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "开局 image / trust 初值，0–100。缺省均为 50。",
+          "properties": {
+            "image": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "trust": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        }
+      },
+      "patternProperties": {
+        "^(constructive_proposal|cite_rules|hardline_stance|broken_promise|personal_attack|redline_provoke|procedural|diplomatic_reframe|protect_ally|keep_promise|betray_ally|vague_stance|conditional_concession)$": {
+          "$ref": "#/$defs/effectLevels"
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "引擎运行参数（非业务语义）。整块可选，缺省时引擎按默认值运行；其中的字段都应被引擎显式读取，禁止在适配层写死。",
+      "properties": {
+        "action_points_per_round": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 3,
+          "description": "每轮行动点。缺省 3；接入时应统一双边、多边、观战三条链路的口径。"
         }
       }
     }
@@ -595,6 +662,54 @@
             "minLength": 1
           },
           "description": "该方议题优先级排序，按 issue_id 从前到后由高到低。"
+        }
+      }
+    },
+    "effectLevels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slight",
+        "moderate",
+        "major"
+      ],
+      "description": "单个 effect label 的三档强度，每档给三项指数增减。",
+      "properties": {
+        "slight": {
+          "$ref": "#/$defs/indexDelta"
+        },
+        "moderate": {
+          "$ref": "#/$defs/indexDelta"
+        },
+        "major": {
+          "$ref": "#/$defs/indexDelta"
+        }
+      }
+    },
+    "indexDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interest_delta",
+        "image_delta",
+        "trust_delta"
+      ],
+      "description": "单个行为标签的三指数增减，整数，取值 -10 到 10。",
+      "properties": {
+        "interest_delta": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "image_delta": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "trust_delta": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
         }
       }
     }
