@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DIPLOMAT · 外交谈判战情室</title>
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="mask" data-act="closeDrawer"></div>
+<aside id="drawer"></aside>
+<div id="finale"></div>
+<div id="toast"></div>
+<div id="demoPanel"></div>
+
+<!-- 零构建：普通 script，file:// 双击可运行；顺序 core → store → adapters → components → app -->
+<script src="core/dom.js"></script>
+<script src="core/util.js"></script>
+<script src="store.js"></script>
+<script src="adapters/mockAdapter.js"></script>
+<script src="adapters/httpAdapter.js"></script>
+<script src="adapters/index.js"></script>
+<script src="components/topbar.js"></script>
+<script src="components/topicbar.js"></script>
+<script src="components/leftColumn.js"></script>
+<script src="components/stage.js"></script>
+<script src="components/rightColumn.js"></script>
+<script src="components/hand.js"></script>
+<script src="components/drawer.js"></script>
+<script src="components/finale.js"></script>
+<script src="components/overlays.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

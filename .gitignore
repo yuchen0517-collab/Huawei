@@ -1,0 +1,12 @@
+.codeartsdoer/
+.arts/
+.merkle-snapshot.json
+logs/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+node_modules/
+demo/raw/
+*.mp4
