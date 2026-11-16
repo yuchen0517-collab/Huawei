@@ -174,3 +174,40 @@ us 不变是夹具的偶然：us 的 ideal 到 `range.min` 的距离恰好等于
 4. 明确 `terminal_rules` 三字段的冻结语义与值域：
    `allow_walk_away` / `accept_requires_no_open_issue`（注意单数） / `partial_agreement_allowed`。
 5. 若需要“假设—条款”可追溯，请把 `assumptions[].affects` 保留在契约中并说明用途。
+## 9. 11-16 交付日状态
+
+### 9.1 集成层完成度自评
+
+| 能力 | 状态 | 依据 |
+|---|---|---|
+| B→C 场景适配层（唯一转换实现） | **完成** | `adapter/scenario_adapter.py` 910 行；`convert_b_scenario` 直接委托 `adapt_scenario`，A 的旧转换器已废除（`tests/test_bridge.py::ConvertDelegationTest` 断言输出相等） |
+| 引擎收口（状态/结算/终局/审计/replay） | **完成** | `engine/{state,core,validator,terminal,indices}.py`；`demo.py` 四项指标全通 |
+| 隐藏底牌隔离对抗测试 | **完成** | `tests/test_isolation_adversarial.py` 843 行 / 24 条，三类诱导零泄露 |
+| 多智能体发言调度 | **完成** | `engine/scheduler.py` 93 行 + `tests/test_scheduler.py` 186 行 / 12 条 |
+| A 侧复盘链路接通 | **完成（由 A 完成，C 不重复接）** | A 的 `1f508b4` 在 `api.py` 接通 debrief/evaluate；C 分支该目录与 A 逐字节一致（见 `docs/RECONCILE_A_C_1116.md`） |
+
+### 9.2 本次交付日改动清单
+
+| 改动 | 位置 | 说明 |
+|---|---|---|
+| K4：`action_points_per_round` 5→3 | `load_scenario_bridge.py::make_scenario_with_warnings` | 引擎默认 / `demo_scenario.json` / B 场景适配默认 / A 书面口径均为 3，原 5 为历史遗留 |
+| K4 回归测试 | `tests/test_bridge.py::MakeScenarioRegressionTest::test_action_points_per_round_is_three` | 断言 `make_scenario()["action_points_per_round"] == 3` |
+| 单复数双读端到端证明测试 | `tests/test_bridge.py::BSingularTerminalRuleTest::test_b_scenario_singular_terminal_rule_enforced` | 用真实夹具 `scenarios/from_b_chip_controls.json` 走完整加载链，证明「有未决条款 accept 被拒 + 状态零推进 + 清空后 accept 成功」 |
+| A/C 目录差异核对报告 | `docs/RECONCILE_A_C_1116.md` | 只读比对；两分支 `C 11.12 三指数/` tree 哈希相同（`25d9802`），39 文件零差异 |
+
+### 9.3 已知边界与待办（答辩用，如实列出）
+
+1. **`speaker_score`（四维发言评分）未实现。** 归属已由 A 接口答复第三轮 Q3 + D 的
+   state-contract 评审 §5 划给 C 的“口径与落库”，但 A、D 均明确**本轮不出接口、
+   终局面板按 null 态渲染**，故本轮不实现，列为交付后 backlog。
+2. **`est_confidence`（对方态势可信度）未产出。** D 已裁决改为定性分级
+   `high/mid/low/unknown` 由 D 前端推导；C 侧只预留字段、默认不填。
+3. **K4（action_points 3 vs 5）仍待 D 签字。** 本仓库已统一取 3；若 D 改判 5，
+   需同步修改 `scenarios/demo_scenario.json`、B 场景适配默认值，并通知 A 修订
+   对 C/D 的书面口径。**不要把“C 已改为 3”当成 D 已同意。**
+4. **B 契约仍缺四个字段**：`index_rules`、`issues[].initial`、`deadlock_rounds`、
+   `action_points_per_round`。现由适配层推导或借用 `demo_scenario.json` 的表，
+   需 B 补正式来源（B 出题材、C 转场景 JSON 的分工不变）。
+5. **`from_b_chip_controls.json` 的单数键 `accept_requires_no_open_issue` 不改。**
+   它是 B 冻结契约（`scenario.schema.json` 的 `terminal_rules.required` 写单数且
+   `additionalProperties: false`）；引擎读复数、由适配层双读翻译，已在 9.2 加证明测试。

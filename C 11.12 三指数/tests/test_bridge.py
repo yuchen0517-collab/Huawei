@@ -263,6 +263,14 @@ class MakeScenarioRegressionTest(unittest.TestCase):
         else:
             self.assertEqual(len(fallback), 1)
 
+    def test_action_points_per_round_is_three(self):
+        """K4 裁决取 3，防止 make_scenario 的硬编码 5 回归。
+
+        引擎默认（core/state）、demo_scenario.json、B 场景适配默认、A 对 C/D 的
+        书面口径均为 3；只有本函数的 make_scenario 曾是历史遗留的 5。
+        """
+        self.assertEqual(self.scenario["action_points_per_round"], 3)
+
     def test_batna_none_keeps_evaluation_shape(self):
         engine = RulesEngine(make_scenario(), session_id="bridge-batna")
         steps = (
@@ -287,6 +295,80 @@ class MakeScenarioRegressionTest(unittest.TestCase):
         self.assertIsNone(us_entry["batna"])
         self.assertIsNone(us_entry["net_gain"])
         self.assertIsNone(us_entry["better_than_batna"])
+
+
+class BSingularTerminalRuleTest(unittest.TestCase):
+    """证明 B 契约单数键 accept_requires_no_open_issue 经适配层双读后，引擎的未决条款拦截正常生效。
+
+    此键名是 B 冻结契约（scenario.schema.json 的 terminal_rules.required 写的就是
+    单数且 additionalProperties: false），**不是拼写错误，不得修改**。
+    from_b_chip_controls.json 是 B 格式文件，经 load_scenario() → is_b_scenario()
+    → convert_b_scenario() → adapter.adapt_scenario() 加载；适配层把单数优先翻译为
+    引擎要的复数 accept_requires_no_open_issues，故线上唯一路径的拦截是生效的。
+    本测试即端到端证据，用于关闭成员A 在接口答复第二轮附2、第三轮附4 反复提出的疑虑。
+    """
+
+    def test_b_scenario_singular_terminal_rule_enforced(self):
+        scenario = load_scenario(B_SCENARIO_PATH)
+
+        # 1) 单数键已被适配层正确翻译为引擎使用的复数键。
+        self.assertIs(
+            scenario["terminal_rules"]["accept_requires_no_open_issues"], True
+        )
+        self.assertEqual(scenario["scenario_id"], "scn_chip_001")
+
+        engine = RulesEngine(scenario, session_id="bridge-singular")
+        self.assertEqual(len(engine.state.open_issues), 3)
+
+        # 铺垫：双方各出 1 条报价，使 accept 有对手报价，但仍遗留「争端解决渠道」未表态。
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-1", "cn", "offer", {"受管制先进制程门槛": 18})
+        )
+        self.assertTrue(ok, f"sing-1: {code} {message}")
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-2", "us", "counter_offer", {"逐案许可有效期": 18})
+        )
+        self.assertTrue(ok, f"sing-2: {code} {message}")
+        engine.next_round()
+        self.assertEqual(engine.state.round, 2)
+        self.assertIn("争端解决渠道", engine.state.open_issues)
+
+        # 2) 仍有未决条款时 accept 被拒，且状态零推进（round / current_version / status 不变）。
+        before = (
+            engine.state.round,
+            engine.state.current_version,
+            engine.state.status,
+            engine.state.action_points,
+            engine.state.terminal,
+        )
+        ok, code, message, events = engine.submit_action(
+            make_action("sing-3", "cn", "accept")
+        )
+        self.assertFalse(ok)
+        self.assertEqual(code, "AGREEMENT_HAS_OPEN_ISSUES")
+        self.assertIn("争端解决渠道", message)
+        self.assertEqual(events, [])
+        after = (
+            engine.state.round,
+            engine.state.current_version,
+            engine.state.status,
+            engine.state.action_points,
+            engine.state.terminal,
+        )
+        self.assertEqual(before, after)
+
+        # 3) 把最后一个条款谈定、open_issues 清空后 accept 成功。
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-4", "us", "counter_offer", {"争端解决渠道": "bilateral"})
+        )
+        self.assertTrue(ok, f"sing-4: {code} {message}")
+        self.assertEqual(engine.state.open_issues, [])
+
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-5", "cn", "accept")
+        )
+        self.assertTrue(ok, f"sing-5: {code} {message}")
+        self.assertEqual(engine.state.terminal["type"], "FULL_AGREEMENT")
 
 
 class EvaluateForTest(unittest.TestCase):
