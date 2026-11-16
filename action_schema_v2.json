@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://diplomat.local/schema/action-v2.json",
+  "title": "外交谈判行动 v2",
+  "description": "v2 在 v1 基础上增加 card_payload 并收紧三条规则：①报价类行动必须至少修改一条条款（关闭空 patch 推进版本号的空转漏洞）；②非报价行动不得修改条款；③card_id 为空时不得携带 card_payload。卡牌语义见 card_registry.json，判定见 negotiation_rules.py。",
+  "type": "object",
+  "required": [
+    "action_id",
+    "actor",
+    "action_type",
+    "card_id",
+    "offer_patch",
+    "conditions",
+    "expected_effect",
+    "public_message"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "action_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "offer",
+        "counter_offer",
+        "conditional_exchange",
+        "accept",
+        "reject",
+        "final_offer",
+        "walk_away",
+        "probe",
+        "statement"
+      ]
+    },
+    "card_id": {
+      "type": ["string", "null"],
+      "description": "策略卡编号；基础行动（报价／接受／拒绝／退出）为 null。"
+    },
+    "card_payload": {
+      "type": "object",
+      "description": "非报价类卡牌的载荷：探询目标、程序选项或承诺文本。报价类卡牌使用 offer_patch，不得携带本字段。",
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "被探询方 party id。"
+        },
+        "clause": {
+          "type": "string",
+          "description": "可选：希望探询的具体议题名。"
+        },
+        "option": {
+          "type": "string",
+          "description": "程序选项，例如休会时长或调解方。"
+        },
+        "text": {
+          "type": "string",
+          "description": "公开承诺的内容。"
+        },
+        "condition": {
+          "type": "string",
+          "description": "可选：承诺的生效条件。"
+        }
+      }
+    },
+    "offer_patch": {
+      "type": "object",
+      "description": "需要修改的议题条款，键为议题名。",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["option", "note"],
+        "additionalProperties": false,
+        "properties": {
+          "option": {
+            "type": ["string", "number"]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "v2 起降级为自由文本备注：生效条件、履约节点、退出条款必须写成 offer_patch 里的结构化条款（见 scenario.clause_roles），否则无法做双方比对与 coverage 校验。"
+    },
+    "expected_effect": {
+      "type": "string"
+    },
+    "public_message": {
+      "type": "string"
+    },
+    "effect_labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "magnitude"],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "constructive_proposal",
+              "cite_rules",
+              "hardline_stance",
+              "broken_promise",
+              "personal_attack",
+              "redline_provoke",
+              "procedural",
+              "diplomatic_reframe",
+              "protect_ally",
+              "keep_promise",
+              "betray_ally",
+              "vague_stance",
+              "conditional_concession"
+            ]
+          },
+          "magnitude": {
+            "type": "string",
+            "enum": ["slight", "moderate", "major"]
+          },
+          "clause": {
+            "type": ["string", "null"]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "报价类行动必须至少修改一条条款，否则会产生一个没有内容的新版本，并免费重置 rounds_without_offer。",
+      "if": {
+        "properties": {
+          "action_type": {
+            "enum": ["offer", "counter_offer", "conditional_exchange", "final_offer"]
+          }
+        },
+        "required": ["action_type"]
+      },
+      "then": {
+        "properties": {
+          "offer_patch": {"minProperties": 1}
+        }
+      },
+      "else": {
+        "properties": {
+          "offer_patch": {"maxProperties": 0}
+        }
+      }
+    },
+    {
+      "$comment": "没有卡牌就没有载荷。",
+      "if": {
+        "properties": {"card_id": {"type": "null"}},
+        "required": ["card_id"]
+      },
+      "then": {
+        "properties": {
+          "card_payload": {"maxProperties": 0}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "schema_version": 2,
+  "cooldown_unit": "round",
+  "cooldown_semantics": "在 R 回合使用后，R+1 … R+cooldown 回合内不可再用，最早可用回合为 R + cooldown + 1。例：cooldown=1 表示「下一回合不能用」。",
+  "strict": {
+    "max_deferrals": 1,
+    "require_card_for_statement": true,
+    "allow_self_revision": false
+  },
+  "families": {
+    "shaping": {
+      "name": "报价塑造",
+      "quote_board": true,
+      "produces": "version",
+      "note": "改变条款结构或交换方式，必须产生新版本。"
+    },
+    "clause_control": {
+      "name": "条款控制",
+      "quote_board": true,
+      "produces": "version",
+      "note": "修法 A：不再写入 conditions 自由文本，而是写入场景声明的结构化条款（clause_roles）。"
+    },
+    "closing": {
+      "name": "终局",
+      "quote_board": true,
+      "produces": "version+closing",
+      "note": "最后报价，声明后不得再改条款。"
+    },
+    "info": {
+      "name": "信息试探",
+      "quote_board": false,
+      "produces": "information",
+      "note": "产出进入信息集，不进入 agreement，因此不产生版本。"
+    },
+    "procedure": {
+      "name": "进程控制",
+      "quote_board": false,
+      "produces": "procedure",
+      "note": "改变 phase、时钟或第三方介入，不产生版本。"
+    },
+    "stance": {
+      "name": "立场表态",
+      "quote_board": false,
+      "produces": "commitment",
+      "note": "进入承诺账本，不产生版本。"
+    }
+  },
+  "cards": [
+    {
+      "id": "anchor_offer",
+      "name": "锚定报价",
+      "family": "shaping",
+      "quote_board": true,
+      "action_types": ["offer"],
+      "payload": {"kind": "offer_patch", "required": []},
+      "cooldown": 1,
+      "uses_per_game": null
+    },
+    {
+      "id": "conditional_concession",
+      "name": "条件让步",
+      "family": "shaping",
+      "quote_board": true,
+      "action_types": ["counter_offer", "offer"],
+      "payload": {"kind": "offer_patch", "required": []},
+      "cooldown": 1,
+      "uses_per_game": null
+    },
+    {
+      "id": "issue_bundle",
+      "name": "议题捆绑",
+      "family": "shaping",
+      "quote_board": true,
+      "action_types": ["conditional_exchange"],
+      "payload": {"kind": "offer_patch", "required": []},
+      "cooldown": 2,
+      "uses_per_game": null
+    },
+    {
+      "id": "issue_split",
+      "name": "分拆议题",
+      "family": "shaping",
+      "quote_board": true,
+      "action_types": ["offer", "counter_offer"],
+      "payload": {"kind": "offer_patch", "required": []},
+      "cooldown": 0,
+      "uses_per_game": 1,
+      "note": "MRV 降级实现：只允许把同一议题的两个候选选项拆成组合，不新增条款 id。"
+    },
+    {
+      "id": "effective_condition",
+      "name": "附加生效条件",
+      "family": "clause_control",
+      "quote_board": true,
+      "action_types": ["offer", "counter_offer"],
+      "payload": {"kind": "offer_patch", "required": [], "clause_role": "condition"},
+      "cooldown": 1,
+      "uses_per_game": null
+    },
+    {
+      "id": "performance_node",
+      "name": "设置履约节点",
+      "family": "clause_control",
+      "quote_board": true,
+      "action_types": ["offer", "counter_offer"],
+      "payload": {"kind": "offer_patch", "required": [], "clause_role": "performance"},
+      "cooldown": 1,
+      "uses_per_game": null
+    },
+    {
+      "id": "exit_clause",
+      "name": "加入退出条款",
+      "family": "clause_control",
+      "quote_board": true,
+      "action_types": ["offer", "counter_offer"],
+      "payload": {"kind": "offer_patch", "required": [], "clause_role": "exit"},
+      "cooldown": 1,
+      "uses_per_game": null
+    },
+    {
+      "id": "final_offer",
+      "name": "最后报价",
+      "family": "closing",
+      "quote_board": true,
+      "action_types": ["final_offer"],
+      "payload": {"kind": "offer_patch", "required": []},
+      "cooldown": 0,
+      "uses_per_game": 1
+    },
+    {
+      "id": "probe_priority",
+      "name": "探询优先级",
+      "family": "info",
+      "quote_board": false,
+      "action_types": ["probe"],
+      "payload": {"kind": "probe", "required": ["target"], "optional": ["clause"]},
+      "cooldown": 2,
+      "uses_per_game": null
+    },
+    {
+      "id": "demand_basis",
+      "name": "要求依据",
+      "family": "info",
+      "quote_board": false,
+      "action_types": ["probe"],
+      "payload": {"kind": "probe", "required": ["target"], "optional": ["clause"]},
+      "cooldown": 2,
+      "uses_per_game": null
+    },
+    {
+      "id": "verify_capacity",
+      "name": "核查履约能力",
+      "family": "info",
+      "quote_board": false,
+      "action_types": ["probe"],
+      "payload": {"kind": "probe", "required": ["target"], "optional": ["clause"]},
+      "cooldown": 3,
+      "uses_per_game": null
+    },
+    {
+      "id": "adjourn",
+      "name": "暂时休会",
+      "family": "procedure",
+      "quote_board": false,
+      "action_types": ["statement"],
+      "payload": {"kind": "procedure", "required": ["option"]},
+      "cooldown": 0,
+      "uses_per_game": 1
+    },
+    {
+      "id": "mediation",
+      "name": "请求调解",
+      "family": "procedure",
+      "quote_board": false,
+      "action_types": ["statement"],
+      "payload": {"kind": "procedure", "required": ["option"]},
+      "cooldown": 0,
+      "uses_per_game": 1
+    },
+    {
+      "id": "public_commitment",
+      "name": "公开承诺",
+      "family": "stance",
+      "quote_board": false,
+      "action_types": ["statement"],
+      "payload": {"kind": "commitment", "required": ["text"]},
+      "cooldown": 2,
+      "uses_per_game": null
+    }
+  ],
+  "basic_actions": [
+    {"action_type": "offer", "name": "报价", "quote_board": true, "card_free": true},
+    {"action_type": "counter_offer", "name": "反报价", "quote_board": true, "card_free": true},
+    {"action_type": "conditional_exchange", "name": "条件交换", "quote_board": true, "card_free": true},
+    {"action_type": "accept", "name": "接受", "quote_board": false, "card_free": true},
+    {"action_type": "reject", "name": "拒绝／维持原报价", "quote_board": false, "card_free": true},
+    {"action_type": "walk_away", "name": "宣布退出", "quote_board": false, "card_free": true}
+  ],
+  "payload_kinds": {
+    "offer_patch": {
+      "carrier": "action.offer_patch",
+      "note": "条款变更；非空即产生新版本。"
+    },
+    "probe": {
+      "carrier": "action.card_payload",
+      "required": {"target": "被探询方 party id"},
+      "optional": {"clause": "希望探询的具体议题名"}
+    },
+    "procedure": {
+      "carrier": "action.card_payload",
+      "required": {"option": "程序选项文本"},
+      "optional": {}
+    },
+    "commitment": {
+      "carrier": "action.card_payload",
+      "required": {"text": "承诺内容"},
+      "optional": {"condition": "承诺生效条件"}
+    }
+  }
+}
