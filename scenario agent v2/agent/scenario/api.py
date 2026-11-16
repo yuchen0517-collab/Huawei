@@ -31,6 +31,7 @@ from agent.scenario.compiler import (
     compile_from_narrowing,
     compile_scenario,
 )
+from agent.scenario.knowledge import build_corpus, lookup_with_hint
 from agent.scenario.models import Scenario, validate_scenario
 from agent.scenario.zopa import evaluate_deal, scenario_feasibility, suggest_deal
 
@@ -219,6 +220,32 @@ def handle_compile(body: Mapping[str, Any]) -> tuple[int, dict[str, Any]]:
     }
 
 
+def handle_evidence(scenario_id: str, body: Mapping[str, Any]) -> tuple[int, dict[str, Any]]:
+    """按议题检索公开事实依据；没有资料就返回空列表 + 建议文案。"""
+    data = load_scenario(scenario_id)
+    if data is None:
+        return 404, {"code": "SCENARIO_NOT_FOUND", "message": f"没有这个场景：{scenario_id}", "detail": None}
+
+    raw_query = body.get("query")
+    query = raw_query.strip() if isinstance(raw_query, str) else ""
+    if not query:
+        return 400, {"code": "INVALID_QUERY", "message": "query 不能为空", "detail": None}
+
+    issue_id = body.get("issue_id")
+    if issue_id is not None:
+        issue_id = str(issue_id).strip() or None
+
+    try:
+        top_k = int(body.get("top_k", 5))
+    except (TypeError, ValueError):
+        top_k = 5
+    top_k = max(1, min(20, top_k))
+
+    corpus = build_corpus(scenario=data)
+    results, hint = lookup_with_hint(query, corpus, issue_id=issue_id, top_k=top_k)
+    return 200, {"evidence": [item.to_dict() for item in results], "hint": hint}
+
+
 # ---------------------------------------------------------------------------
 # 模式一：FastAPI 路由
 # ---------------------------------------------------------------------------
@@ -246,6 +273,10 @@ def create_router():
     def _compile(body: dict = Body(...)):
         status, payload = handle_compile(body)
         return payload
+
+    @router.post("/scenario/{scenario_id}/evidence")
+    def _evidence(scenario_id: str, body: dict = Body(...)):
+        return handle_evidence(scenario_id, body)[1]
 
     return router
 
@@ -280,6 +311,9 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(status, payload)
         if method == "POST" and len(parts) == 4 and parts[3] == "check":
             status, payload = handle_check(parts[2])
+            return self._send(status, payload)
+        if method == "POST" and len(parts) == 4 and parts[3] == "evidence":
+            status, payload = handle_evidence(parts[2], body or {})
             return self._send(status, payload)
         if method == "POST" and parts == ["api", "scenario", "compile"]:
             status, payload = handle_compile(body or {})
