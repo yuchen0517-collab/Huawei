@@ -23,10 +23,25 @@ from tests import make_action
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 B_SCENARIO_PATH = os.path.join(ROOT, "scenarios", "from_b_chip_controls.json")
 DEMO_PATH = os.path.join(ROOT, "scenarios", "demo_scenario.json")
+B_V11_ROOT = os.path.abspath(os.path.join(ROOT, "..", "scenario agent v2"))
+B_V11_EXAMPLE_PATH = os.path.join(
+    B_V11_ROOT, "docs", "contracts", "scenario.example.json"
+)
+B_V11_INDEX_RULES_PATH = os.path.join(
+    B_V11_ROOT, "docs", "contracts", "index_rules.v1.json"
+)
+B_MAIN_SCENARIO_PATH = os.path.join(
+    B_V11_ROOT, "data", "scenarios", "main_chip_controls.json"
+)
 
 
 def load_b() -> dict:
     with open(B_SCENARIO_PATH, "r", encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
+def load_b_v11_json(path) -> dict:
+    with open(path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
 
 
@@ -263,6 +278,14 @@ class MakeScenarioRegressionTest(unittest.TestCase):
         else:
             self.assertEqual(len(fallback), 1)
 
+    def test_action_points_per_round_is_three(self):
+        """K4 裁决取 3，防止 make_scenario 的硬编码 5 回归。
+
+        引擎默认（core/state）、demo_scenario.json、B 场景适配默认、A 对 C/D 的
+        书面口径均为 3；只有本函数的 make_scenario 曾是历史遗留的 5。
+        """
+        self.assertEqual(self.scenario["action_points_per_round"], 3)
+
     def test_batna_none_keeps_evaluation_shape(self):
         engine = RulesEngine(make_scenario(), session_id="bridge-batna")
         steps = (
@@ -287,6 +310,178 @@ class MakeScenarioRegressionTest(unittest.TestCase):
         self.assertIsNone(us_entry["batna"])
         self.assertIsNone(us_entry["net_gain"])
         self.assertIsNone(us_entry["better_than_batna"])
+
+
+class BSingularTerminalRuleTest(unittest.TestCase):
+    """证明 B 契约单数键 accept_requires_no_open_issue 经适配层双读后，引擎的未决条款拦截正常生效。
+
+    此键名是 B 冻结契约（scenario.schema.json 的 terminal_rules.required 写的就是
+    单数且 additionalProperties: false），**不是拼写错误，不得修改**。
+    from_b_chip_controls.json 是 B 格式文件，经 load_scenario() → is_b_scenario()
+    → convert_b_scenario() → adapter.adapt_scenario() 加载；适配层把单数优先翻译为
+    引擎要的复数 accept_requires_no_open_issues，故线上唯一路径的拦截是生效的。
+    本测试即端到端证据，用于关闭成员A 在接口答复第二轮附2、第三轮附4 反复提出的疑虑。
+    """
+
+    def test_b_scenario_singular_terminal_rule_enforced(self):
+        scenario = load_scenario(B_SCENARIO_PATH)
+
+        # 1) 单数键已被适配层正确翻译为引擎使用的复数键。
+        self.assertIs(
+            scenario["terminal_rules"]["accept_requires_no_open_issues"], True
+        )
+        self.assertEqual(scenario["scenario_id"], "scn_chip_001")
+
+        engine = RulesEngine(scenario, session_id="bridge-singular")
+        self.assertEqual(len(engine.state.open_issues), 3)
+
+        # 铺垫：双方各出 1 条报价，使 accept 有对手报价，但仍遗留「争端解决渠道」未表态。
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-1", "cn", "offer", {"受管制先进制程门槛": 18})
+        )
+        self.assertTrue(ok, f"sing-1: {code} {message}")
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-2", "us", "counter_offer", {"逐案许可有效期": 18})
+        )
+        self.assertTrue(ok, f"sing-2: {code} {message}")
+        engine.next_round()
+        self.assertEqual(engine.state.round, 2)
+        self.assertIn("争端解决渠道", engine.state.open_issues)
+
+        # 2) 仍有未决条款时 accept 被拒，且状态零推进（round / current_version / status 不变）。
+        before = (
+            engine.state.round,
+            engine.state.current_version,
+            engine.state.status,
+            engine.state.action_points,
+            engine.state.terminal,
+        )
+        ok, code, message, events = engine.submit_action(
+            make_action("sing-3", "cn", "accept")
+        )
+        self.assertFalse(ok)
+        self.assertEqual(code, "AGREEMENT_HAS_OPEN_ISSUES")
+        self.assertIn("争端解决渠道", message)
+        self.assertEqual(events, [])
+        after = (
+            engine.state.round,
+            engine.state.current_version,
+            engine.state.status,
+            engine.state.action_points,
+            engine.state.terminal,
+        )
+        self.assertEqual(before, after)
+
+        # 3) 把最后一个条款谈定、open_issues 清空后 accept 成功。
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-4", "us", "counter_offer", {"争端解决渠道": "bilateral"})
+        )
+        self.assertTrue(ok, f"sing-4: {code} {message}")
+        self.assertEqual(engine.state.open_issues, [])
+
+        ok, code, message, _ = engine.submit_action(
+            make_action("sing-5", "cn", "accept")
+        )
+        self.assertTrue(ok, f"sing-5: {code} {message}")
+        self.assertEqual(engine.state.terminal["type"], "FULL_AGREEMENT")
+
+
+class BV11BridgeCompatibilityTest(unittest.TestCase):
+    def test_global_initial_expands_and_aliases_through_load(self):
+        source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+        source["parties"][0]["party_id"] = "P1"
+        source["parties"][1]["party_id"] = "P2"
+        private_state = source["private_state_by_party"]
+        source["private_state_by_party"] = {
+            "P1": private_state["cn"],
+            "P2": private_state["us"],
+        }
+        table = load_b_v11_json(B_V11_INDEX_RULES_PATH)
+        table["initial"] = {"image": 66, "trust": 77}
+        source["index_rules"] = table
+        handle = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+        handle.close()
+        try:
+            with open(handle.name, "w", encoding="utf-8") as target:
+                json.dump(source, target, ensure_ascii=False)
+            scenario = load_scenario(handle.name)
+        finally:
+            os.unlink(handle.name)
+
+        self.assertEqual([party["id"] for party in scenario["parties"]], ["cn", "us"])
+        self.assertEqual(
+            scenario["index_rules"]["initial"],
+            {
+                "cn": {"image": 66, "trust": 77},
+                "us": {"image": 66, "trust": 77},
+            },
+        )
+        engine = RulesEngine(scenario, session_id="bridge-b-v11-initial")
+        for party in ("cn", "us"):
+            self.assertEqual(engine.state.indices[party]["image"], 66)
+            self.assertEqual(engine.state.indices[party]["trust"], 77)
+
+    def test_real_main_chip_controls_end_to_end(self):
+        scenario = load_scenario(B_MAIN_SCENARIO_PATH)
+        self.assertEqual(scenario["scenario_id"], "scn-chip-controls-0001")
+        self.assertEqual(scenario["action_points_per_round"], 3)
+        self.assertEqual(scenario["deadlock_rounds"], 2)
+        self.assertEqual(
+            scenario["index_rules"]["initial"]["cn"], {"image": 60, "trust": 45}
+        )
+        self.assertEqual(
+            scenario["index_rules"]["initial"]["us"], {"image": 55, "trust": 40}
+        )
+        engine = RulesEngine(scenario, session_id="bridge-main-chip-v11")
+        first_round = (
+            ("main-1", "cn", "offer", {"芯片算力门槛": 1200, "许可审批时限": 75}),
+            (
+                "main-2",
+                "us",
+                "counter_offer",
+                {"芯片算力门槛": 1000, "第三国再出口限制": "O3"},
+            ),
+        )
+        for action_id, actor, action_type, patch in first_round:
+            ok, code, message, _ = engine.submit_action(
+                make_action(action_id, actor, action_type, patch)
+            )
+            self.assertTrue(ok, f"{action_id}: {code} {message}")
+        self.assertEqual(engine.state.round, 1)
+        engine.next_round()
+        self.assertEqual(engine.state.round, 2)
+        second_round = (
+            (
+                "main-3",
+                "cn",
+                "counter_offer",
+                {
+                    "芯片算力门槛": 1200,
+                    "第三国再出口限制": "O2",
+                    "关键矿产出口安排": "O2",
+                },
+            ),
+            (
+                "main-4",
+                "us",
+                "counter_offer",
+                {
+                    "芯片算力门槛": 1200,
+                    "许可审批时限": 75,
+                    "第三国再出口限制": "O2",
+                    "关键矿产出口安排": "O2",
+                },
+            ),
+            ("main-5", "us", "accept", None),
+        )
+        for action_id, actor, action_type, patch in second_round:
+            ok, code, message, _ = engine.submit_action(
+                make_action(action_id, actor, action_type, patch)
+            )
+            self.assertTrue(ok, f"{action_id}: {code} {message}")
+        self.assertEqual(engine.state.terminal["type"], "FULL_AGREEMENT")
+        self.assertEqual(engine.evaluate()["agreement_quality"]["coverage"], 1.0)
+        self.assertTrue(engine.replay()["consistent"])
 
 
 class EvaluateForTest(unittest.TestCase):

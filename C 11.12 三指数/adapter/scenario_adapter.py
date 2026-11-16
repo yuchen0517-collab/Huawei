@@ -1,7 +1,7 @@
 """成员B 场景契约 → 成员C 引擎场景的单向只读适配层。
 
 设计约束：
-- 不改 B 的契约（urn:diplomat:schema:scenario:1.0），不改引擎核心逻辑；
+- 不改 B 的契约（urn:diplomat:schema:scenario:1.0/1.1），不改引擎核心逻辑；
 - B 侧字段名一律不改，只在中间层翻译成引擎已冻结的 C 侧格式；
 - 转换过程完全确定，不使用随机、时间、UUID、网络或 LLM；
 - 所有 warning 都是结构化 dict：{"code", "field", "message"}。
@@ -107,6 +107,42 @@ def _as_dict(value) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+def _adapt_index_rules(rules: dict, party_ids: List[str]) -> Tuple[dict, bool]:
+    initial = _as_dict(rules.get("initial"))
+    engine_keys = ("scale", "sensitivity", "image_actions", "trust_actions")
+    if any(key in rules for key in engine_keys) or any(
+        isinstance(value, dict) for value in initial.values()
+    ):
+        return deepcopy(rules), False
+
+    adapted = deepcopy(DEFAULT_INDEX_RULES)
+    adapted["initial"] = {
+        party_id: {
+            "image": initial.get("image", 50),
+            "trust": initial.get("trust", 50),
+        }
+        for party_id in party_ids
+    }
+    adapted["sensitivity"] = {
+        party_id: {"image": 1.0, "trust": 1.0} for party_id in party_ids
+    }
+    for label, levels in rules.items():
+        if label == "initial" or not isinstance(levels, dict):
+            continue
+        for magnitude, deltas in levels.items():
+            if not isinstance(deltas, dict):
+                continue
+            if "image_delta" in deltas:
+                adapted["image_actions"].setdefault(label, {})[magnitude] = deepcopy(
+                    deltas["image_delta"]
+                )
+            if "trust_delta" in deltas:
+                adapted["trust_actions"].setdefault(label, {})[magnitude] = deepcopy(
+                    deltas["trust_delta"]
+                )
+    return adapted, True
+
+
 def _normalized_private_state(raw) -> dict:
     """private_state_by_party 的键按小写归一。
 
@@ -175,6 +211,30 @@ def validate_b_contract(b_scenario) -> List[str]:
                 "$.terminal_rules: accept_requires_no_open_issue 与 "
                 "accept_requires_no_open_issues 同时出现且取值冲突。"
             )
+        if "deadlock_rounds" in terminal_rules:
+            rounds = terminal_rules["deadlock_rounds"]
+            if not isinstance(rounds, int) or isinstance(rounds, bool):
+                errors.append("$.terminal_rules.deadlock_rounds: 必须是非 bool 整数。")
+            elif not 2 <= rounds <= 10:
+                errors.append("$.terminal_rules.deadlock_rounds: 必须在 2～10 范围内。")
+            elif (
+                isinstance(max_rounds, int)
+                and not isinstance(max_rounds, bool)
+                and rounds > max_rounds
+            ):
+                errors.append(
+                    "$.terminal_rules.deadlock_rounds: 不得大于 max_rounds。"
+                )
+
+    runtime = b_scenario.get("runtime")
+    if "runtime" in b_scenario and not isinstance(runtime, dict):
+        errors.append("$.runtime: 必须是对象。")
+    elif isinstance(runtime, dict) and "action_points_per_round" in runtime:
+        points = runtime["action_points_per_round"]
+        if not isinstance(points, int) or isinstance(points, bool):
+            errors.append("$.runtime.action_points_per_round: 必须是非 bool 整数。")
+        elif not 1 <= points <= 5:
+            errors.append("$.runtime.action_points_per_round: 必须在 1～5 范围内。")
 
     parties = b_scenario.get("parties")
     party_ids: List[str] = []
@@ -847,17 +907,33 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
         ),
     }
 
+    deadlock_rounds = terminal_rules_source.get(
+        "deadlock_rounds", DEFAULT_DEADLOCK_ROUNDS
+    )
+    runtime_source = _as_dict(b_scenario.get("runtime"))
+    action_points_per_round = runtime_source.get(
+        "action_points_per_round", DEFAULT_ACTION_POINTS_PER_ROUND
+    )
+
     provided_index_rules = b_scenario.get("index_rules")
     if isinstance(provided_index_rules, dict) and provided_index_rules:
-        index_rules = deepcopy(provided_index_rules)
-        warnings.append(
-            _warning(
-                "INDEX_RULES_PRESERVED",
-                "$.index_rules",
-                "输入场景自带 index_rules（上游组装层补全），适配层原样保留，"
-                "不使用默认查表。",
+        index_rules, converted = _adapt_index_rules(provided_index_rules, party_ids)
+        if converted:
+            warnings.append(
+                _warning(
+                    "INDEX_RULES_ADAPTED",
+                    "$.index_rules",
+                    "B 1.1 全局初值已展开到各参与方，image/trust 行为增量已转换为引擎查表。",
+                )
             )
-        )
+        else:
+            warnings.append(
+                _warning(
+                    "INDEX_RULES_PRESERVED",
+                    "$.index_rules",
+                    "输入场景自带引擎格式 index_rules，适配层原样保留，不使用默认查表。",
+                )
+            )
     else:
         index_rules = deepcopy(DEFAULT_INDEX_RULES)
         warnings.append(
@@ -879,8 +955,8 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
         # 引擎只读 assumptions（字符串数组），全程忽略本键。
         "assumptions_detail": deepcopy(b_scenario["assumptions"]),
         "max_rounds": b_scenario["max_rounds"],
-        "deadlock_rounds": DEFAULT_DEADLOCK_ROUNDS,
-        "action_points_per_round": DEFAULT_ACTION_POINTS_PER_ROUND,
+        "deadlock_rounds": deadlock_rounds,
+        "action_points_per_round": action_points_per_round,
         "parties": parties,
         "clauses": clauses,
         "index_rules": index_rules,

@@ -21,10 +21,25 @@ from tests import make_action
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 B_SCENARIO_PATH = os.path.join(ROOT, "scenarios", "from_b_chip_controls.json")
+B_V11_ROOT = os.path.abspath(os.path.join(ROOT, "..", "scenario agent v2"))
+B_V11_EXAMPLE_PATH = os.path.join(
+    B_V11_ROOT, "docs", "contracts", "scenario.example.json"
+)
+B_V11_INDEX_RULES_PATH = os.path.join(
+    B_V11_ROOT, "docs", "contracts", "index_rules.v1.json"
+)
+B_MAIN_SCENARIO_PATH = os.path.join(
+    B_V11_ROOT, "data", "scenarios", "main_chip_controls.json"
+)
 
 
 def b_scenario() -> dict:
     with open(B_SCENARIO_PATH, "r", encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
+def load_b_v11_json(path) -> dict:
+    with open(path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
 
 
@@ -297,6 +312,117 @@ class AdapterContractTest(unittest.TestCase):
 
 def _adapt_with_warnings(source: dict):
     return adapt_scenario_with_warnings(source)
+
+
+class AdapterV11CompatibilityTest(unittest.TestCase):
+    def test_explicit_runtime_and_deadlock_rounds_reach_engine(self):
+        source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+        source["runtime"]["action_points_per_round"] = 5
+        source["terminal_rules"]["deadlock_rounds"] = 7
+        scenario = adapt_scenario(source)
+        self.assertEqual(scenario["action_points_per_round"], 5)
+        self.assertEqual(scenario["deadlock_rounds"], 7)
+        engine = RulesEngine(scenario, session_id="b-v11-runtime")
+        self.assertEqual(engine.state.action_points, 5)
+        self.assertEqual(engine.scenario["deadlock_rounds"], 7)
+
+    def test_real_main_scenario_uses_defaults(self):
+        source = load_b_v11_json(B_MAIN_SCENARIO_PATH)
+        source.pop("runtime", None)
+        source.pop("index_rules", None)
+        source["terminal_rules"].pop("deadlock_rounds", None)
+        scenario = adapt_scenario(source)
+        self.assertEqual(scenario["action_points_per_round"], 3)
+        self.assertEqual(scenario["deadlock_rounds"], 2)
+        self.assertEqual(scenario["index_rules"], DEFAULT_INDEX_RULES)
+
+    def test_global_initial_and_thirteen_labels_are_preserved(self):
+        source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+        table = load_b_v11_json(B_V11_INDEX_RULES_PATH)
+        table["initial"] = {"image": 66, "trust": 77}
+        source["index_rules"] = table
+        snapshot = deepcopy(source)
+        scenario = adapt_scenario(source)
+        self.assertEqual(source, snapshot)
+        self.assertEqual(scenario["index_rules"]["scale"], [0, 100])
+        self.assertEqual(
+            scenario["index_rules"]["initial"],
+            {
+                "cn": {"image": 66, "trust": 77},
+                "us": {"image": 66, "trust": 77},
+            },
+        )
+        self.assertEqual(
+            scenario["index_rules"]["sensitivity"],
+            {
+                "cn": {"image": 1.0, "trust": 1.0},
+                "us": {"image": 1.0, "trust": 1.0},
+            },
+        )
+        for label, levels in table.items():
+            if label == "initial":
+                continue
+            for magnitude, deltas in levels.items():
+                self.assertEqual(
+                    scenario["index_rules"]["image_actions"][label][magnitude],
+                    deltas["image_delta"],
+                )
+                self.assertEqual(
+                    scenario["index_rules"]["trust_actions"][label][magnitude],
+                    deltas["trust_delta"],
+                )
+
+        engine = RulesEngine(scenario, session_id="b-v11-labels")
+        ok, code, message, _ = engine.submit_action(
+            make_action(
+                action_id="b-v11-label",
+                actor="cn",
+                action_type="statement",
+                labels=[{"label": "cite_rules", "magnitude": "major"}],
+            )
+        )
+        self.assertTrue(ok, f"{code}: {message}")
+        self.assertEqual(engine.state.indices["cn"]["image"], 72)
+        self.assertEqual(engine.state.indices["cn"]["trust"], 80)
+
+    def test_invalid_action_points_are_rejected(self):
+        for value in (True, 0, 6, 1.5, "5", None):
+            with self.subTest(value=value):
+                source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+                source["runtime"]["action_points_per_round"] = value
+                with self.assertRaises(ScenarioContractError) as context:
+                    adapt_scenario(source)
+                self.assertIn("action_points_per_round", str(context.exception))
+
+    def test_invalid_deadlock_rounds_are_rejected(self):
+        for value in (True, 1, 11, 2.5, "7", None):
+            with self.subTest(value=value):
+                source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+                source["terminal_rules"]["deadlock_rounds"] = value
+                with self.assertRaises(ScenarioContractError) as context:
+                    adapt_scenario(source)
+                self.assertIn("deadlock_rounds", str(context.exception))
+
+    def test_deadlock_rounds_greater_than_max_rounds_is_rejected(self):
+        source = load_b_v11_json(B_V11_EXAMPLE_PATH)
+        source["max_rounds"] = 8
+        source["terminal_rules"]["deadlock_rounds"] = 9
+        with self.assertRaises(ScenarioContractError) as context:
+            adapt_scenario(source)
+        self.assertIn("max_rounds", str(context.exception))
+
+    def test_per_party_index_rules_remain_compatible(self):
+        source = b_scenario()
+        custom = deepcopy(DEFAULT_INDEX_RULES)
+        custom["initial"]["cn"] = {"image": 66, "trust": 77}
+        custom["initial"]["us"] = {"image": 66, "trust": 77}
+        source["index_rules"] = custom
+        scenario = adapt_scenario(source)
+        self.assertEqual(scenario["index_rules"], custom)
+        engine = RulesEngine(scenario, session_id="c-per-party-initial")
+        for party in ("cn", "us"):
+            self.assertEqual(engine.state.indices[party]["image"], 66)
+            self.assertEqual(engine.state.indices[party]["trust"], 77)
 
 
 class AdapterEngineTest(unittest.TestCase):

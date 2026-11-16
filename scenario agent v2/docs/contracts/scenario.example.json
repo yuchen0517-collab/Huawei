@@ -46,7 +46,8 @@
         "min": 7,
         "max": 28,
         "step": 1
-      }
+      },
+      "initial": 18
     },
     {
       "issue_id": "license_validity_months",
@@ -57,7 +58,8 @@
         "min": 6,
         "max": 36,
         "step": 6
-      }
+      },
+      "initial": 18
     },
     {
       "issue_id": "dispute_forum",
@@ -80,7 +82,8 @@
           "label": "单边国内法程序",
           "order": 3
         }
-      ]
+      ],
+      "initial": "bilateral"
     }
   ],
   "public_facts": [
@@ -250,11 +253,15 @@
   "terminal_rules": {
     "allow_walk_away": false,
     "accept_requires_no_open_issue": true,
-    "partial_agreement_allowed": true
+    "partial_agreement_allowed": true,
+    "deadlock_rounds": 2
   },
   "negotiability": {
     "verdict": "needs_narrowing",
     "zopa_exists": true,
     "notes": "export_license_scope 存在 14 至 21nm 的重叠区间；dispute_forum 的 wto 与 bilateral 亦有交集。需先收窄 license_validity_months 的 12 至 24 个月区间，并确认硬红线是否可被技术性安排绕开。"
+  },
+  "runtime": {
+    "action_points_per_round": 3
   }
 }

@@ -450,7 +450,8 @@ def make_scenario_with_warnings(
             },
         ],
         "clauses": clauses,
-        "action_points_per_round": 5,
+        # K4：每轮行动点统一为 3（引擎默认/demo/B场景/A口径一致）；原硬编码 5 为历史遗留，11-16 修正
+        "action_points_per_round": 3,
         "max_rounds": 12,
         "deadlock_rounds": 2,
         "index_rules": index_rules,

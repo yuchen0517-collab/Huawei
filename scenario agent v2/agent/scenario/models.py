@@ -40,6 +40,7 @@ __all__ = [
     "Negotiability",
     "Scenario",
     "validate_scenario",
+    "validate_index_rules",
 ]
 
 
@@ -76,11 +77,14 @@ class Issue:
     range: IssueRange | None = None
     options: list[Option] = field(default_factory=list)
     description: str | None = None
+    initial: float | str | None = None
+    initial_ref: str | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Issue":
         item = data if isinstance(data, Mapping) else {}
         raw_range = item.get("range")
+        raw_initial = item.get("initial")
         return cls(
             issue_id=_text(item.get("issue_id")),
             name=_text(item.get("name")),
@@ -100,6 +104,8 @@ class Issue:
                 for option in _dict_list(item.get("options"))
             ],
             description=item.get("description") if isinstance(item.get("description"), str) else None,
+            initial=raw_initial if isinstance(raw_initial, (int, float, str)) and not isinstance(raw_initial, bool) else None,
+            initial_ref=item.get("initial_ref") if isinstance(item.get("initial_ref"), str) else None,
         )
 
 
@@ -245,14 +251,17 @@ class TerminalRules:
     allow_walk_away: bool
     accept_requires_no_open_issue: bool
     partial_agreement_allowed: bool
+    deadlock_rounds: int = 2
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "TerminalRules":
         item = data if isinstance(data, Mapping) else {}
+        # 只接受真正的 bool：不做 bool() 强转，避免字符串 "false" 变成 True
         return cls(
-            allow_walk_away=bool(item.get("allow_walk_away", False)),
-            accept_requires_no_open_issue=bool(item.get("accept_requires_no_open_issue", False)),
-            partial_agreement_allowed=bool(item.get("partial_agreement_allowed", False)),
+            allow_walk_away=_bool_or_false(item.get("allow_walk_away")),
+            accept_requires_no_open_issue=_bool_or_false(item.get("accept_requires_no_open_issue")),
+            partial_agreement_allowed=_bool_or_false(item.get("partial_agreement_allowed")),
+            deadlock_rounds=_int_or(item.get("deadlock_rounds"), 2),
         )
 
 
@@ -286,6 +295,7 @@ class Scenario:
     max_rounds: int = 1
     terminal_rules: TerminalRules | None = None
     negotiability: Negotiability | None = None
+    runtime: dict[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Scenario":
@@ -298,6 +308,7 @@ class Scenario:
         } if isinstance(raw_private, Mapping) else {}
         raw_terminal = item.get("terminal_rules")
         raw_negotiability = item.get("negotiability")
+        raw_runtime = item.get("runtime")
         return cls(
             scenario_id=_text(item.get("scenario_id")),
             title=_text(item.get("title")),
@@ -311,6 +322,7 @@ class Scenario:
             max_rounds=_int_or_zero(item.get("max_rounds")) or 1,
             terminal_rules=TerminalRules.from_dict(raw_terminal) if isinstance(raw_terminal, Mapping) else None,
             negotiability=Negotiability.from_dict(raw_negotiability) if isinstance(raw_negotiability, Mapping) else None,
+            runtime=dict(raw_runtime) if isinstance(raw_runtime, Mapping) else None,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -337,6 +349,17 @@ def _number_or_zero(value: Any) -> float:
 def _int_or_zero(value: Any) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         return 0
+    return value
+
+
+def _bool_or_false(value: Any) -> bool:
+    """只认 JSON 布尔；字符串 "false"、1、None 一律按 False 处理，不做真值转换。"""
+    return value if isinstance(value, bool) else False
+
+
+def _int_or(value: Any, default: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
     return value
 
 
@@ -940,11 +963,289 @@ def _check_r11_assumption_traceable(data: Mapping[str, Any]) -> list[Problem]:
     return problems
 
 
+# ---------------------------------------------------------------------------
+# R12 终局规则：三个布尔是冻结语义，缺失 / 非布尔一律报错，禁止 bool() 兜底
+# ---------------------------------------------------------------------------
+TERMINAL_BOOL_FIELDS = (
+    "allow_walk_away",
+    "accept_requires_no_open_issue",
+    "partial_agreement_allowed",
+)
+
+
+def _check_r12_terminal_rules(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+    rules = data.get("terminal_rules")
+    if not isinstance(rules, Mapping):
+        return problems  # 缺整块由 R0 报，避免重复
+
+    for field_name in TERMINAL_BOOL_FIELDS:
+        path = f"terminal_rules.{field_name}"
+        if field_name not in rules:
+            problems.append(Problem(
+                "R12_terminal_rules", path,
+                "缺少该字段；三个布尔是冻结语义，必须显式给出，不得由引擎默认",
+            ))
+            continue
+        value = rules.get(field_name)
+        if not isinstance(value, bool):
+            problems.append(Problem(
+                "R12_terminal_rules", path,
+                f"必须是 JSON 布尔 true/false，实际为 {type(value).__name__}: {value!r}",
+            ))
+
+    if "deadlock_rounds" in rules:
+        rounds = rules.get("deadlock_rounds")
+        path = "terminal_rules.deadlock_rounds"
+        if isinstance(rounds, bool) or not isinstance(rounds, int):
+            problems.append(Problem(
+                "R12_terminal_rules", path,
+                f"必须是整数，实际为 {type(rounds).__name__}: {rounds!r}",
+            ))
+        elif not 2 <= rounds <= 10:
+            problems.append(Problem(
+                "R12_terminal_rules", path,
+                f"取值 {rounds} 超出允许范围 [2, 10]",
+            ))
+        else:
+            max_rounds = data.get("max_rounds")
+            if (
+                isinstance(max_rounds, int)
+                and not isinstance(max_rounds, bool)
+                and rounds > max_rounds
+            ):
+                problems.append(Problem(
+                    "R12_terminal_rules", path,
+                    f"deadlock_rounds={rounds} 大于 max_rounds={max_rounds}，僵局永远不会先于超时触发",
+                ))
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# R13 开局现状：initial 必须是合法值，initial_ref 必须能解析到事实或假设
+# ---------------------------------------------------------------------------
+def _check_r13_initial(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+    fact_ids = {
+        fact.get("fact_id")
+        for fact in _dict_list(data.get("public_facts"))
+        if isinstance(fact.get("fact_id"), str)
+    }
+    assumption_ids = {
+        item.get("assumption_id")
+        for item in _dict_list(data.get("assumptions"))
+        if isinstance(item.get("assumption_id"), str)
+    }
+
+    for index, issue in enumerate(_dict_list(data.get("issues"))):
+        base = f"issues[{index}]"
+        raw_initial = issue.get("initial")
+        raw_ref = issue.get("initial_ref")
+        # dataclass 转 dict 时未设置的字段是 None；与 JSON 缺省同义，按未提供处理
+        has_initial = raw_initial is not None
+        has_ref = raw_ref is not None
+        if not has_initial and not has_ref:
+            continue
+        issue_type = issue.get("type")
+        value = raw_initial
+
+        if has_initial and issue_type == "numeric":
+            number = _number(value)
+            if number is None:
+                problems.append(Problem(
+                    "R13_initial", f"{base}.initial",
+                    f"numeric 议题的 initial 必须是数值，实际为 {type(value).__name__}: {value!r}",
+                ))
+            else:
+                raw_range = _mapping(issue.get("range"))
+                low = _number(raw_range.get("min"))
+                high = _number(raw_range.get("max"))
+                step = _number(raw_range.get("step"))
+                if low is None or high is None or step is None or step <= 0:
+                    pass  # 区间本身非法由 R3 报
+                elif number < low - FLOAT_TOLERANCE or number > high + FLOAT_TOLERANCE:
+                    problems.append(Problem(
+                        "R13_initial", f"{base}.initial",
+                        f"现状 {number:g} 超出 range [{low:g}, {high:g}]",
+                    ))
+                else:
+                    steps = (number - low) / step
+                    if abs(steps - round(steps)) > 1e-6:
+                        problems.append(Problem(
+                            "R13_initial", f"{base}.initial",
+                            f"现状 {number:g} 不在 step={step:g} 的网格上（相对 min 偏移 {steps:.6f} 格）",
+                        ))
+        elif has_initial and issue_type == "enumerated":
+            if not isinstance(value, str):
+                problems.append(Problem(
+                    "R13_initial", f"{base}.initial",
+                    f"enumerated 议题的 initial 必须是 option_id 字符串，实际为 {type(value).__name__}: {value!r}",
+                ))
+            elif value not in _option_ids(issue):
+                problems.append(Problem(
+                    "R13_initial", f"{base}.initial",
+                    f"{value!r} 不是该议题的合法 option_id",
+                ))
+
+        if has_ref:
+            ref = raw_ref
+            path = f"{base}.initial_ref"
+            if not isinstance(ref, str) or not ref.strip():
+                problems.append(Problem(
+                    "R13_initial", path,
+                    "initial_ref 必须是非空字符串（fact_id 或 assumption_id）",
+                ))
+            elif ref not in fact_ids and ref not in assumption_ids:
+                problems.append(Problem(
+                    "R13_initial", path,
+                    f"{ref!r} 既不是 public_facts[].fact_id，也不是 assumptions[].assumption_id",
+                ))
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# R14 运行参数：action_points_per_round
+# ---------------------------------------------------------------------------
+def _check_r14_runtime(data: Mapping[str, Any]) -> list[Problem]:
+    problems: list[Problem] = []
+    runtime = data.get("runtime")
+    if runtime is None:
+        return problems
+    if not isinstance(runtime, Mapping):
+        problems.append(Problem(
+            "R14_runtime", "runtime",
+            f"runtime 必须是对象，实际为 {type(runtime).__name__}",
+        ))
+        return problems
+
+    points = runtime.get("action_points_per_round")
+    if points is not None:
+        if isinstance(points, bool) or not isinstance(points, int) or not 1 <= points <= 5:
+            problems.append(Problem(
+                "R14_runtime", "runtime.action_points_per_round",
+                f"必须是 [1, 5] 内的整数，实际为 {points!r}",
+            ))
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# R15 行为标签表：13 个 effect label × slight / moderate / major
+# 键集与 action_schema.json 的 effect_labels[].label 严格一致
+# ---------------------------------------------------------------------------
+EFFECT_LABELS = (
+    "constructive_proposal",
+    "cite_rules",
+    "hardline_stance",
+    "broken_promise",
+    "personal_attack",
+    "redline_provoke",
+    "procedural",
+    "diplomatic_reframe",
+    "protect_ally",
+    "keep_promise",
+    "betray_ally",
+    "vague_stance",
+    "conditional_concession",
+)
+MAGNITUDES = ("slight", "moderate", "major")
+_INDEX_DELTA_FIELDS = ("interest_delta", "image_delta", "trust_delta")
+
+
+def validate_index_rules(rules: Mapping[str, Any]) -> list[Problem]:
+    """校验一张行为标签表；键集必须覆盖 13 个 effect label。"""
+    problems: list[Problem] = []
+
+    initial = rules.get("initial")
+    if initial is not None:
+        if not isinstance(initial, Mapping):
+            problems.append(Problem(
+                "R15_index_rules", "index_rules.initial",
+                f"initial 必须是对象，实际为 {type(initial).__name__}",
+            ))
+        else:
+            for key in ("image", "trust"):
+                if key not in initial:
+                    continue
+                value = initial.get(key)
+                if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100:
+                    problems.append(Problem(
+                        "R15_index_rules", f"index_rules.initial.{key}",
+                        f"必须是 [0, 100] 内的整数，实际为 {value!r}",
+                    ))
+
+    for label in EFFECT_LABELS:
+        path = f"index_rules.{label}"
+        if label not in rules:
+            problems.append(Problem(
+                "R15_index_rules", path,
+                "缺少该标签；引擎需要 13 个 effect label 齐全",
+            ))
+            continue
+        levels = rules.get(label)
+        if not isinstance(levels, Mapping):
+            problems.append(Problem(
+                "R15_index_rules", path,
+                f"必须是对象（slight / moderate / major），实际为 {type(levels).__name__}",
+            ))
+            continue
+        for magnitude in MAGNITUDES:
+            if magnitude not in levels:
+                problems.append(Problem(
+                    "R15_index_rules", f"{path}.{magnitude}",
+                    f"缺少 {magnitude} 档",
+                ))
+                continue
+            delta = levels.get(magnitude)
+            delta_path = f"{path}.{magnitude}"
+            if not isinstance(delta, Mapping):
+                problems.append(Problem(
+                    "R15_index_rules", delta_path,
+                    f"必须是对象（三指数增减），实际为 {type(delta).__name__}",
+                ))
+                continue
+            for field_name in _INDEX_DELTA_FIELDS:
+                value = delta.get(field_name)
+                if isinstance(value, bool) or not isinstance(value, int):
+                    problems.append(Problem(
+                        "R15_index_rules", f"{delta_path}.{field_name}",
+                        f"必须是整数，实际为 {type(value).__name__}: {value!r}",
+                    ))
+                elif not -10 <= value <= 10:
+                    problems.append(Problem(
+                        "R15_index_rules", f"{delta_path}.{field_name}",
+                        f"取值 {value} 超出允许范围 [-10, 10]",
+                    ))
+
+    for key in rules:
+        if key != "initial" and key not in EFFECT_LABELS:
+            problems.append(Problem(
+                "R15_index_rules", f"index_rules.{key}",
+                f"{key!r} 不是 13 个 effect label 之一",
+            ))
+    return problems
+
+
+def _check_r15_index_rules(data: Mapping[str, Any]) -> list[Problem]:
+    rules = data.get("index_rules")
+    if rules is None:
+        return []
+    if not isinstance(rules, Mapping):
+        return [Problem(
+            "R15_index_rules", "index_rules",
+            f"必须是对象，实际为 {type(rules).__name__}",
+        )]
+    return validate_index_rules(rules)
+
+
 _RULES = (
     _check_r0_required_fields,
     _check_r9_clause_naming,
     _check_r10_facts_sourced,
     _check_r11_assumption_traceable,
+    _check_r12_terminal_rules,
+    _check_r13_initial,
+    _check_r14_runtime,
+    _check_r15_index_rules,
     _check_r8_enum_values,
     _check_r1_weight_sum,
     _check_r2_target_in_range,

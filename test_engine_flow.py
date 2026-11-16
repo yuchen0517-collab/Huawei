@@ -48,7 +48,9 @@ def restore(engine):
 
 
 def test_flow_five_steps_reach_terminal_without_effect_labels(tmp_path):
-    engine = RulesEngine(make_scenario(), "flow-test")
+    scenario = make_scenario()
+    scenario["action_points_per_round"] = 6
+    engine = RulesEngine(scenario, "flow-test")
     assert len(HELPERS.FLOW) == 5
     submitted = []
     for step in HELPERS.FLOW:
@@ -83,7 +85,9 @@ def test_flow_five_steps_reach_terminal_without_effect_labels(tmp_path):
 
 
 def test_archive_restore_is_independent_and_can_replay_remaining_flow():
-    engine = RulesEngine(make_scenario(), "flow-restore-test")
+    scenario = make_scenario()
+    scenario["action_points_per_round"] = 6
+    engine = RulesEngine(scenario, "flow-restore-test")
     first = flow_action(HELPERS.FLOW[0])
     ok, code, detail, _ = engine.submit_action(first)
     assert ok, (code, detail)
