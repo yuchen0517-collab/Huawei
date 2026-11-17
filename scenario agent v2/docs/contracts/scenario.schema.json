@@ -231,6 +231,15 @@
                   "type": "integer",
                   "minimum": 1,
                   "description": "对我方有利程度排序，从 1 开始递增，1 表示对我方最有利；同一议题内应连续且不重复。"
+                },
+                "score_by_party": {
+                  "type": "object",
+                  "description": "可选：按参与方给选项打分，0~1。缺省时沿用 order 推导",
+                  "additionalProperties": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
                 }
               }
             }

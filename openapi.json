@@ -1,1 +1,1170 @@
-{"openapi":"3.1.0","info":{"title":"谈判 HTTP API","version":"0.1.0"},"paths":{"/":{"get":{"summary":"Health","operationId":"health__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"additionalProperties":true,"type":"object","title":"Response Health  Get"}}}}}}},"/session":{"post":{"summary":"Create Session Endpoint","operationId":"create_session_endpoint_session_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateSessionRequest"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"additionalProperties":true,"type":"object","title":"Response Create Session Endpoint Session Post"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/session/{session_id}/state":{"get":{"summary":"State Endpoint","operationId":"state_endpoint_session__session_id__state_get","parameters":[{"name":"session_id","in":"path","required":true,"schema":{"type":"string","title":"Session Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":true,"title":"Response State Endpoint Session  Session Id  State Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/session/{session_id}/auto_status":{"get":{"summary":"Auto Status Endpoint","operationId":"auto_status_endpoint_session__session_id__auto_status_get","parameters":[{"name":"session_id","in":"path","required":true,"schema":{"type":"string","title":"Session Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AutoStatusResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/session/{session_id}/action":{"post":{"summary":"Action Endpoint","operationId":"action_endpoint_session__session_id__action_post","parameters":[{"name":"session_id","in":"path","required":true,"schema":{"type":"string","title":"Session Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":true,"title":"Response Action Endpoint Session  Session Id  Action Post"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/session/{session_id}/auto_step":{"post":{"summary":"Auto Step Endpoint","operationId":"auto_step_endpoint_session__session_id__auto_step_post","parameters":[{"name":"session_id","in":"path","required":true,"schema":{"type":"string","title":"Session Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":true,"title":"Response Auto Step Endpoint Session  Session Id  Auto Step Post"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/session/{session_id}/debrief":{"post":{"summary":"Debrief Endpoint","operationId":"debrief_endpoint_session__session_id__debrief_post","parameters":[{"name":"session_id","in":"path","required":true,"schema":{"type":"string","title":"Session Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"object","additionalProperties":true,"title":"Response Debrief Endpoint Session  Session Id  Debrief Post"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"AutoErrorResponse":{"properties":{"code":{"type":"string","title":"Code"},"detail":{"type":"string","title":"Detail"}},"additionalProperties":false,"type":"object","required":["code","detail"],"title":"AutoErrorResponse"},"AutoStatusResponse":{"properties":{"session_id":{"type":"string","title":"Session Id"},"status":{"type":"string","enum":["running","paused","done","error"],"title":"Status"},"current_round":{"type":"integer","title":"Current Round"},"terminal_type":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Terminal Type"},"last_error":{"anyOf":[{"$ref":"#/components/schemas/AutoErrorResponse"},{"type":"null"}]}},"additionalProperties":false,"type":"object","required":["session_id","status","current_round","terminal_type","last_error"],"title":"AutoStatusResponse"},"CreateSessionRequest":{"properties":{"scenario_id":{"type":"string","title":"Scenario Id"},"agent":{"type":"string","title":"Agent"},"scenario_path":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Scenario Path"}},"additionalProperties":false,"type":"object","required":["scenario_id","agent"],"title":"CreateSessionRequest"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"},"input":{"title":"Input"},"ctx":{"type":"object","title":"Context"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "谈判 HTTP API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "post": {
+        "summary": "Create Session Endpoint",
+        "operationId": "create_session_endpoint_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateProjection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "场景或对手不合法",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "请求体校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/state": {
+      "get": {
+        "summary": "State Endpoint",
+        "operationId": "state_endpoint_session__session_id__state_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateProjection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/auto_status": {
+      "get": {
+        "summary": "Auto Status Endpoint",
+        "operationId": "auto_status_endpoint_session__session_id__auto_status_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/action": {
+      "post": {
+        "summary": "Action Endpoint",
+        "operationId": "action_endpoint_session__session_id__action_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateProjection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_ACTION / INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ROUND_LOCKED / VERSION_CONFLICT / SESSION_BUSY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MODEL_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "TIMEOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/auto_step": {
+      "post": {
+        "summary": "Auto Step Endpoint",
+        "operationId": "auto_step_endpoint_session__session_id__auto_step_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateProjection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ROUND_LOCKED / AUTO_STATUS_ERROR / SESSION_BUSY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MODEL_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "TIMEOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/debrief": {
+      "post": {
+        "summary": "Debrief Endpoint",
+        "operationId": "debrief_endpoint_session__session_id__debrief_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Debrief Endpoint Session  Session Id  Debrief Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DEBRIEF_NOT_AVAILABLE（带面向用户的 fail_reason）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "复盘生成失败（带 fail_reason）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActionErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiErrorCode"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "engine_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Error"
+          },
+          "retry_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "current_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StateProjection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error",
+          "detail"
+        ],
+        "title": "ActionErrorResponse"
+      },
+      "ActionHistoryItem": {
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "title": "Action Id"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "action_id",
+          "round",
+          "actor",
+          "action_type",
+          "origin",
+          "warnings"
+        ],
+        "title": "ActionHistoryItem",
+        "description": "行动账本项：action_id / round / actor / action_type 是前端证据索引的锚点。"
+      },
+      "ApiErrorCode": {
+        "type": "string",
+        "enum": [
+          "INVALID_ACTION",
+          "ROUND_LOCKED",
+          "VERSION_CONFLICT",
+          "SESSION_BUSY",
+          "MODEL_UNAVAILABLE",
+          "TIMEOUT"
+        ],
+        "title": "ApiErrorCode",
+        "description": "行动提交/模型调用对外只出这六个码。"
+      },
+      "AutoErrorResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "detail"
+        ],
+        "title": "AutoErrorResponse"
+      },
+      "AutoStatusResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "paused",
+              "done",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "current_round": {
+            "type": "integer",
+            "title": "Current Round"
+          },
+          "terminal_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Type"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AutoErrorResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "current_round",
+          "terminal_type",
+          "last_error"
+        ],
+        "title": "AutoStatusResponse"
+      },
+      "ClauseDef": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "enum",
+              "numeric"
+            ],
+            "title": "Type"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClauseRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "initial": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "unit"
+        ],
+        "title": "ClauseDef"
+      },
+      "ClauseRange": {
+        "properties": {
+          "min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Step"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "min",
+          "max",
+          "step"
+        ],
+        "title": "ClauseRange"
+      },
+      "CoachAdvice": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "basis_round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Round"
+          },
+          "basis_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis Version"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CoachItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "items"
+        ],
+        "title": "CoachAdvice"
+      },
+      "CoachEvidence": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "action",
+              "offer",
+              "event"
+            ],
+            "title": "Kind"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "action_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Id"
+          },
+          "clause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clause"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "round",
+          "label"
+        ],
+        "title": "CoachEvidence"
+      },
+      "CoachItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "risk",
+              "opportunity",
+              "next_move"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/CoachEvidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "ap_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap Cost"
+          },
+          "apply_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apply Hint"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "text",
+          "evidence",
+          "ap_cost"
+        ],
+        "title": "CoachItem"
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "agent": {
+            "type": "string",
+            "title": "Agent"
+          },
+          "scenario_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "agent"
+        ],
+        "title": "CreateSessionRequest"
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "engine_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Error"
+          },
+          "retry_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error",
+          "detail"
+        ],
+        "title": "ErrorEnvelope",
+        "description": "六码之外的通用错误（会话不存在、参数校验、复盘未开放等）。"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "OfferView": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "offers": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Offers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "offers"
+        ],
+        "title": "OfferView"
+      },
+      "StateProjection": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "my_offer": {
+            "$ref": "#/components/schemas/OfferView"
+          },
+          "opponent_offer": {
+            "$ref": "#/components/schemas/OfferView"
+          },
+          "open_issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Open Issues"
+          },
+          "action_history": {
+            "items": {
+              "$ref": "#/components/schemas/ActionHistoryItem"
+            },
+            "type": "array",
+            "title": "Action History"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/ClauseDef"
+            },
+            "type": "array",
+            "title": "Clauses"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "action_points": {
+            "type": "integer",
+            "title": "Action Points"
+          },
+          "action_points_per_round": {
+            "type": "integer",
+            "title": "Action Points Per Round"
+          },
+          "coach_advice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoachAdvice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "round",
+          "phase",
+          "my_offer",
+          "opponent_offer",
+          "open_issues",
+          "action_history",
+          "status",
+          "mode",
+          "clauses",
+          "version",
+          "action_points",
+          "action_points_per_round"
+        ],
+        "title": "StateProjection"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

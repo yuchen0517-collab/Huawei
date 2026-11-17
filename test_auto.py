@@ -196,8 +196,11 @@ def test_chip_terminal_rejection_after_done_and_reload(monkeypatch):
     resp = auto_step(sid)
     assert resp.status_code == 409
     body = resp.json()
-    assert set(body) == {"error", "detail", "auto_status", "current_round", "terminal_type"}
-    assert body["error"] == "PHASE_CLOSED"
+    assert set(body) == {
+        "error", "detail", "engine_error", "auto_status", "current_round", "terminal_type",
+    }
+    assert body["error"] == "ROUND_LOCKED"
+    assert body["engine_error"] == "PHASE_CLOSED"
     assert body["auto_status"] == "done"
     assert body["terminal_type"] == "FULL_AGREEMENT"
     assert body["current_round"] == before["round"]
@@ -215,7 +218,8 @@ def test_chip_terminal_rejection_after_done_and_reload(monkeypatch):
     assert restored["last_error"] is None
     rejected = auto_step(sid)
     assert rejected.status_code == 409
-    assert rejected.json()["error"] == "PHASE_CLOSED"
+    assert rejected.json()["error"] == "ROUND_LOCKED"
+    assert rejected.json()["engine_error"] == "PHASE_CLOSED"
     assert get_state(sid) == before
 
 
@@ -240,22 +244,23 @@ def test_auto_timeout_once_pauses_and_recovers(monkeypatch):
     )
 
     failed = auto_step(sid)
-    assert failed.status_code == 503
-    assert failed.json()["error"] == "MODEL_UNAVAILABLE"
+    assert failed.status_code == 504
+    assert failed.json()["error"] == "TIMEOUT"
+    assert failed.json()["engine_error"] == "MODEL_TIMEOUT"
     assert calls == [60]
 
     status = auto_status(sid)
     assert status["status"] == "paused"
     assert status["current_round"] == 1
     assert status["terminal_type"] is None
-    assert status["last_error"]["code"] == "MODEL_UNAVAILABLE"
+    assert status["last_error"]["code"] == "MODEL_TIMEOUT"
     assert status["last_error"]["detail"]
     assert get_state(sid) == before_state
     assert rec.runtime.action_seq == 0
     assert rec.runtime.offline_cursor == 0
     document = stored_document(sid)
     assert document["auto_status"] == "paused"
-    assert document["auto_last_error"]["code"] == "MODEL_UNAVAILABLE"
+    assert document["auto_last_error"]["code"] == "MODEL_TIMEOUT"
     assert document["engine_state"] == before_document["engine_state"]
     assert document["runtime"] == before_document["runtime"]
     assert document["idempotency_ledger"] == before_document["idempotency_ledger"]
@@ -489,7 +494,8 @@ def test_auto_accept_redline_precheck_pauses_without_opponent(monkeypatch):
 
     rejected = auto_step(sid)
     assert rejected.status_code == 400
-    assert rejected.json()["error"] == "REDLINE_VIOLATION"
+    assert rejected.json()["error"] == "INVALID_ACTION"
+    assert rejected.json()["engine_error"] == "REDLINE_VIOLATION"
     status = auto_status(sid)
     assert status["status"] == "paused"
     assert status["last_error"]["code"] == "REDLINE_VIOLATION"
@@ -511,7 +517,8 @@ def test_auto_accept_without_counterpart_offer_pauses(monkeypatch):
 
     rejected = auto_step(sid)
     assert rejected.status_code == 400
-    assert rejected.json()["error"] == "NO_COUNTERPART_OFFER"
+    assert rejected.json()["error"] == "INVALID_ACTION"
+    assert rejected.json()["engine_error"] == "NO_COUNTERPART_OFFER"
     assert auto_status(sid)["last_error"]["code"] == "NO_COUNTERPART_OFFER"
     assert opponent_calls == []
     assert get_state(sid)["action_history"] == []

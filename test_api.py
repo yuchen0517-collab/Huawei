@@ -213,7 +213,9 @@ def test_engine_rejection_preserves_error_and_zero_change(monkeypatch):
     payload["offer_patch"] = {"不存在的条款": {"option": "x", "note": "y"}}
     resp = client.post(f"/session/{sid}/action", json=payload)
     assert resp.status_code == 400
-    assert resp.json()["error"] == "UNKNOWN_CLAUSE"
+    body = resp.json()
+    assert body["error"] == "INVALID_ACTION"
+    assert body["engine_error"] == "UNKNOWN_CLAUSE"
     assert calls == []
     assert get_state(sid) == before
     assert rec.engine.state.to_archive_dict() == archive
@@ -226,8 +228,9 @@ def test_term_locked_error_mapping_and_zero_change():
     archive = copy.deepcopy(engine.state.to_archive_dict())
     with pytest.raises(api.ApiError) as caught:
         api.submit_engine_action(engine, flat_action())
-    assert caught.value.status_code == 400
-    assert caught.value.error == "TERM_LOCKED"
+    assert caught.value.status_code == 409
+    assert caught.value.error == "ROUND_LOCKED"
+    assert caught.value.extra == {"engine_error": "TERM_LOCKED"}
     assert engine.state.to_archive_dict() == archive
 
 
@@ -238,14 +241,17 @@ def test_duplicate_and_phase_closed_error_mappings():
     archive = copy.deepcopy(engine.state.to_archive_dict())
     with pytest.raises(api.ApiError) as caught:
         api.submit_engine_action(engine, action)
-    assert caught.value.status_code == 409
-    assert caught.value.error == "DUPLICATE_ACTION"
+    # DUPLICATE_ACTION 不在映射表里 → 归 INVALID_ACTION，原始码保留。
+    assert caught.value.status_code == 400
+    assert caught.value.error == "INVALID_ACTION"
+    assert caught.value.extra == {"engine_error": "DUPLICATE_ACTION"}
     assert engine.state.to_archive_dict() == archive
     engine.state.status = "ended"
     with pytest.raises(api.ApiError) as caught:
         api.submit_engine_action(engine, flat_action(action_id="engine-2"))
     assert caught.value.status_code == 409
-    assert caught.value.error == "PHASE_CLOSED"
+    assert caught.value.error == "ROUND_LOCKED"
+    assert caught.value.extra == {"engine_error": "PHASE_CLOSED"}
 
 
 def test_action_id_sequence_not_consumed_by_failure():
@@ -408,7 +414,9 @@ def test_opponent_engine_rejection_preserves_original_error(monkeypatch):
     monkeypatch.setattr(neg, "call_with_retry", lambda *args: (bad, "raw", None))
     resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
     assert resp.status_code == 400
-    assert resp.json()["error"] == "UNKNOWN_CLAUSE"
+    body = resp.json()
+    assert body["error"] == "INVALID_ACTION"
+    assert body["engine_error"] == "UNKNOWN_CLAUSE"
     assert get_state(sid) == before
     assert api.SESSIONS[sid].runtime.action_seq == 0
 
@@ -430,8 +438,10 @@ def test_debrief_not_available_before_terminal_and_state_unchanged():
     before = get_state(sid)
     resp = client.post(f"/session/{sid}/debrief")
     assert resp.status_code == 409
-    assert resp.json()["error"] == "DEBRIEF_NOT_AVAILABLE"
-    assert set(resp.json()) == {"error", "detail"}
+    body = resp.json()
+    assert body["error"] == "DEBRIEF_NOT_AVAILABLE"
+    assert body["fail_reason"] == "谈判尚未结束，复盘暂不可用"
+    assert set(body) == {"error", "detail", "fail_reason"}
     assert get_state(sid) == before
 
 
@@ -675,7 +685,11 @@ class ContractClient(TestClient):
             payload = dict(payload)
             payload.setdefault("client_action_id", uuid.uuid4().hex)
             if rec is not None:
-                payload.setdefault("base_version", rec.engine.state.current_version)
+                # base_version 与顶层 version 同口径：已提交行动数。
+                payload.setdefault(
+                    "base_version",
+                    api.action_event_count(rec.engine.public_state("cn")["public_events"]),
+                )
             kwargs["json"] = payload
         return super().post(url, **kwargs)
 
@@ -712,7 +726,10 @@ def test_missing_or_invalid_transport_fields_rejected():
     sid = new_session()
     resp = raw_client.post(f"/session/{sid}/action", json=VALID_OFFER)
     assert resp.status_code == 422
-    assert resp.json() == {"error": "INVALID_REQUEST", "detail": "缺少必填字段 client_action_id。"}
+    assert resp.json() == {
+        "error": "INVALID_REQUEST",
+        "detail": "缺少必填字段 client_action_id（或 Idempotency-Key 头）。",
+    }
     resp = raw_client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, client_action_id="c-1"))
     assert resp.status_code == 422
     assert resp.json() == {"error": "INVALID_REQUEST", "detail": "缺少必填字段 base_version。"}
@@ -720,7 +737,7 @@ def test_missing_or_invalid_transport_fields_rejected():
         f"/session/{sid}/action", json=dict(VALID_OFFER, client_action_id="   ", base_version=0)
     )
     assert resp.status_code == 422
-    assert resp.json()["detail"] == "缺少必填字段 client_action_id。"
+    assert resp.json()["detail"] == "缺少必填字段 client_action_id（或 Idempotency-Key 头）。"
     for bad_version in ("0", -1, 1.5, True, None):
         resp = raw_client.post(
             f"/session/{sid}/action",
@@ -738,19 +755,22 @@ def test_stale_base_version_conflict_returns_current_state():
     assert ok.status_code == 200, ok.text
     rec = api.SESSIONS[sid]
     before = get_state(sid)
+    assert before["version"] == 2
     archive = copy.deepcopy(rec.engine.state.to_archive_dict())
+    # 0 是旧的“报价版本”口径，在新口径下必然是过期基线。
     resp = submit_action(sid, STATEMENT, "v-2", 0)
     assert resp.status_code == 409
     body = resp.json()
-    assert set(body) == {"error", "detail", "current_state"}
+    assert set(body) == {"error", "detail", "current_state", "version"}
     assert body["error"] == "VERSION_CONFLICT"
+    assert body["version"] == before["version"]
     assert body["current_state"] == before
-    for key in ("my_offer", "opponent_offer", "open_issues"):
+    for key in ("my_offer", "opponent_offer", "open_issues", "version"):
         assert key in body["current_state"]
     assert get_state(sid) == before
     assert rec.engine.state.to_archive_dict() == archive
     assert set(rec.idempotency_ledger) == {"v-1"}
-    retry = submit_action(sid, STATEMENT, "v-2", rec.engine.state.current_version)
+    retry = submit_action(sid, STATEMENT, "v-2", before["version"])
     assert retry.status_code == 200, retry.text
 
 
@@ -804,8 +824,11 @@ def test_model_timeout_fails_atomically_and_same_request_can_retry(monkeypatch):
         neg.time, "sleep", lambda _: pytest.fail("60 秒超时后不应继续内层重试")
     )
     failed = submit_action(sid, VALID_OFFER, "timeout-retry-1", 0)
-    assert failed.status_code == 503
-    assert failed.json()["error"] == "MODEL_UNAVAILABLE"
+    assert failed.status_code == 504
+    body = failed.json()
+    assert body["error"] == "TIMEOUT"
+    assert body["engine_error"] == "MODEL_TIMEOUT"
+    assert body["detail"] == "对手模型响应超时，本次未提交，可原样重试。"
     assert len(calls) == 1
     assert calls[0]["timeout"] == 60
     assert get_state(sid) == before

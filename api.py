@@ -10,6 +10,8 @@ import sys
 import threading
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Literal
@@ -66,7 +68,13 @@ def pick_action_fields(source: dict) -> dict:
 PUBLIC_STATE_KEYS = (
     "session_id", "round", "phase", "my_offer", "opponent_offer",
     "open_issues", "action_history", "status", "mode",
+    # 11/17 契约扩到 14 字段：条款投影、行动数版本、行动点与教练建议。
+    "clauses", "version", "action_points", "action_points_per_round",
+    "coach_advice",
 )
+# 11/16 及以前的投影只有 9 个字段。旧幂等账本里的缓存投影无法按新契约回放，
+# 加载时会被丢弃；旧意图号是前端已废弃的 `act-` 前缀，不会被再次提交。
+IDEMPOTENCY_HEADER = "Idempotency-Key"
 
 ACTION_SCHEMA = json.loads(
     (BASE_DIR / "action_schema.json").read_text(encoding="utf-8-sig")
@@ -97,6 +105,63 @@ PHASE_CLOSED_DETAIL = "谈判已结束，不能继续自动推进。"
 AUTO_FIELDS = ("auto_status", "auto_terminal_type", "auto_last_error")
 AutoStatus = Literal["running", "paused", "done", "error"]
 
+# ---------------------------------------------------------------------------
+# 对外六码（11/17 契约）。引擎原来的 18 个码只放在 engine_error 里。
+# 映射表以 C 侧 engine/validator.py 的 ERRORS 为准逐条核对；表里没覆盖到的
+# 引擎码（如 DUPLICATE_ACTION，API 层用服务端 action_id 后已不可达）一律归
+# INVALID_ACTION，不发明第七个对外码。
+# ---------------------------------------------------------------------------
+TIMEOUT_DETAIL = "对手模型响应超时，本次未提交，可原样重试。"
+INVALID_ACTION_ENGINE_CODES = frozenset({
+    "SCHEMA_VIOLATION",
+    "UNKNOWN_ACTION_TYPE",
+    "PATCH_NOT_ALLOWED",
+    "UNKNOWN_CLAUSE",
+    "UNKNOWN_OPTION",
+    "VALUE_OUT_OF_RANGE",
+    "REDLINE_VIOLATION",
+    "AGREEMENT_HAS_OPEN_ISSUES",
+    "NO_COUNTERPART_OFFER",
+    "FINAL_OFFER_EMPTY",
+    "WALK_AWAY_FORBIDDEN",
+})
+ROUND_LOCKED_ENGINE_CODES = frozenset({
+    "PHASE_CLOSED",
+    "ACTION_POINTS_INSUFFICIENT",
+    "TERM_LOCKED",
+    "FINAL_OFFER_ALREADY_DECLARED",
+    "FINAL_OFFER_LOCKED",
+})
+ENGINE_ERROR_TO_API = {
+    **{code: "INVALID_ACTION" for code in INVALID_ACTION_ENGINE_CODES},
+    **{code: "ROUND_LOCKED" for code in ROUND_LOCKED_ENGINE_CODES},
+    "VERSION_CONFLICT": "VERSION_CONFLICT",
+}
+API_ERROR_STATUS = {
+    "INVALID_ACTION": 400,
+    "ROUND_LOCKED": 409,
+    "VERSION_CONFLICT": 409,
+    "SESSION_BUSY": 409,
+    "MODEL_UNAVAILABLE": 503,
+    "TIMEOUT": 504,
+}
+
+# 教练禁用词（与前端 §1.5 同一张表；归一化后命中即整条不生成）。
+FORBIDDEN_COACH_WORDS = (
+    "对方红线", "对方真实", "对方BATNA", "真实底线", "私有", "net_gain", "隐藏底牌",
+)
+COACH_ACTION_LABELS = {
+    "offer": "报价",
+    "counter_offer": "反报价",
+    "conditional_exchange": "条件交换",
+    "final_offer": "最后报价",
+    "statement": "发言",
+    "accept": "接受",
+    "walk_away": "退出",
+}
+COACH_MAX_ITEMS = 5
+COACH_CACHE_LIMIT = 32
+
 
 class ApiError(Exception):
     def __init__(self, status_code: int, error: str, detail: str, extra: dict | None = None):
@@ -108,8 +173,9 @@ class ApiError(Exception):
 
 
 class ModelUnavailable(ApiError):
-    def __init__(self, detail: str = MODEL_ERROR_DETAIL):
-        super().__init__(503, "MODEL_UNAVAILABLE", detail)
+    def __init__(self, detail: str = MODEL_ERROR_DETAIL, engine_error: str | None = None):
+        extra = {"engine_error": engine_error} if engine_error else None
+        super().__init__(503, "MODEL_UNAVAILABLE", detail, extra)
 
 
 @dataclass(frozen=True)
@@ -131,6 +197,127 @@ class AutoStatusResponse(BaseModel):
     current_round: int
     terminal_type: str | None
     last_error: AutoErrorResponse | None
+
+
+# ---------------------------------------------------------------------------
+# 对外投影模型：同时作为 openapi.json 的 schema 来源。
+# 状态投影的 14 个字段必须与 PUBLIC_STATE_KEYS 一一对应。
+# ---------------------------------------------------------------------------
+class ClauseRange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    min: int | float
+    max: int | float
+    step: int | float
+
+
+class ClauseDef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    type: Literal["enum", "numeric"]
+    unit: str
+    range: ClauseRange | None = None
+    options: list[str] | None = None
+    initial: int | float | str | None = None
+
+
+class OfferView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    version: int
+    offers: dict[str, dict]
+
+
+class ActionHistoryItem(BaseModel):
+    """行动账本项：action_id / round / actor / action_type 是前端证据索引的锚点。"""
+
+    model_config = ConfigDict(extra="allow")
+    action_id: str
+    round: int
+    actor: str
+    action_type: str
+    origin: str
+    warnings: list[str]
+
+
+class CoachEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["action", "offer", "event"]
+    round: int
+    action_id: str | None = None
+    clause: str | None = None
+    label: str
+    quote: str | None = None
+
+
+class CoachItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    kind: Literal["risk", "opportunity", "next_move"]
+    title: str
+    text: str
+    evidence: list[CoachEvidence]
+    ap_cost: int | None
+    apply_hint: str | None = None
+
+
+class CoachAdvice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["pending", "ready", "failed"]
+    basis_round: int | None = None
+    basis_version: int | None = None
+    generated_at: str | None = None
+    items: list[CoachItem]
+    fail_reason: str | None = None
+
+
+class StateProjection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: str
+    round: int
+    phase: str
+    my_offer: OfferView
+    opponent_offer: OfferView
+    open_issues: list[str]
+    action_history: list[ActionHistoryItem]
+    status: str
+    mode: str
+    clauses: list[ClauseDef]
+    version: int
+    action_points: int
+    action_points_per_round: int
+    coach_advice: CoachAdvice | None = None
+
+
+class ApiErrorCode(str, Enum):
+    """行动提交/模型调用对外只出这六个码。"""
+
+    INVALID_ACTION = "INVALID_ACTION"
+    ROUND_LOCKED = "ROUND_LOCKED"
+    VERSION_CONFLICT = "VERSION_CONFLICT"
+    SESSION_BUSY = "SESSION_BUSY"
+    MODEL_UNAVAILABLE = "MODEL_UNAVAILABLE"
+    TIMEOUT = "TIMEOUT"
+
+
+class ActionErrorResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    error: ApiErrorCode
+    detail: str
+    engine_error: str | None = None
+    retry_after: int | None = None
+    version: int | None = None
+    current_state: StateProjection | None = None
+
+
+class ErrorEnvelope(BaseModel):
+    """六码之外的通用错误（会话不存在、参数校验、复盘未开放等）。"""
+
+    model_config = ConfigDict(extra="forbid")
+    error: str
+    detail: str
+    engine_error: str | None = None
+    retry_after: int | None = None
+    version: int | None = None
+    fail_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +346,10 @@ class SessionRecord:
     auto_status: AutoStatus = "paused"
     auto_terminal_type: str | None = None
     auto_last_error: AutoError | None = None
+    # coach_advice 按 (version, 行动账本指纹) 缓存：同一 basis_version 下
+    # GET /state 与提交响应共用同一份，generated_at 不随请求时间漂移。
+    coach_cache: dict = field(default_factory=dict)
+    coach_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 SESSIONS: dict[str, SessionRecord] = {}
@@ -380,6 +571,49 @@ def validate_idempotency_ledger(ledger: dict, session_id: str, mode: str) -> dic
     return validated
 
 
+def drop_legacy_ledger_entries(ledger: Any) -> dict:
+    """丢掉 9 字段时代的缓存投影。
+
+    11/17 投影扩到 14 字段后，旧缓存既不能按新契约回放，也不该悄悄补字段
+    （那会让幂等响应与首次响应不一致）。旧意图号是前端已废弃的 `act-` 前缀。
+    """
+    if not isinstance(ledger, dict):
+        return ledger
+    return {
+        key: value
+        for key, value in ledger.items()
+        if isinstance(value, dict) and set(value) == set(PUBLIC_STATE_KEYS)
+    }
+
+
+def encode_coach_cache(rec: SessionRecord, engine: RulesEngine, runtime: RuntimeMetadata) -> dict:
+    """落盘当前版本的教练建议，保证服务重启后同版本仍逐字节一致。"""
+    state = project_engine_state(rec, engine, runtime)
+    return {
+        "version": state["version"],
+        "fingerprint": [item.get("action_id") for item in state["action_history"]],
+        "advice": copy.deepcopy(state["coach_advice"]),
+    }
+
+
+def decode_coach_cache(data: Any) -> tuple[int, tuple, dict] | None:
+    if data is None:
+        return None
+    if not isinstance(data, dict) or set(data) != {"version", "fingerprint", "advice"}:
+        raise ValueError()
+    version = data["version"]
+    fingerprint = data["fingerprint"]
+    if isinstance(version, bool) or not isinstance(version, int) or version < 0:
+        raise ValueError()
+    if not isinstance(fingerprint, list) or any(not isinstance(item, str) for item in fingerprint):
+        raise ValueError()
+    advice = data["advice"]
+    CoachAdvice.model_validate(advice)
+    if advice.get("basis_version") != version:
+        raise ValueError()
+    return version, tuple(fingerprint), copy.deepcopy(advice)
+
+
 def encode_session_document(
     rec: SessionRecord,
     engine: RulesEngine,
@@ -422,11 +656,12 @@ def encode_session_document(
                 ],
             },
             "idempotency_ledger": ledger,
+            "coach_cache": encode_coach_cache(rec, engine, runtime),
             "auto_status": auto_status,
             "auto_terminal_type": auto_terminal_type,
             "auto_last_error": error_data,
         }
-    except (AttributeError, TypeError, ValueError):
+    except (AttributeError, KeyError, TypeError, ValueError):
         raise internal_api_error()
 
 
@@ -448,7 +683,7 @@ def decode_session_document(document: dict) -> SessionRecord:
     try:
         if not isinstance(document, dict) or not required.issubset(document):
             raise ValueError()
-        if set(document) - required - set(AUTO_FIELDS) - {"schema_version"}:
+        if set(document) - required - set(AUTO_FIELDS) - {"schema_version", "coach_cache"}:
             raise ValueError()
         if "schema_version" in document and (
             isinstance(document["schema_version"], bool) or document["schema_version"] != 1
@@ -531,7 +766,11 @@ def decode_session_document(document: dict) -> SessionRecord:
         engine = restore_engine_from_archive(scenario, session_id, document["engine_state"])
         if engine.state.scenario_id != scenario_id:
             raise ValueError()
-        ledger = validate_idempotency_ledger(document["idempotency_ledger"], session_id, mode)
+        ledger = validate_idempotency_ledger(
+            drop_legacy_ledger_entries(document["idempotency_ledger"]),
+            session_id,
+            mode,
+        )
         rec = SessionRecord(
             session_id=session_id,
             scenario_id=scenario_id,
@@ -550,6 +789,10 @@ def decode_session_document(document: dict) -> SessionRecord:
             runtime=runtime,
             idempotency_ledger=ledger,
         )
+        coach_cache = decode_coach_cache(document.get("coach_cache"))
+        if coach_cache is not None:
+            coach_version, coach_fingerprint, coach_advice = coach_cache
+            rec.coach_cache[coach_version] = (coach_fingerprint, coach_advice)
         status, terminal_type, error = normalize_auto_fields(document, engine)
         rec.auto_status = status
         rec.auto_terminal_type = terminal_type
@@ -619,6 +862,330 @@ def latest_offer(public: dict, actor: str) -> dict:
     return {"version": latest["version"], "offers": copy.deepcopy(latest["clauses"])}
 
 
+def action_event_count(public_events: Any) -> int:
+    """已提交行动数（我方 + 对手）：顶层 version 与 base_version 的唯一口径。"""
+    if not isinstance(public_events, list):
+        return 0
+    return sum(
+        1 for event in public_events
+        if isinstance(event, dict) and event.get("type") == "action"
+    )
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _clean_number(value: Any) -> int | float:
+    """整数值的 float 归一成 int，避免投影里出现 800.0 这种噪声。"""
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def scenario_budget(scenario: dict) -> int:
+    raw = scenario.get("action_points_per_round", 3)
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 0:
+        return 3
+    return raw
+
+
+def project_clause_defs(scenario: dict, my_offers: dict) -> list[dict]:
+    """把我方场景条款投影成前端 defs。
+
+    数量跟随场景（ai_governance 3 条、芯片场景 4 条），不硬凑 5 条。
+    initial 取我方最新报价里该条款的取值；还没报价时回落到场景初始值。
+    """
+    defs: list[dict] = []
+    for clause in scenario.get("clauses") or []:
+        if not isinstance(clause, dict):
+            continue
+        name = clause.get("name")
+        if not isinstance(name, str) or not name:
+            continue
+        entry = my_offers.get(name) if isinstance(my_offers, dict) else None
+        offered = entry.get("option") if isinstance(entry, dict) else None
+        unit = clause.get("unit") if isinstance(clause.get("unit"), str) else ""
+        if clause.get("type") == "numeric":
+            range_value = clause.get("range")
+            low, high = 0, 0
+            if isinstance(range_value, (list, tuple)) and len(range_value) == 2:
+                low, high = range_value
+            step = clause.get("step")
+            if isinstance(step, bool) or not _is_number(step) or step <= 0:
+                step = 1
+            initial = offered if _is_number(offered) else clause.get("initial")
+            if not _is_number(initial):
+                initial = low
+            defs.append({
+                "name": name,
+                "type": "numeric",
+                "unit": unit,
+                "range": {
+                    "min": _clean_number(low),
+                    "max": _clean_number(high),
+                    "step": _clean_number(step),
+                },
+                "options": None,
+                "initial": _clean_number(initial),
+            })
+            continue
+        options = [
+            option.get("id")
+            for option in clause.get("options") or []
+            if isinstance(option, dict) and isinstance(option.get("id"), str)
+        ]
+        initial = offered if isinstance(offered, str) and offered in options else clause.get("initial")
+        if initial not in options:
+            initial = options[0] if options else None
+        defs.append({
+            "name": name,
+            "type": "enum",
+            "unit": unit,
+            "range": None,
+            "options": options,
+            "initial": initial,
+        })
+    return defs
+
+
+def _coach_now() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _coach_normalize(text: str) -> str:
+    return re.sub(r"\s+", "", text).lower()
+
+
+def coach_text_ok(title: str, text: str) -> bool:
+    """title + text 归一化后不得命中禁用词。"""
+    blob = _coach_normalize(f"{title}{text}")
+    return not any(_coach_normalize(word) in blob for word in FORBIDDEN_COACH_WORDS)
+
+
+def _coach_clamp(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def coach_evidence_ok(
+    evidence: dict,
+    history_ids: set,
+    basis_round: int,
+    clause_names: set,
+) -> bool:
+    """§1.3 证据断言：round 在 1..basis_round、action_id 可查、clause 同名。"""
+    if not isinstance(evidence, dict):
+        return False
+    if evidence.get("kind") not in ("action", "offer", "event"):
+        return False
+    round_no = evidence.get("round")
+    if isinstance(round_no, bool) or not isinstance(round_no, int):
+        return False
+    if not 1 <= round_no <= basis_round:
+        return False
+    clause = evidence.get("clause")
+    if clause is not None and clause not in clause_names:
+        return False
+    label = evidence.get("label")
+    if not isinstance(label, str) or not label.strip() or len(label) > 20:
+        return False
+    if evidence.get("kind") == "action" and evidence.get("action_id") not in history_ids:
+        return False
+    return True
+
+
+def build_coach_advice(
+    version: int,
+    round_no: int,
+    clauses: list[dict],
+    my_offers: dict,
+    opponent_offers: dict,
+    open_issues: list[str],
+    history: list[dict],
+    opponent_actor: str,
+) -> dict:
+    """规则启发式，不调模型；同输入必须同输出（generated_at 由缓存层固定）。"""
+    advice = {
+        "status": "pending",
+        "basis_round": round_no,
+        "basis_version": version,
+        "generated_at": None,
+        "items": [],
+        "fail_reason": None,
+    }
+    if version == 0:
+        return advice
+
+    clause_names = [clause["name"] for clause in clauses]
+    clause_set = set(clause_names)
+    history_ids = {
+        event.get("action_id") for event in history if isinstance(event, dict)
+    }
+    patches_by_clause: dict[str, list[dict]] = {}
+    for event in history:
+        if not isinstance(event, dict):
+            continue
+        patch = event.get("offer_patch")
+        if not isinstance(patch, dict):
+            continue
+        for name in patch:
+            if isinstance(name, str):
+                patches_by_clause.setdefault(name, []).append(event)
+
+    def latest_patch(name: str, actor: str | None = None) -> dict | None:
+        events = patches_by_clause.get(name, [])
+        if actor is not None:
+            events = [event for event in events if event.get("actor") == actor]
+        return events[-1] if events else None
+
+    def evidence_for(event: dict | None, clause: str | None, side: str) -> dict | None:
+        if not isinstance(event, dict):
+            return None
+        action_id = event.get("action_id")
+        event_round = event.get("round")
+        if not isinstance(action_id, str) or isinstance(event_round, bool) or not isinstance(event_round, int):
+            return None
+        verb = COACH_ACTION_LABELS.get(event.get("action_type"), "行动")
+        return {
+            "kind": "action",
+            "round": event_round,
+            "action_id": action_id,
+            "clause": clause,
+            "label": _coach_clamp(f"R{event_round} {side}{verb}", 20),
+        }
+
+    items: list[dict] = []
+
+    def try_add(kind: str, title: str, text: str, evidence: list[dict]) -> None:
+        if len(items) >= COACH_MAX_ITEMS:
+            return
+        if not evidence or not 30 <= len(text) <= 90:
+            return
+        if not coach_text_ok(title, text):
+            return
+        if any(
+            not coach_evidence_ok(item, history_ids, round_no, clause_set)
+            for item in evidence
+        ):
+            return
+        items.append({
+            "id": f"ca-{version}-{len(items) + 1}",
+            "kind": kind,
+            "title": _coach_clamp(title, 16),
+            "text": text,
+            "evidence": evidence,
+            "ap_cost": 1 if kind == "next_move" else None,
+            "apply_hint": None,
+        })
+
+    open_set = [name for name in open_issues if name in clause_set]
+    for name in open_set:
+        mine = my_offers.get(name) if isinstance(my_offers, dict) else None
+        theirs = opponent_offers.get(name) if isinstance(opponent_offers, dict) else None
+        if isinstance(mine, dict) and isinstance(theirs, dict):
+            if mine.get("option") == theirs.get("option"):
+                continue  # 已一致，交给下面的 opportunity 分支
+            evidence = [
+                item for item in (
+                    evidence_for(latest_patch(name, MY_ACTOR), name, "我方"),
+                    evidence_for(latest_patch(name, opponent_actor), name, "对手"),
+                ) if item is not None
+            ]
+            latest_round = max((item["round"] for item in evidence), default=round_no)
+            try_add(
+                "risk",
+                f"「{name}」仍未收敛",
+                f"第{latest_round}轮双方对「{name}」的取值仍不一致，建议先确认该项口径再安排让步顺序，避免把分歧直接带进终局。",
+                evidence,
+            )
+        elif not isinstance(mine, dict) and not isinstance(theirs, dict):
+            anchor = latest_patch(name) or (history[-1] if history else None)
+            anchor_patch = anchor.get("offer_patch") if isinstance(anchor, dict) else None
+            anchor_clause = name if isinstance(anchor_patch, dict) and name in anchor_patch else None
+            evidence = [
+                item for item in (evidence_for(anchor, anchor_clause, "最近"),) if item is not None
+            ]
+            try_add(
+                "next_move",
+                f"下一手：{name}",
+                f"下一手就「{name}」提出明确取值：该项目前双方都未表态，先锁定一个可交换条款，再推进其余议题。",
+                evidence,
+            )
+
+    for name in clause_names:
+        if name in open_set:
+            continue
+        mine = my_offers.get(name) if isinstance(my_offers, dict) else None
+        theirs = opponent_offers.get(name) if isinstance(opponent_offers, dict) else None
+        if not (isinstance(mine, dict) and isinstance(theirs, dict)):
+            continue
+        if mine.get("option") != theirs.get("option"):
+            continue
+        evidence = [
+            item for item in (
+                evidence_for(latest_patch(name, MY_ACTOR), name, "我方"),
+                evidence_for(latest_patch(name, opponent_actor), name, "对手"),
+            ) if item is not None
+        ]
+        try_add(
+            "opportunity",
+            f"「{name}」已见共识",
+            f"「{name}」双方已给出相同取值，可作为本轮交换支点：建议公开确认该项共识，换取对方在未决议题上的让步。",
+            evidence,
+        )
+
+    advice["status"] = "ready"
+    advice["items"] = items
+    advice["generated_at"] = _coach_now()
+    return advice
+
+
+def coach_advice_for(
+    rec: SessionRecord,
+    version: int,
+    round_no: int,
+    open_issues: list[str],
+    history: list[dict],
+    my_offers: dict,
+    opponent_offers: dict,
+    clauses: list[dict],
+) -> dict:
+    """get-or-create，按 (version, 行动账本指纹) 缓存，同一版本只算一次。"""
+    fingerprint = tuple(
+        event.get("action_id") for event in history if isinstance(event, dict)
+    )
+    with rec.coach_lock:
+        cached = rec.coach_cache.get(version)
+        if cached is not None and cached[0] == fingerprint:
+            return copy.deepcopy(cached[1])
+        try:
+            advice = build_coach_advice(
+                version=version,
+                round_no=round_no,
+                clauses=clauses,
+                my_offers=my_offers,
+                opponent_offers=opponent_offers,
+                open_issues=open_issues,
+                history=history,
+                opponent_actor=rec.opponent_actor,
+            )
+        except Exception:
+            # 生成失败一律降级为 failed，不许把 /state 打成 500。
+            advice = {
+                "status": "failed",
+                "basis_round": round_no,
+                "basis_version": version,
+                "generated_at": None,
+                "items": [],
+                "fail_reason": "教练建议生成失败，可稍后重试",
+            }
+        rec.coach_cache[version] = (fingerprint, advice)
+        if len(rec.coach_cache) > COACH_CACHE_LIMIT:
+            for stale in sorted(rec.coach_cache)[: len(rec.coach_cache) - COACH_CACHE_LIMIT]:
+                rec.coach_cache.pop(stale, None)
+        return copy.deepcopy(advice)
+
+
 def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: RuntimeMetadata) -> dict:
     public = engine.public_state(MY_ACTOR)
     action_meta = {action_id: (origin, warnings) for action_id, origin, warnings in runtime.action_meta}
@@ -632,16 +1199,40 @@ def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: Runti
         record["origin"] = origin
         record["warnings"] = list(warnings)
         history.append(record)
+    # 同一次遍历里得到 version：已提交行动数，不另建计数器、不落库。
+    version = len(history)
+    my_offer = latest_offer(public, rec.my_actor)
+    opponent_offer = latest_offer(public, rec.opponent_actor)
+    clauses = project_clause_defs(engine.scenario, my_offer["offers"])
+    budget = scenario_budget(engine.scenario)
+    open_issues = copy.deepcopy(public["open_issues"])
+    coach_advice = coach_advice_for(
+        rec,
+        version,
+        public["round"],
+        open_issues,
+        history,
+        my_offer["offers"],
+        opponent_offer["offers"],
+        clauses,
+    )
     return {
         "session_id": rec.session_id,
         "round": public["round"],
         "phase": public["phase"],
-        "my_offer": latest_offer(public, rec.my_actor),
-        "opponent_offer": latest_offer(public, rec.opponent_actor),
-        "open_issues": copy.deepcopy(public["open_issues"]),
+        "my_offer": my_offer,
+        "opponent_offer": opponent_offer,
+        "open_issues": open_issues,
         "action_history": history,
         "status": public["status"],
         "mode": rec.mode,
+        "clauses": clauses,
+        "version": version,
+        # 11/17 回签：action_points 恒等于预算（UI 只显示上限，不做递减）。
+        # 直接从场景预算取值，不读引擎那个被 -=1 的回合剩余值。
+        "action_points": budget,
+        "action_points_per_round": budget,
+        "coach_advice": coach_advice,
     }
 
 
@@ -751,14 +1342,31 @@ def run_validate_action(wrapped: dict, opponent: bool = False) -> list:
     return list(warns)
 
 
-def extract_transport_fields(payload: Any) -> tuple[dict, str, int]:
+def extract_transport_fields(
+    payload: Any,
+    idempotency_key: str | None = None,
+) -> tuple[dict, str, int]:
+    """意图号可来自 body 的 client_action_id 或 Idempotency-Key 头，互为别名。
+
+    两个都给且不相等 → 400 INVALID_REQUEST；都没给 → 422（保持必填语义）。
+    意图号是不透明字符串，不校验格式（前端已把 act- 改成 req-）。
+    """
     if not isinstance(payload, dict):
         raise ApiError(422, "INVALID_REQUEST", "请求体顶层必须是 JSON 对象。")
-    client_action_id = payload.get("client_action_id")
-    if client_action_id is None or (isinstance(client_action_id, str) and not client_action_id.strip()):
-        raise ApiError(422, "INVALID_REQUEST", "缺少必填字段 client_action_id。")
-    if not isinstance(client_action_id, str):
+    body_id = payload.get("client_action_id")
+    if body_id is not None and not isinstance(body_id, str):
         raise ApiError(422, "INVALID_REQUEST", "字段 client_action_id 必须是非空字符串。")
+    header_id = idempotency_key if isinstance(idempotency_key, str) else None
+    body_present = isinstance(body_id, str) and bool(body_id.strip())
+    header_present = isinstance(header_id, str) and bool(header_id.strip())
+    if body_present and header_present and body_id != header_id:
+        raise ApiError(
+            400, "INVALID_REQUEST",
+            "Idempotency-Key 头与 body 的 client_action_id 不一致，二者必须相同或只提供一个。",
+        )
+    client_action_id = body_id if body_present else (header_id if header_present else None)
+    if client_action_id is None:
+        raise ApiError(422, "INVALID_REQUEST", "缺少必填字段 client_action_id（或 Idempotency-Key 头）。")
     if "base_version" not in payload:
         raise ApiError(422, "INVALID_REQUEST", "缺少必填字段 base_version。")
     base_version = payload["base_version"]
@@ -827,6 +1435,10 @@ def generate_opponent_turn(rec: SessionRecord, candidate_messages: list, runtime
         obj, _, _ = neg.call_with_retry(
             list(candidate_messages), rec.system_prompt, rec.model_options
         )
+    except neg.ModelTimeout:
+        # 超时不是模型不可用：504 且明确告诉前端“本次未提交、可原样重试”。
+        # 绝不能让它变成 SystemExit——那会把整个 uvicorn 进程带走。
+        raise ApiError(504, "TIMEOUT", TIMEOUT_DETAIL, extra={"engine_error": "MODEL_TIMEOUT"})
     except SystemExit:
         raise ModelUnavailable()
     except Exception:
@@ -873,15 +1485,21 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
     return opp_flat, list(warns), checked
 
 
-def engine_action_error(code: str | None) -> ApiError:
-    error = code or "INTERNAL_ERROR"
-    status_code = 409 if code in {
-        "VERSION_CONFLICT", "DUPLICATE_ACTION", "PHASE_CLOSED",
-    } else 400
+def engine_action_error(code: str | None, engine: RulesEngine | None = None) -> ApiError:
+    """引擎码 → 对外六码；原始码一律放进 engine_error。
+
+    映射表没覆盖到的引擎码归 INVALID_ACTION（不发明第七个对外码）。
+    """
     if code is None:
-        status_code = 500
-    detail = ENGINE_ERRORS.get(error, "规则引擎拒绝了该行动，本轮未推进。")
-    return ApiError(status_code, error, detail)
+        return ApiError(500, "INTERNAL_ERROR", SESSION_RECORD_ERROR_DETAIL)
+    api_code = ENGINE_ERROR_TO_API.get(code, "INVALID_ACTION")
+    status_code = API_ERROR_STATUS[api_code]
+    detail = ENGINE_ERRORS.get(code, "规则引擎拒绝了该行动，本轮未推进。")
+    extra: dict = {"engine_error": code}
+    if api_code == "VERSION_CONFLICT" and engine is not None:
+        # 六码契约要求 VERSION_CONFLICT 带顶层 version（行动数口径）。
+        extra["version"] = action_event_count(engine.public_state(MY_ACTOR)["public_events"])
+    return ApiError(status_code, api_code, detail, extra=extra)
 
 
 def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
@@ -890,7 +1508,7 @@ def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
     ok, code, _, events = submit_for(engine, flat["actor"], copy.deepcopy(flat))
     if ok:
         return events
-    raise engine_action_error(code)
+    raise engine_action_error(code, engine)
 
 
 def set_auto_fields(
@@ -959,9 +1577,10 @@ def check_auto_gate(rec: SessionRecord, engine: RulesEngine) -> None:
         ):
             raise ApiError(
                 409,
-                "PHASE_CLOSED",
+                "ROUND_LOCKED",
                 PHASE_CLOSED_DETAIL,
                 extra={
+                    "engine_error": "PHASE_CLOSED",
                     "auto_status": "done",
                     "current_round": engine.state.round,
                     "terminal_type": fact_terminal,
@@ -978,17 +1597,37 @@ def check_auto_gate(rec: SessionRecord, engine: RulesEngine) -> None:
 
 
 def is_ordinary_auto_error(exc: ApiError) -> bool:
-    return exc.status_code < 500 or exc.error == "MODEL_UNAVAILABLE"
+    # 业务性失败（含模型超时）→ pause；只有内部/持久化故障才标 error。
+    return exc.status_code < 500 or exc.error in ("MODEL_UNAVAILABLE", "TIMEOUT")
 
 
-def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dict:
+def auto_error_for(exc: ApiError) -> AutoError:
+    """auto_last_error 记底层原因：引擎码优先，其次才是对外码。"""
+    code = exc.error
+    if isinstance(exc.extra, dict) and isinstance(exc.extra.get("engine_error"), str):
+        code = exc.extra["engine_error"]
+    return AutoError(code, exc.detail)
+
+
+def run_turn(
+    rec: SessionRecord,
+    payload: Any = None,
+    auto: bool = False,
+    idempotency_key: str | None = None,
+) -> dict:
     action_payload = payload
     client_action_id = None
     base_version = None
     if not auto:
-        action_payload, client_action_id, base_version = extract_transport_fields(payload)
+        action_payload, client_action_id, base_version = extract_transport_fields(
+            payload, idempotency_key
+        )
     if not rec.mutation_lock.acquire(blocking=False):
-        raise ApiError(409, "SESSION_BUSY", "本会话有另一轮正在处理，请稍后重试；本次未推进。")
+        raise ApiError(
+            409, "SESSION_BUSY",
+            "本会话有另一轮正在处理，请稍后重试；本次未推进。",
+            extra={"retry_after": 1},
+        )
     auto_started = False
     business_active = False
     try:
@@ -1028,12 +1667,19 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
             set_auto_fields(rec, "running", None, None)
             business_active = True
         candidate = restore_engine(engine)
-        if not auto and base_version != candidate.state.current_version:
-            raise ApiError(
-                409, "VERSION_CONFLICT",
-                "客户端基线版本与服务端当前版本不一致，请按 current_state 刷新后重试，本轮未推进。",
-                extra={"current_state": project_engine_state(rec, candidate, runtime)},
-            )
+        if not auto:
+            # base_version 与顶层 version 同一口径：已提交行动数。
+            # 报价版本（current_version）只在报价类行动时 +1，不能当基线。
+            current_state = project_engine_state(rec, candidate, runtime)
+            if base_version != current_state["version"]:
+                raise ApiError(
+                    409, "VERSION_CONFLICT",
+                    "客户端基线版本与服务端当前版本不一致，请按 current_state 刷新后重试，本轮未推进。",
+                    extra={
+                        "current_state": current_state,
+                        "version": current_state["version"],
+                    },
+                )
         current_round = candidate.public_state(MY_ACTOR)["round"]
         my_id = make_action_id(runtime.action_seq + 1)
         opp_id = make_action_id(runtime.action_seq + 2)
@@ -1132,7 +1778,7 @@ def run_turn(rec: SessionRecord, payload: Any = None, auto: bool = False) -> dic
                     engine,
                     runtime,
                     ledger,
-                    AutoError(exc.error, exc.detail),
+                    auto_error_for(exc),
                 )
                 raise
             fail_auto_system(rec, engine, runtime, ledger)
@@ -1177,6 +1823,16 @@ async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
     content = {"error": exc.error, "detail": exc.detail}
     if exc.extra:
         content.update(exc.extra)
+    # VERSION_CONFLICT 的 current_state 与 GET /state 走同一个投影模型，
+    # 否则错误体里会少掉响应模型补的可空字段（如 evidence.quote），
+    # 前端换基线时会看到两份“看起来不一样”的状态。
+    if isinstance(content.get("current_state"), dict):
+        try:
+            content["current_state"] = StateProjection.model_validate(
+                content["current_state"]
+            ).model_dump(mode="json")
+        except Exception:
+            pass
     return JSONResponse(status_code=exc.status_code, content=content)
 
 
@@ -1241,12 +1897,23 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/session")
+@app.post(
+    "/session",
+    response_model=StateProjection,
+    responses={
+        400: {"model": ErrorEnvelope, "description": "场景或对手不合法"},
+        422: {"model": ErrorEnvelope, "description": "请求体校验失败"},
+    },
+)
 def create_session_endpoint(req: CreateSessionRequest) -> dict:
     return create_session(req)
 
 
-@app.get("/session/{session_id}/state")
+@app.get(
+    "/session/{session_id}/state",
+    response_model=StateProjection,
+    responses={404: {"model": ErrorEnvelope, "description": "会话不存在"}},
+)
 def state_endpoint(session_id: str) -> dict:
     return project_state(get_session(session_id))
 
@@ -1256,33 +1923,69 @@ def auto_status_endpoint(session_id: str) -> AutoStatusResponse:
     return project_auto_status(get_session(session_id))
 
 
-@app.post("/session/{session_id}/action")
+@app.post(
+    "/session/{session_id}/action",
+    response_model=StateProjection,
+    responses={
+        400: {"model": ActionErrorResponse, "description": "INVALID_ACTION / INVALID_REQUEST"},
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+        409: {"model": ActionErrorResponse, "description": "ROUND_LOCKED / VERSION_CONFLICT / SESSION_BUSY"},
+        422: {"model": ErrorEnvelope, "description": "INVALID_REQUEST"},
+        503: {"model": ActionErrorResponse, "description": "MODEL_UNAVAILABLE"},
+        504: {"model": ActionErrorResponse, "description": "TIMEOUT"},
+    },
+)
 async def action_endpoint(session_id: str, request: Request) -> dict:
     rec = get_session(session_id)
     try:
         payload = await request.json()
     except json.JSONDecodeError:
         raise ApiError(400, "INVALID_JSON", "请求体不是合法 JSON。")
-    return await run_in_threadpool(run_turn, rec, payload, False)
+    idempotency_key = request.headers.get(IDEMPOTENCY_HEADER)
+    return await run_in_threadpool(run_turn, rec, payload, False, idempotency_key)
 
 
-@app.post("/session/{session_id}/auto_step")
+@app.post(
+    "/session/{session_id}/auto_step",
+    response_model=StateProjection,
+    responses={
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+        409: {"model": ErrorEnvelope, "description": "ROUND_LOCKED / AUTO_STATUS_ERROR / SESSION_BUSY"},
+        503: {"model": ErrorEnvelope, "description": "MODEL_UNAVAILABLE"},
+        504: {"model": ErrorEnvelope, "description": "TIMEOUT"},
+    },
+)
 def auto_step_endpoint(session_id: str) -> dict:
     return run_turn(get_session(session_id), auto=True)
 
 
-@app.post("/session/{session_id}/debrief")
+@app.post(
+    "/session/{session_id}/debrief",
+    responses={
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+        409: {"model": ErrorEnvelope, "description": "DEBRIEF_NOT_AVAILABLE（带面向用户的 fail_reason）"},
+        500: {"model": ErrorEnvelope, "description": "复盘生成失败（带 fail_reason）"},
+    },
+)
 def debrief_endpoint(session_id: str) -> dict:
     rec = get_session(session_id)
     with rec.state_lock:
         engine = rec.engine
         try:
             debrief = debrief_for(engine, MY_ACTOR)
+            # 对外评价唯一出口：evaluate_for 会把他方 batna / net_gain /
+            # better_than_batna 置 None，禁止直出 engine.evaluate()。
+            evaluation = evaluate_for(engine, MY_ACTOR)
         except IllegalDebriefAccess as exc:
-            raise ApiError(409, "DEBRIEF_NOT_AVAILABLE", str(exc))
-        # 对外评价唯一出口：evaluate_for 会把他方 batna / net_gain /
-        # better_than_batna 置 None，禁止直出 engine.evaluate()。
-        evaluation = evaluate_for(engine, MY_ACTOR)
+            raise ApiError(
+                409, "DEBRIEF_NOT_AVAILABLE", str(exc),
+                extra={"fail_reason": "谈判尚未结束，复盘暂不可用"},
+            )
+        except Exception as exc:
+            raise ApiError(
+                500, "INTERNAL_ERROR", f"复盘生成失败：{type(exc).__name__}。",
+                extra={"fail_reason": "复盘生成失败，请稍后重试"},
+            )
     result = {"debrief": debrief, "evaluation": evaluation}
     json.dumps(result, ensure_ascii=False)
     return result

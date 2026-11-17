@@ -78,12 +78,18 @@ def main():
     sid = data["session_id"]
     expect(data["round"] == 1 and data["action_history"] == [], "引擎初始轮次为 1 且历史为空")
     expect(data["my_offer"] == {"version": 0, "offers": {}}, "我方初始报价为空")
+    expect(data["version"] == 0 and data["action_points"] == 3, "初始 version=0、行动点=预算 3")
+    expect(len(data["clauses"]) == 3, "clauses 数量跟随场景（3 条）")
+    expect(data["coach_advice"]["status"] == "pending", "首轮 coach_advice=pending")
     expect(data["mode"] == "offline", "离线模式标注 mode=offline")
 
-    resp, action_state = call(3, "POST", f"/session/{sid}/action", body=VALID_OFFER)
+    resp, action_state = call(3, "POST", f"/session/{sid}/action",
+                              body=dict(VALID_OFFER, client_action_id="manual-1", base_version=0))
     expect(resp.status_code == 200, "合法行动被接受")
     expect(action_state["round"] == data["round"] + 1, "双方行动后轮次由引擎推进一次")
     expect(len(action_state["action_history"]) == 2, "历史新增两条")
+    expect(action_state["version"] == 2, "顶层 version = 已提交行动数 2")
+    expect(action_state["coach_advice"]["status"] == "ready", "首轮行动后 coach_advice=ready")
     expect(action_state["my_offer"]["version"] == data["my_offer"]["version"] + 1, "我方报价版本 +1")
     expect(action_state["opponent_offer"]["version"] == 2, "对手报价版本取引擎结果")
 
@@ -97,21 +103,26 @@ def main():
         "expected_effect": "",
         "public_message": "我方尝试提交未知条款。",
     }
-    resp, data = call(5, "POST", f"/session/{sid}/action", body=illegal)
-    expect(resp.status_code == 400 and data.get("error") == "UNKNOWN_CLAUSE", "引擎非法行动返回 400 UNKNOWN_CLAUSE")
-    expect(set(data) == {"error", "detail"}, "错误响应只有 error/detail 两字段")
+    resp, data = call(5, "POST", f"/session/{sid}/action",
+                      body=dict(illegal, client_action_id="manual-2", base_version=action_state["version"]))
+    expect(resp.status_code == 400 and data.get("error") == "INVALID_ACTION", "引擎非法行动返回 400 INVALID_ACTION")
+    expect(data.get("engine_error") == "UNKNOWN_CLAUSE", "原始引擎码保留在 engine_error")
+    expect(set(data) == {"error", "detail", "engine_error"}, "错误响应只多一个 engine_error 字段")
 
     resp, data = call(6, "GET", f"/session/{sid}/state")
-    expect(data == action_state, "引擎拒绝后九字段状态零变更")
+    expect(data == action_state, "引擎拒绝后 14 字段状态零变更")
 
     resp, auto_state = call(7, "POST", f"/session/{sid}/auto_step")
     expect(resp.status_code == 200, "auto_step 成功")
     expect(auto_state["round"] == action_state["round"] + 1, "auto_step 恰好推进一轮")
     expect(len(auto_state["action_history"]) == 4, "auto_step 历史再增两条")
+    expect(auto_state["version"] == 4, "auto_step 后 version=4")
     expect(auto_state["action_history"][-2]["origin"] == "auto_player", "自动我方行动 origin=auto_player")
 
     resp, data = call(8, "POST", f"/session/{sid}/debrief")
-    expect(resp.status_code == 202 and data == {"status": "accepted"}, "debrief 返回 202 accepted 占位")
+    expect(resp.status_code == 409 and data.get("error") == "DEBRIEF_NOT_AVAILABLE",
+           "未终局 debrief 返回 409 DEBRIEF_NOT_AVAILABLE")
+    expect(data.get("fail_reason") == "谈判尚未结束，复盘暂不可用", "debrief 失败带人话 fail_reason")
 
     resp, data = call(9, "GET", f"/session/{sid}/state")
     expect(data == auto_state, "debrief 后状态不变")

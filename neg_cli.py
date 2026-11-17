@@ -365,6 +365,15 @@ def build_user_message(round_no: int, indexes: dict, user_message: str) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
+class ModelTimeout(Exception):
+    """模型连接/读取超时。
+
+    调用方（api.py）据此返回 504 TIMEOUT；**绝不能**用 sys.exit 退出——
+    被 HTTP 服务调用时，SystemExit 会把整个 uvicorn 进程带走，前端只会看到
+    连接被重置，而不是一个可重试的 504。
+    """
+
+
 def call_deepseek(messages: list[dict], json_mode: bool = True,
                   temperature: float = 0.7) -> tuple[str, str | None]:
     """返回 (content, finish_reason)。content 可能是空字符串，交给上层判定。"""
@@ -421,7 +430,8 @@ def call_deepseek(messages: list[dict], json_mode: bool = True,
                 or (isinstance(reason, str) and "timed out" in reason.lower())
             )
             if timed_out:
-                break
+                # 超时不在内层重试：交给调用方转为 504，由客户端原样重试。
+                raise ModelTimeout(f"调用模型超时：{last_err}") from e
             if attempt < 3:
                 time.sleep(2 * attempt)
                 continue
@@ -1153,4 +1163,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except ModelTimeout as exc:
+        # 命令行入口自己兜住：照旧打印人类可读的错误后非零退出。
+        print(f"[错误] {exc}")
+        sys.exit(1)

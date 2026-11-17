@@ -52,7 +52,7 @@ NEG_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 "$PY" api.py
 在另一个终端运行自动化测试和真实 HTTP 验收：
 
 ```bash
-NEG_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 "$PY" -m pytest test_api.py test_engine_flow.py -q
+NEG_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 "$PY" -m pytest test_api.py test_auto.py test_contract_v17.py test_engine_flow.py -q
 NEG_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 "$PY" manual_api_check.py
 ```
 
@@ -67,9 +67,9 @@ NEG_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 "$PY" neg_cli.py --offline
 
 ### 正式交付替换
 
-1. 取得 C 的引擎源码、接口说明、17 项错误定义和正式场景文件。
+1. 取得 C 的引擎源码、接口说明、18 项错误定义和正式场景文件。
 2. 用正式源码替代临时字节码，并将 API 的场景入口从 `make_scenario()` 切换到 `load_scenario(正式场景路径)`；显式加载失败不得回退到临时场景。
 3. 使用同一 Python 3.12 环境重跑 API、FLOW、CLI 和 C 的 5 个 unittest，核对公开状态、错误原码、终局和隐私结果。
 4. 等价回归通过并确认唯一真源后，再删除 `engine/` 上一级的 6 个临时 `.pyc`；临时 `load_scenario.py` 的归档或删除另行确认。
 
-内部归档包含双方私有状态和行动 ID，只能用于候选事务与内部验收，不得写入 HTTP 响应或公开日志。服务重启后内存会话不会恢复，`/debrief` 仍是 202 占位接口。
+内部归档包含双方私有状态和行动 ID，只能用于候选事务与内部验收，不得写入 HTTP 响应或公开日志。服务重启后内存会话不会恢复（会话记录落盘在 `runtime/sessions/`，含行动账本与教练建议缓存）；`/debrief` 是同步二态接口：终局后 `200 {"debrief", "evaluation"}`，未终局 `409 {"error": "DEBRIEF_NOT_AVAILABLE", "fail_reason": "谈判尚未结束，复盘暂不可用"}`，不存在 202 占位响应。

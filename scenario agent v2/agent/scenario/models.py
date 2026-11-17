@@ -10,6 +10,10 @@ import math
 import re
 from typing import Any, Mapping
 
+# 编号索引：
+# R0 顶层结构 / R1-R8 业务规则 / R9-R11 条款命名·事实来源·假设 /
+# R12-R15 1.1 契约新增（终局·初始·运行时·指数）/ R16 逐方选项打分
+
 SCENARIO_TYPE_VALUES = ("documented", "hypothesis")
 ISSUE_TYPE_VALUES = ("numeric", "enumerated")
 FACT_TYPE_VALUES = ("立场", "行动", "数字", "引用", "智库")
@@ -1237,6 +1241,70 @@ def _check_r15_index_rules(data: Mapping[str, Any]) -> list[Problem]:
     return validate_index_rules(rules)
 
 
+def _check_r16_option_scores(data: Mapping[str, Any]) -> list[Problem]:
+    """逐方选项打分：键必须是已知 party，值在 0~1；同一方在同一议题内必须给全。"""
+    problems: list[Problem] = []
+    party_ids = set(_state_index(data).keys())
+    for issue_index, issue in enumerate(_dict_list(data.get("issues"))):
+        if issue.get("type") != "enumerated":
+            continue
+        options = _dict_list(issue.get("options"))
+        scored: dict[str, dict[str, float]] = {}
+        for option_index, option in enumerate(options):
+            raw_scores = option.get("score_by_party")
+            if raw_scores is None:
+                continue
+            path = f"issues[{issue_index}].options[{option_index}].score_by_party"
+            if not isinstance(raw_scores, Mapping):
+                problems.append(Problem(
+                    "R16_option_scores",
+                    path,
+                    f"score_by_party 必须是对象，实际为 {type(raw_scores).__name__}",
+                ))
+                continue
+            for party_id, raw_value in raw_scores.items():
+                if party_id not in party_ids:
+                    problems.append(Problem(
+                        "R16_option_scores",
+                        f"{path}.{party_id}",
+                        f"参与方 {party_id!r} 不在 private_state_by_party 中",
+                    ))
+                    continue
+                number = _number(raw_value)
+                if number is None or not 0 <= number <= 1:
+                    problems.append(Problem(
+                        "R16_option_scores",
+                        f"{path}.{party_id}",
+                        f"分数必须是 0~1 的数值，实际为 {raw_value!r}",
+                    ))
+                    continue
+                scored.setdefault(party_id, {})[str(option.get("option_id"))] = number
+        if not scored:
+            continue
+        issue_id = issue.get("issue_id")
+        expected_parties = {
+            party_id
+            for party_id, state in _state_index(data).items()
+            if any(goal.get("issue_id") == issue_id for goal in _dict_list(state.get("goals")))
+        }
+        option_ids = [str(option.get("option_id")) for option in options]
+        for party_id in sorted(expected_parties - set(scored)):
+            problems.append(Problem(
+                "R16_option_scores",
+                f"issues[{issue_index}].options",
+                f"参与方 {party_id} 未给该议题的任何选项打分；启用逐方打分后必须给全",
+            ))
+        for party_id, given in scored.items():
+            for option_index, option_id in enumerate(option_ids):
+                if option_id not in given:
+                    problems.append(Problem(
+                        "R16_option_scores",
+                        f"issues[{issue_index}].options[{option_index}]",
+                        f"参与方 {party_id} 缺少选项 {option_id!r} 的分数；同一方在同一议题内必须给全",
+                    ))
+    return problems
+
+
 _RULES = (
     _check_r0_required_fields,
     _check_r9_clause_naming,
@@ -1246,6 +1314,7 @@ _RULES = (
     _check_r13_initial,
     _check_r14_runtime,
     _check_r15_index_rules,
+    _check_r16_option_scores,
     _check_r8_enum_values,
     _check_r1_weight_sum,
     _check_r2_target_in_range,

@@ -165,6 +165,12 @@ def score(scenario: Mapping[str, Any], party_id: str, issue_id: str, value: Any)
         return max(0.0, min(1.0, raw))
 
     total = len(issue.get("options") or [])
+    for option in issue.get("options") or []:
+        if option.get("option_id") == value:
+            scores = option.get("score_by_party")
+            if isinstance(scores, Mapping) and party_id in scores:
+                return float(scores[party_id])
+            break
     order = _order_of(issue, value)
     if party_id == parties[0]:
         return (total - order + 1) / total
