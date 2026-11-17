@@ -146,3 +146,25 @@ python demo.py
    `submit_for`。合并后需确认调用链只保留一处覆盖，避免“双重覆盖顺序不一致”。
 4. **`multi_agent.py` 改造范围**。本文档给出 `TurnScheduler` 的只读调用方式，
    但 A 侧实际改动需 A 自己排期；C 不改 A 文件。
+## 8. 2026-11-17 更新：A/C 两份引擎目录再次分叉
+
+11-16 交付时 A/C 两侧 `C 11.12 三指数/` 为零差异（39 文件 tree 哈希相同，
+见 `docs/RECONCILE_A_C_1116.md`）。本轮对接 B 契约 1.1 后，**本分支
+`feat/rules-c` 再次领先**，A 那份停在 11-16 快照。合并时请继续以
+`feat/rules-c` 为准，并注意以下文件新增了 1.1 能力：
+
+| 文件 | 11-17 新增内容 |
+|---|---|
+| `engine/indices.py` | `IndexRulesShapeError`；`behaviour_delta` 形状自检与可选 warnings；`initial_indices` 兼容全局 initial |
+| `engine/core.py` | `finish(terminal_type="PARTIAL_AGREEMENT")` 在禁止部分协议时改判 `DEADLOCK` |
+| `adapter/scenario_adapter.py` | `_normalize_index_rules`；`runtime` / `deadlock_rounds` 显式读取；三布尔必填；`step` 与 `initial_ref` 校验 |
+| `load_scenario_bridge.py` | `make_scenario` 从 `agents._scenario.runtime` / `terminal_rules` 读运行参数 |
+| `tests/test_index_rules_v1.py` | 新增 20 条 |
+| `tests/test_contract_v1_1.py` | 新增 18 条 |
+| `tests/fixtures/index_rules_v1.json` | B 原表夹具（从 `origin/feat/scenario-b` 复制） |
+| `tests/fixtures/b_scenario_dst.json` | B 真实场景夹具 |
+| `docs/INDEX_RULES_V1_GAP.md` | `interest_delta` 分歧说明（只出报告，未改结算） |
+
+**合并后预期基线**：`pytest 218 passed / 145 subtests`、`unittest Ran 218 tests OK`、
+`demo.py` 四项指标不变。若 A 侧同时带了新的 `test_e2e.py`，总数可能继续上升，
+以实跑为准。

@@ -211,3 +211,108 @@ us 不变是夹具的偶然：us 的 ideal 到 `range.min` 的距离恰好等于
 5. **`from_b_chip_controls.json` 的单数键 `accept_requires_no_open_issue` 不改。**
    它是 B 冻结契约（`scenario.schema.json` 的 `terminal_rules.required` 写单数且
    `additionalProperties: false`）；引擎读复数、由适配层双读翻译，已在 9.2 加证明测试。
+## 10. 11-17 对接 B 契约 1.1
+
+成员B `e229462`「11.15针对c的修改」把场景契约从 1.0 升到 1.1（加法式，1.0 场景仍合法）。
+本轮按 B 的原文补齐适配缺口，并修掉一个**会静默归零**的严重问题。
+
+### 10.1 本轮改动清单
+
+| # | 文件 / 函数 | 改动 | 理由 |
+|---|---|---|---|
+| 1 | `adapter/scenario_adapter.py::_normalize_index_rules` | 新增：B 1.1 的 13 标签平铺表 → `image_actions` / `trust_actions` 两张表 | B 表与引擎表**结构层级不同**；适配层原样保留会让 image/trust 静默归零 |
+| 2 | 同上 | `initial` 全局值展开到每个参与方；`scale` 补 `[0,100]`；`sensitivity` 缺失时省略并 warning | 引擎要求按参与方分层；不编造敏感度 |
+| 3 | 同上 | `interest_delta` 忽略 + `INTEREST_DELTA_UNSUPPORTED` warning | 引擎无 interest 行为通道，见 `docs/INDEX_RULES_V1_GAP.md` |
+| 4 | `engine/indices.py::IndexRulesShapeError` | 新增异常（可外部 import） | 形状不可识别时显式失败，禁止静默返回 0 |
+| 5 | `engine/indices.py::behaviour_delta` | 非空表但既无 `image_actions` 也无 `trust_actions` 时抛错；可选 `warnings` 参数记录缺档位 | 防静默失效；空表保持 delta=0 兼容老场景 |
+| 6 | `engine/indices.py::initial_indices` | 同时兼容「全局 initial」与「按方分层 initial」 | 上游绕过适配层时不再静默回落 50 |
+| 7 | `adapter/scenario_adapter.py::_adapt` | `runtime.action_points_per_round` 显式读取（1~5）；缺省 3 + warning | B 明确「禁止在适配层写死」 |
+| 8 | 同上 | `terminal_rules.deadlock_rounds` 显式读取（2~10 且 ≤ max_rounds）；缺省 2 + warning | 路径与字段位置按 B 1.1 |
+| 9 | 同上 | `terminal_rules` 三布尔改为**必填**，取消 `.get(..., True)` 兜底 | B 1.1 冻结语义：缺失或非布尔即契约错误 |
+| 10 | `adapter/scenario_adapter.py::validate_b_contract` | 新增 numeric `initial` 的 `(value-min) % step` 整数倍校验 | B 1.1 明确要求 |
+| 11 | 同上 | 新增 `initial_ref` 解析校验（`public_facts[].fact_id` / `assumptions[].assumption_id`） | B 1.1 明确要求「填写时必须能解析到」 |
+| 12 | 同上 | 适配结果在 clause 上保留 `initial_ref` + `INITIAL_REF_RESOLVED` warning | 供审计追溯「有据的现状」 |
+| 13 | `engine/core.py::finish` | 显式传入 `PARTIAL_AGREEMENT` 且场景禁止部分协议时改判 `DEADLOCK` | 关闭 `finish(terminal_type=...)` 绕过口，与另外两处判定同口径 |
+| 14 | `load_scenario_bridge.py::make_scenario_with_warnings` | 从 `agents._scenario.runtime` / `terminal_rules` 读运行参数，缺省回默认并加来源注释 | 与 B 1.1 的显式读取口径对齐 |
+| 15 | `tests/fixtures/index_rules_v1.json` | **新增**（从 `origin/feat/scenario-b` 复制 B 原表） | 测试不得跨分支读取，别人 checkout 后必须可独立跑 |
+| 16 | `tests/fixtures/b_scenario_dst.json` | **新增**（B 的真实场景，从 `origin/feat/scenario-b` 复制） | 端到端回归需要 B 真实场景 |
+| 17 | `tests/test_index_rules_v1.py` | **新增** 20 条 | 任务 1 的全部验收点 |
+| 18 | `tests/test_contract_v1_1.py` | **新增** 18 条 | runtime / deadlock / 三布尔 / initial_ref |
+
+测试夹具没有因「三布尔必填」而需要补齐：`scenarios/from_b_chip_controls.json` 与
+`tests/fixtures/b_scenario_dst.json` 的三布尔都齐全且都是 JSON 布尔。
+
+### 10.2 `index_rules` 形状映射表
+
+| B 1.1 原生形状 | 引擎形状 | 规则 |
+|---|---|---|
+| `initial: {"image": 50, "trust": 50}` | `initial: {"p1": {"image": 50, "trust": 50}, "p2": {...}}` | 全局值展开到每个 `parties[].id`；已分层则原样保留 |
+| `{"<label>": {"slight": {...}, "moderate": {...}, "major": {...}}}` | `image_actions["<label>"][magnitude]` | 取 `image_delta` |
+| 同上 | `trust_actions["<label>"][magnitude]` | 取 `trust_delta` |
+| 同上 | —（丢弃） | `interest_delta` 忽略 + `INTEREST_DELTA_UNSUPPORTED` |
+| 无 `scale` | `scale: [0, 100]` | 补引擎默认量纲 |
+| 无 `sensitivity` | 省略该键 | 引擎按 1.0 等权；`SENSITIVITY_ABSENT` warning |
+| 缺某标签 | 该标签三档补 0 | `INDEX_RULE_LABEL_MISSING` warning |
+| 13 标签外的键 | 忽略 | `INDEX_RULE_LABEL_UNKNOWN` warning |
+| 已含 `image_actions` / `trust_actions` | 原样深拷贝 | `INDEX_RULES_ALREADY_NATIVE` warning |
+
+13 个标签与三档幅度两边完全一致：
+`constructive_proposal / cite_rules / hardline_stance / broken_promise /
+personal_attack / redline_provoke / procedural / diplomatic_reframe /
+protect_ally / keep_promise / betray_ally / vague_stance / conditional_concession`，
+`slight / moderate / major`。因此转换是无损的结构搬移。
+
+### 10.3 `IndexRulesShapeError` 的设计理由
+
+`_table_delta()` 原来的语义是「查不到表就返回 0」。这在「场景没有结算表」时是正确的，
+但在「场景带了表、但表形状没被识别」时是**静默降级**：image / trust 永远停在初值，
+全部测试照样绿。B 1.1 原生表正好会触发这条路径。
+
+现在的规则：
+
+- `index_rules` 为空 `{}` 或缺失 → 不抛，`delta=0`（兼容 demo / 老场景）；
+- 表非空、但既无 `image_actions` 也无 `trust_actions` → 抛
+  `IndexRulesShapeError`，消息列出实际顶层键，并提示「是否使用了未经适配层转换的 B 1.1 原生表」；
+- 适配层 `_normalize_index_rules` 遇到同样不可识别的形状 → `ScenarioContractError`。
+
+实测（`tests/fixtures` 真实 B 表）：适配后 `personal_attack/major` 的
+`behaviour_delta` 为 `{"image": -9, "trust": -6}`，初值 50 → 41 / 44；
+修复前同一条链路为 `{"image": 0, "trust": 0}`。
+
+### 10.4 `partial_agreement` 双触发口核对结论
+
+结论：**部分满足 → 已做最小增量修复**。
+
+| 核对项 | 结论 | 证据 |
+|---|---|---|
+| `partial_agreement_allowed=false` 时不存在 PARTIAL_AGREEMENT | 基本满足；`finish(terminal_type="PARTIAL_AGREEMENT")` 曾可绕过 | `engine/terminal.py:128-131`、`engine/core.py:181-197`；本轮在 `core.py::finish` 关闭显式绕过口 |
+| 优先级高于 `accept_requires_no_open_issue` | 满足：存在未决条款且 partial=false 时 accept 被 validator 拒 | `engine/validator.py:401-412`（`requires_full = not partial_allowed or ...`） |
+| 与 `accept_requires_no_open_issue=true` 同时为 true 不矛盾 | 满足：引擎有两个独立触发口——accept 口与 `finish()` 自动封存口 | `engine/core.py:274-288`（`_seal_partial_agreement`）+ `determine_terminal_type` |
+| timeout / deadlock 不受三开关影响 | 满足：`ROUNDS_EXHAUSTED` / `DEADLOCK` 分支不读三布尔 | `engine/terminal.py:137-146`、`engine/core.py:252-261` |
+
+新增测试固化：`tests/test_contract_v1_1.py::TerminalBooleansTest`（4 条）。
+
+### 10.5 仍待对齐事项（按紧急度）
+
+1. **`interest_delta` 无落点**（最高优先级，需 B + 队长裁决）：见 `docs/INDEX_RULES_V1_GAP.md`。
+   C 侧当前忽略并 warning；推荐方案 (a)：B 移除或标注为 informational。
+2. **`initial_ref` 的承载字段**：C 侧暂存在 `clauses[].initial_ref`（引擎忽略）。
+   需与 B / 审计确认：是否要在 `docs/state.example.json` 或审计报告的字段里正式暴露。
+3. **`sensitivity` 缺失**：B 1.1 未提供参与方敏感度，C 按 1.0 等权处理。
+   若 B 后续补该字段，适配层已支持直接透传（见 `_normalize_index_rules` 第 6 步）。
+4. **`deadlock_rounds` 的「状态变化」口径**：B 描述为「连续多少轮无状态变化」，
+   C 引擎按 `rounds_without_offer`（无新报价）计数，语义略窄。需与 B 确认是否要把
+   「无新事件 / 无新暗线」也纳入计数；本轮未改引擎计数口径。
+5. **`runtime` 目前只有 `action_points_per_round`**：B schema 的
+   `additionalProperties: false` 已冻结；后续若加字段需 B 先升级契约。
+
+### 10.6 验证基线（2026-11-17 实跑）
+
+| 检查项 | 结果 |
+|---|---|
+| `python -m pytest tests/ -q` | `218 passed, 145 subtests passed` |
+| `python -m unittest discover -s tests -t .` | `Ran 218 tests ... OK` |
+| `python demo.py` 终局 | `FULL_AGREEMENT` |
+| `demo.py` coverage | `1.0` |
+| `demo.py` 审计 | `{"ok": true, "issues": [], "summary": {"blocking": 0, "warning": 0}}` |
+| `demo.py` replay | `True` |

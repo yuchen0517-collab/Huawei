@@ -426,6 +426,42 @@ def make_scenario_with_warnings(
     index_rules, index_warnings = _make_index_rules(player, opponent)
     warnings.extend(index_warnings)
 
+    # 运行参数优先读 agents.json 的 _scenario.runtime / terminal_rules；
+    # 注册表没有这两个块时，保持引擎既有默认值（3 / 2）并在下面注释说明来源。
+    scenario_meta = agents.get("_scenario") or {}
+    runtime_meta = scenario_meta.get("runtime") or {}
+    terminal_meta = scenario_meta.get("terminal_rules") or {}
+    action_points = runtime_meta.get("action_points_per_round")
+    if (
+        not isinstance(action_points, int)
+        or isinstance(action_points, bool)
+        or not 1 <= action_points <= 5
+    ):
+        action_points = 3
+        if "action_points_per_round" in runtime_meta:
+            warnings.append(
+                _warning(
+                    "RUNTIME_ACTION_POINTS_DEFAULTED",
+                    "agents._scenario.runtime.action_points_per_round",
+                    "agents.json 的值不是 1~5 的整数，回落引擎默认 3。",
+                )
+            )
+    deadlock_rounds = terminal_meta.get("deadlock_rounds")
+    if (
+        not isinstance(deadlock_rounds, int)
+        or isinstance(deadlock_rounds, bool)
+        or not 2 <= deadlock_rounds <= 10
+    ):
+        deadlock_rounds = 2
+        if "deadlock_rounds" in terminal_meta:
+            warnings.append(
+                _warning(
+                    "DEADLOCK_ROUNDS_DEFAULTED",
+                    "agents._scenario.terminal_rules.deadlock_rounds",
+                    "agents.json 的值不是 2~10 的整数，回落引擎默认 2。",
+                )
+            )
+
     scenario = {
         "scenario_id": SCENARIO_ID,
         "parties": [
@@ -450,10 +486,13 @@ def make_scenario_with_warnings(
             },
         ],
         "clauses": clauses,
-        # K4：每轮行动点统一为 3（引擎默认/demo/B场景/A口径一致）；原硬编码 5 为历史遗留，11-16 修正
-        "action_points_per_round": 3,
+        # 默认值来源：B 契约 1.1 runtime.action_points_per_round default=3；
+        # agents.json 无该块时沿用此默认（曾硬编码 5，11-16 K4 已修正）。
+        "action_points_per_round": action_points,
         "max_rounds": 12,
-        "deadlock_rounds": 2,
+        # 默认值来源：B 契约 1.1 terminal_rules.deadlock_rounds default=2；
+        # agents.json 无该块时沿用此默认。
+        "deadlock_rounds": deadlock_rounds,
         "index_rules": index_rules,
     }
     _set_warnings(warnings)

@@ -284,6 +284,12 @@ class RulesEngine:
             if resolved in ("FULL_AGREEMENT", "PARTIAL_AGREEMENT"):
                 if self.state.agreement is None and self.state.offers:
                     self._seal_partial_agreement()
+            # 场景禁止部分协议时，显式指定 PARTIAL_AGREEMENT 也不得生效；
+            # 与 determine_terminal_type / accept 分支保持同一口径。
+            if resolved == "PARTIAL_AGREEMENT":
+                rules = self.scenario.get("terminal_rules", {}) or {}
+                if rules.get("partial_agreement_allowed", True) is False:
+                    resolved = "DEADLOCK"
 
         self._record_terminal(resolved)
         return deepcopy(self.state.terminal)

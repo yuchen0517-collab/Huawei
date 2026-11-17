@@ -106,8 +106,17 @@ evaluation = evaluate_for(engine, "cn")
 | 27 | — | `deadlock_rounds` | 默认 `2` |
 | 28 | — | `action_points_per_round` | 默认 `3` |
 | 29 | `issues[].initial`（可选） | `clauses[].initial` | 显式值优先并跳过推导 warning；缺省时枚举取 `order` 最小项、数值取双方 ideal 中点并按硬红线可行域夹逼，并记 `INITIAL_DERIVED` |
-| 30 | —（可选 `index_rules`，上游组装层可补） | `index_rules` | 输入自带则原样保留；否则注入 `demo_scenario.json` 同口径默认表并 warning |
+| 30 | —（B 1.1 顶层 `index_rules`，可选） | `index_rules` | B 1.1 的 13 标签平铺表经 `_normalize_index_rules` 转为 `image_actions` / `trust_actions`；已是引擎形状则原样保留；无表时注入 demo 同口径默认表 |
 | 31 | — | `allow_accept_with_open_issues` | 由第 23 条取反得到 |
+| 32 | `issues[].initial_ref`（可选） | `clauses[].initial_ref` | 必须能解析到 `public_facts[].fact_id` 或 `assumptions[].assumption_id`；解析到后保留并记 `INITIAL_REF_RESOLVED` |
+| 33 | `terminal_rules.deadlock_rounds`（可选） | `deadlock_rounds` | 2~10 的整数且 ≤ `max_rounds`；缺失默认 2 + warning |
+| 34 | `runtime.action_points_per_round`（可选） | `action_points_per_round` | 1~5 的整数；缺失默认 3 + warning |
+| 35 | `index_rules.initial`（B 为全局 `{image, trust}`） | `index_rules.initial`（按参与方分层） | 全局值展开到每个 `parties[].id`；已分层则原样保留 |
+| 36 | `index_rules.<label>.<mag>.image_delta` | `index_rules.image_actions.<label>.<mag>` | 13 标签 × 三档无损搬移 |
+| 37 | `index_rules.<label>.<mag>.trust_delta` | `index_rules.trust_actions.<label>.<mag>` | 同上 |
+| 38 | `index_rules.<label>.<mag>.interest_delta` | —（忽略） | 引擎 interest 为效用驱动，无行为通道；记 `INTEREST_DELTA_UNSUPPORTED`，见 `docs/INDEX_RULES_V1_GAP.md` |
+| 39 | `terminal_rules` 三个布尔 | 同名字段（单数翻译为复数） | **必填**；缺失或非 JSON 布尔直接 `ScenarioContractError`，禁止 `bool()` / 默认值兜底 |
+| 40 | `index_rules.sensitivity`（B 1.1 未提供） | 省略该键 | 引擎按 1.0 等权；记 `SENSITIVITY_ABSENT` |
 
 > 说明：任务书里写的是 `clauses[].targets[p].ideal`，但引擎 `validator.py` /
 > `indices.py` 实际读取的是 `clauses[].positions[p].ideal` 与
@@ -183,31 +192,50 @@ evaluation = evaluate_for(engine, "cn")
 | `MULTIPLE_NUMERIC_REDLINES` | 同一方对同一数值议题给了多条红线，引擎单槽位只留一条 |
 | `IDEALS_INCOMPLETE` | 数值议题 ideal 不足两方，无法取中点，回退 `range.min` |
 | `REDLINE_RANGE_EMPTY` | 双方硬红线可行域为空，取中点并由审计关注 |
+| `INITIAL_REF_RESOLVED` | `initial_ref` 已解析到 `public_facts[]` / `assumptions[]` 并保留 |
+| `INDEX_RULES_ALREADY_NATIVE` | 输入 index_rules 已是引擎原生形状，原样保留 |
+| `INDEX_RULE_LABEL_MISSING` | B 1.1 表缺某个标签，三档补 0 |
+| `INDEX_RULE_LABEL_UNKNOWN` | 出现 13 标签之外的键，已忽略 |
+| `INDEX_RULE_DELTA_INVALID` | 某个 delta 不是数值，按 0 处理 |
+| `INTEREST_DELTA_UNSUPPORTED` | B 的 `interest_delta` 在引擎中无落点，已忽略 |
+| `SENSITIVITY_ABSENT` | B 1.1 未提供敏感度，引擎按 1.0 等权 |
+| `RUNTIME_ACTION_POINTS_DEFAULTED` | 未提供 `runtime.action_points_per_round`，默认 3 |
+| `DEADLOCK_ROUNDS_DEFAULTED` | 未提供 `terminal_rules.deadlock_rounds`，默认 2 |
 
 ## 7. 已知限制（需与 B 对齐）
 
-1. **B 契约没有 `index_rules`**：上游组装层（成员A）现在会借用
-   `scenarios/demo_scenario.json` 的整张结算表并随场景传入，适配层检测到该字段后
-   **原样保留**；只有输入完全没带时才注入默认表并 warning。
-   **结算表的唯一源头是 `demo_scenario.json`**，改表时必须通知 A 同步；
-   `tests/test_adapter.py::test_default_index_rules_matches_demo_scenario` 会守卫
+1. **`index_rules` 形状（B 1.1 已提供）**：B 1.1 的 13 标签平铺表**不能原样喂给引擎**，
+   必须经 `_normalize_index_rules` 转成 `image_actions` / `trust_actions`；
+   否则引擎查不到表会静默返回 0（现已由 `IndexRulesShapeError` 阻断）。
+   上游若仍借用 `demo_scenario.json` 的整表（引擎原生形状），适配层原样保留。
+   `tests/test_adapter.py::test_default_index_rules_matches_demo_scenario` 继续守卫
    默认常量与 demo 表一致。
-2. **B 契约没有 `initial`**：当前数值取双方 ideal 中点并按硬红线夹逼，枚举取 `order`
-   最小项，均记 `INITIAL_DERIVED`。建议 B 在 `issues[]` 补 `initial`
-   （数值为数值型、枚举为 `option_id`）；适配层已支持显式值优先与前向校验。
-3. **B 契约没有 `deadlock_rounds` 与 `action_points_per_round`**：固定为 2 与 3，
-   无法按场景调节节奏。
+2. **`initial`（B 1.1 已提供）**：显式 `initial` 优先；缺省时数值取双方 ideal 中点并按
+   硬红线夹逼，枚举取 `order` 最小项，均记 `INITIAL_DERIVED`。B 1.1 起编译器应输出
+   显式 `initial`，缺省推导仅作兜底。`initial_ref` 解析后保留在
+   `clauses[].initial_ref` 供审计追溯，引擎忽略该字段。
+3. **运行参数（B 1.1 已提供）**：`runtime.action_points_per_round`（1~5，默认 3）与
+   `terminal_rules.deadlock_rounds`（2~10 且 ≤ max_rounds，默认 2）已改为显式读取；
+   仅在 B 场景缺失时回落默认值并记 `RUNTIME_ACTION_POINTS_DEFAULTED` /
+   `DEADLOCK_ROUNDS_DEFAULTED`。
 4. **数值红线单槽位**：现有引擎每个数值条款每方只有一个 `redline`。若 B 同方同时给出
    `min` 与 `max` 两条硬红线（区间约束），适配层只保留第一条并记 warning。
-5. **`step` 不参与校验**：引擎只校验 `range[0] <= value <= range[1]`，不检查取值是否是
-   `step` 的整数倍。B 若依赖步长离散化，需要引擎侧另行补校验。
+5. **`step` 校验范围**：适配层已校验显式 `initial` 必须满足
+   `(value - range.min)` 是 `step` 的整数倍；但引擎对**行动中提交的数值**仍只校验
+   `range[0] <= value <= range[1]`，不检查步长离散化。B 若依赖步长约束行动取值，
+   需要引擎侧另行补校验（本轮未改，避免影响既有行动断言）。
 6. **枚举 `direction` 只能是 `ranked`**：B 若给枚举议题写 `higher_better`，适配层直接报
    契约错误，不猜测语义。
 7. **`negotiability` 未消费**：它是编译器回填的只读审计字段，适配层忽略，不进入 C 场景。
 8. **多参与方**：引擎的 `accept` 只找“第一个对方”，当前按双边设计；三方及以上会退化。
 9. **`partial_agreement_allowed=false`** 的实现方式：`accept` 时由 validator 拒绝未全覆盖的
-   协议；`finish()` 自动封存部分协议后由 `determine_terminal_type` 判为 `DEADLOCK`
-   （协议对象仍留在 state 中供审计回看）。
+   协议；`finish()` 自动封存部分协议后由 `determine_terminal_type` 判为 `DEADLOCK`，
+   显式 `finish("PARTIAL_AGREEMENT")` 也会被改判 `DEADLOCK`（协议对象仍留在 state 中供审计回看）。
+   与 `accept_requires_no_open_issue=true` 并存不矛盾：引擎有两个独立触发口
+   （accept 口 + `finish()` 自动封存口）。
+10. **`interest_delta` 无落点**：B 1.1 的 `interest_delta` 在引擎中没有结算通道，
+    适配层忽略并记 `INTEREST_DELTA_UNSUPPORTED`；方案待 B / 队长裁决，
+    见 `docs/INDEX_RULES_V1_GAP.md`。
 
 ## 8. 与成员A `load_scenario.py` 的关系
 
