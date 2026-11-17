@@ -2,7 +2,7 @@
   "scenario_id": "scn-chip-controls-nozopa-0001",
   "title": "中美先进计算芯片出口管制与关键矿产交换（无合作区间变体）",
   "scenario_type": "hypothesis",
-  "background": "两国就先进计算芯片的出口许可条件长期僵持。美方以国家安全为由限制高算力芯片对华出口，并对经第三国转口设置审查；中方则以关键矿产（稀土、镓、锗）出口许可作为对等筹码。双方均表示愿意谈，但都不接受先单方面让步。本轮为封闭式双边磋商，议题限定在许可门槛、审批时限、转口限制与关键矿产安排四项。",
+  "background": "两国就先进计算芯片的出口许可条件长期僵持。美方以国家安全为由限制高算力芯片对华出口，并对经第三国转口设置审查；中方则以关键矿产（稀土、镓、锗）出口许可作为对等筹码。双方均表示愿意谈，但都不接受先单方面让步。本轮为封闭式双边磋商，议题限定在许可门槛、转口限制、关键矿产安排与退出救济四项。",
   "assumptions": [
     {
       "assumption_id": "A1",
@@ -66,18 +66,6 @@
       "description": "低于该门槛的芯片可获出口许可。数值越高，中方能拿到的芯片越强；美方则希望压低以维持管制效力。现状 800。"
     },
     {
-      "issue_id": "I2",
-      "name": "许可审批时限",
-      "type": "numeric",
-      "unit": "天",
-      "range": {
-        "min": 15,
-        "max": 180,
-        "step": 15
-      },
-      "description": "单笔出口许可的法定审批时限上限。天数越短对中方越有利，越长对美方越有利。现状 120 天。"
-    },
-    {
       "issue_id": "I3",
       "name": "第三国再出口限制",
       "type": "enumerated",
@@ -134,6 +122,35 @@
         }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
+    },
+    {
+      "issue_id": "I5",
+      "name": "协议退出与救济安排",
+      "type": "enumerated",
+      "unit": "",
+      "options": [
+        {
+          "option_id": "O1",
+          "label": "违约方限期整改并补偿损失",
+          "order": 1
+        },
+        {
+          "option_id": "O2",
+          "label": "双方协商延长履约期",
+          "order": 2
+        },
+        {
+          "option_id": "O3",
+          "label": "提交第三方仲裁",
+          "order": 3
+        },
+        {
+          "option_id": "O4",
+          "label": "单方暂停履行并退出协议",
+          "order": 4
+        }
+      ],
+      "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好相反，倾向程序化仲裁与退出权。"
     }
   ],
   "public_facts": [
@@ -218,7 +235,6 @@
         "confidence": "A"
       },
       "applies_to": [
-        "I2",
         "I3"
       ]
     },
@@ -233,8 +249,7 @@
         "confidence": "A"
       },
       "applies_to": [
-        "I1",
-        "I2"
+        "I1"
       ]
     },
     {
@@ -248,7 +263,6 @@
         "confidence": "A"
       },
       "applies_to": [
-        "I2",
         "I3"
       ]
     }
@@ -259,14 +273,8 @@
         {
           "issue_id": "I1",
           "target": 1500,
-          "weight": 0.35,
+          "weight": 0.4,
           "direction": "higher_better"
-        },
-        {
-          "issue_id": "I2",
-          "target": 30,
-          "weight": 0.2,
-          "direction": "lower_better"
         },
         {
           "issue_id": "I3",
@@ -277,7 +285,13 @@
         {
           "issue_id": "I4",
           "target": "O1",
-          "weight": 0.3,
+          "weight": 0.25,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I5",
+          "target": "O1",
+          "weight": 0.2,
           "direction": "ranked"
         }
       ],
@@ -299,13 +313,6 @@
           "reason": "【变体】不接受任何形式的快速通道或核查安排，只维持现行制度"
         },
         {
-          "issue_id": "I2",
-          "op": "max",
-          "value": 90,
-          "hard": false,
-          "reason": "审批时限超过 90 天将实质阻断交付"
-        },
-        {
           "issue_id": "I3",
           "op": "in",
           "value": [
@@ -314,6 +321,16 @@
           ],
           "hard": false,
           "reason": "不接受一律事前许可及转口禁令"
+        },
+        {
+          "issue_id": "I5",
+          "op": "in",
+          "value": [
+            "O1",
+            "O2"
+          ],
+          "hard": false,
+          "reason": "退出安排优先内部整改或协商延期，不接受直接单方退出"
         }
       ],
       "batna": {
@@ -325,7 +342,7 @@
       "priority_ranking": [
         "I1",
         "I4",
-        "I2",
+        "I5",
         "I3"
       ]
     },
@@ -338,12 +355,6 @@
           "direction": "lower_better"
         },
         {
-          "issue_id": "I2",
-          "target": 150,
-          "weight": 0.15,
-          "direction": "higher_better"
-        },
-        {
           "issue_id": "I3",
           "target": "O3",
           "weight": 0.3,
@@ -352,7 +363,13 @@
         {
           "issue_id": "I4",
           "target": "O3",
-          "weight": 0.3,
+          "weight": 0.25,
+          "direction": "ranked"
+        },
+        {
+          "issue_id": "I5",
+          "target": "O4",
+          "weight": 0.2,
           "direction": "ranked"
         }
       ],
@@ -386,11 +403,15 @@
           "reason": "【变体】快速通道无法验证终端用途，必须配额核查或取消许可"
         },
         {
-          "issue_id": "I2",
-          "op": "min",
-          "value": 60,
+          "issue_id": "I5",
+          "op": "in",
+          "value": [
+            "O2",
+            "O3",
+            "O4"
+          ],
           "hard": false,
-          "reason": "审批时限短于 60 天将无法完成必要的安全审查"
+          "reason": "保留仲裁与退出权，不接受仅内部整改"
         }
       ],
       "batna": {
@@ -403,7 +424,7 @@
         "I3",
         "I4",
         "I1",
-        "I2"
+        "I5"
       ]
     }
   },
@@ -413,9 +434,14 @@
     "accept_requires_no_open_issue": true,
     "partial_agreement_allowed": true
   },
+  "clause_roles": {
+    "condition": "I3",
+    "performance": "I4",
+    "exit": "I5"
+  },
   "negotiability": {
     "verdict": "needs_narrowing",
     "zopa_exists": false,
-    "notes": "I4 关键矿产议题双方硬红线无交集（中方只接受 O1，美方只接受 O3/O4），预期终局为僵局终止或主动退出；其余三个议题仍有交集，可观察规则引擎是否给出部分协议。"
+    "notes": "I4 关键矿产议题双方硬红线无交集（中方只接受 O1，美方只接受 O3/O4），预期终局为僵局终止或主动退出；I1/I3/I5 仍有交集，可观察引擎是否给出部分协议。"
   }
 }
