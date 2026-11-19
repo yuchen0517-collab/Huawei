@@ -49,6 +49,7 @@
     {
       "id": "anchor_offer",
       "name": "锚定报价",
+      "desc": "先开一个偏高的价，把整场谈判拉到这个价位附近。下一回合不能用。",
       "family": "shaping",
       "quote_board": true,
       "action_types": ["offer"],
@@ -59,6 +60,7 @@
     {
       "id": "conditional_concession",
       "name": "条件让步",
+      "desc": "我方让一步，但必须换来对方的一个明确承诺。",
       "family": "shaping",
       "quote_board": true,
       "action_types": ["counter_offer", "offer"],
@@ -69,6 +71,7 @@
     {
       "id": "issue_bundle",
       "name": "议题捆绑",
+      "desc": "两件事绑在一起谈：我方在这件上让，换对方在那件上给准数。",
       "family": "shaping",
       "quote_board": true,
       "action_types": ["conditional_exchange"],
@@ -79,6 +82,7 @@
     {
       "id": "issue_split",
       "name": "分拆议题",
+      "desc": "把一件事拆成两半，先谈容易谈成的那一半。每局只能用一次。",
       "family": "shaping",
       "quote_board": true,
       "action_types": ["offer", "counter_offer"],
@@ -90,6 +94,7 @@
     {
       "id": "effective_condition",
       "name": "附加生效条件",
+      "desc": "给谈好的条款加个前提：对方先做到某件事，这条款才算数。",
       "family": "clause_control",
       "quote_board": true,
       "action_types": ["offer", "counter_offer"],
@@ -100,6 +105,7 @@
     {
       "id": "performance_node",
       "name": "设置履约节点",
+      "desc": "把一次性交付拆成三步，每步都查一次。对方中途反悔，我方可以停。",
       "family": "clause_control",
       "quote_board": true,
       "action_types": ["offer", "counter_offer"],
@@ -110,6 +116,7 @@
     {
       "id": "exit_clause",
       "name": "加入退出条款",
+      "desc": "在协议里写清楚：出现某种情况时，我方可以合法退出，不算违约。",
       "family": "clause_control",
       "quote_board": true,
       "action_types": ["offer", "counter_offer"],
@@ -120,6 +127,7 @@
     {
       "id": "final_offer",
       "name": "最后报价",
+      "desc": "摊牌价。说了就不能再改，对方只能接受或散场。每局只能用一次。",
       "family": "closing",
       "quote_board": true,
       "action_types": ["final_offer"],
@@ -130,6 +138,7 @@
     {
       "id": "probe_priority",
       "name": "探询优先级",
+      "desc": "不给条件，只问对方最在意哪一条，看它真正的排序。",
       "family": "info",
       "quote_board": false,
       "action_types": ["probe"],
@@ -140,6 +149,7 @@
     {
       "id": "demand_basis",
       "name": "要求依据",
+      "desc": "让对方拿出证据。拿不出来，它那条主张就站不住。",
       "family": "info",
       "quote_board": false,
       "action_types": ["probe"],
@@ -150,6 +160,7 @@
     {
       "id": "verify_capacity",
       "name": "核查履约能力",
+      "desc": "让对方证明自己做得到。做不到的那一段会当场露出来。",
       "family": "info",
       "quote_board": false,
       "action_types": ["probe"],
@@ -160,6 +171,7 @@
     {
       "id": "adjourn",
       "name": "暂时休会",
+      "desc": "暂停这一轮，把谈判挪到场下先谈，躲开正在变差的局面。",
       "family": "procedure",
       "quote_board": false,
       "action_types": ["statement"],
@@ -170,6 +182,7 @@
     {
       "id": "mediation",
       "name": "请求调解",
+      "desc": "请第三方进来评理，把两方僵住的事变成多方商量。",
       "family": "procedure",
       "quote_board": false,
       "action_types": ["statement"],
@@ -180,6 +193,7 @@
     {
       "id": "public_commitment",
       "name": "公开承诺",
+      "desc": "公开表个态，记一笔形象分。但以后反悔，信任分要掉。",
       "family": "stance",
       "quote_board": false,
       "action_types": ["statement"],
