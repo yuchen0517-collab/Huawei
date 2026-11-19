@@ -7,6 +7,7 @@
 
 import unittest
 
+from load_scenario_bridge import evaluate_for
 from tests import full_engine, make_engine
 
 
@@ -96,6 +97,38 @@ class ReservedFieldTest(unittest.TestCase):
         )
         self.assertEqual(engine.state.to_public_dict("root")["private_state_by_party"], {})
         self.assertEqual(engine.state.to_public_dict("")["private_state_by_party"], {})
+
+
+class EvaluateForRedlineIsolationTest(unittest.TestCase):
+    """evaluate_for 必须把 redline_check 也按 viewer 裁剪，防止反推对方红线。"""
+
+    def test_cn_view_redline_us_is_none_and_cn_is_bool(self):
+        result = evaluate_for(full_engine(), "cn")
+        check = result["redline_check"]
+        self.assertTrue(check)
+        clause = next(iter(check))
+        self.assertIsNone(check[clause]["us"])
+        self.assertIs(type(check[clause]["cn"]), bool)
+
+    def test_cn_view_hides_us_on_every_clause(self):
+        result = evaluate_for(full_engine(), "cn")
+        self.assertTrue(result["redline_check"])
+        for clause, row in result["redline_check"].items():
+            with self.subTest(clause=clause):
+                self.assertIsNone(row["us"])
+                self.assertIs(type(row["cn"]), bool)
+
+    def test_us_view_is_symmetric(self):
+        result = evaluate_for(full_engine(), "us")
+        self.assertTrue(result["redline_check"])
+        for clause, row in result["redline_check"].items():
+            with self.subTest(clause=clause):
+                self.assertIsNone(row["cn"])
+                self.assertIs(type(row["us"]), bool)
+
+    def test_empty_viewer_still_raises(self):
+        with self.assertRaises(ValueError):
+            evaluate_for(full_engine(), "")
 
 
 if __name__ == "__main__":
