@@ -1,0 +1,1237 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070402">
+<title>外交谈判模拟器 · 第二关 中场博弈 · 学习笔记</title>
+<script>
+  window.THEME_CFG = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG;
+      var manual = localStorage.getItem('neg-theme-mode') === 'manual';
+      var saved = manual ? localStorage.getItem('neg-theme') : null;
+      var now = new Date();
+      var mins = now.getHours() * 60 + now.getMinutes();
+      var theme = manual ? (saved === 'light' ? 'light' : 'dark')
+        : (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60 ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#070402');
+    }catch(e){}
+  })();
+</script>
+<script src="progress.js"></script>
+<script>LearningProgress.requireLevel(2);</script>
+<link href="../assets/fonts.css" rel="stylesheet">
+<style>
+  /* ========== 设计令牌 ========== */
+  :root[data-theme="dark"]{
+    --bg:#070402;
+    --bg-soft:#0c0703;
+    --bg-card:rgba(18,11,5,.72);
+    --bg-card-hover:rgba(26,15,7,.85);
+    --bg-inset:rgba(10,6,3,.55);
+    --gold:#c9a061;
+    --gold-bright:#efd7a8;
+    --gold-dim:#8b7149;
+    --gold-soft:rgba(201,160,97,.15);
+    --gold-line:rgba(201,160,97,.35);
+    --gold-line-strong:rgba(201,160,97,.55);
+    --ivory:#f4e9d4;
+    --text-primary:#f0dcb5;
+    --text-secondary:#b59b74;
+    --text-muted:#8a7352;
+    --text-on-gold:#2a1d0c;
+    --shadow-card:0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(201,151,85,.06);
+    --divider:rgba(201,160,97,.14);
+    --success:#b8d4a3;
+    --success-line:rgba(184,212,163,.4);
+    --warning:#e9c67a;
+    --warning-line:rgba(233,198,122,.35);
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f9f2e3;
+    --bg-soft:#f4e9d4;
+    --bg-card:rgba(255,255,255,.82);
+    --bg-card-hover:rgba(255,252,246,.95);
+    --bg-inset:rgba(244,233,212,.55);
+    --gold:#a07c3f;
+    --gold-bright:#c9a061;
+    --gold-dim:#7d6338;
+    --gold-soft:rgba(160,124,63,.1);
+    --gold-line:rgba(160,124,63,.3);
+    --gold-line-strong:rgba(160,124,63,.5);
+    --ivory:#f4e9d4;
+    --text-primary:#2a1d0c;
+    --text-secondary:#5c4a2e;
+    --text-muted:#8c7754;
+    --text-on-gold:#fff8ea;
+    --shadow-card:0 4px 20px rgba(120,90,40,.12),0 0 24px rgba(201,151,85,.04);
+    --divider:rgba(160,124,63,.16);
+    --success:#5a8c3e;
+    --success-line:rgba(90,140,62,.35);
+    --warning:#b8842a;
+    --warning-line:rgba(184,132,42,.3);
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  html{background:var(--bg);transition:background .5s var(--ease);scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:"Noto Serif SC","Source Han Serif SC","Songti SC",STSong,"SimSun",serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    transition:background .5s var(--ease),color .5s var(--ease);
+    overflow-x:hidden;
+  }
+  button{font:inherit;cursor:pointer;background:none;border:none;color:inherit;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ========== 背景装饰 ========== */
+  .page-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.06),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(201,160,97,.04),transparent 70%);
+  }
+  :root[data-theme="light"] .page-bg{
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.12),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(160,124,63,.06),transparent 70%);
+  }
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    opacity:.035;mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:160px 160px;
+  }
+
+  /* ========== 四角细线 ========== */
+  .corner{position:fixed;z-index:10;width:44px;height:44px;pointer-events:none;opacity:.5;}
+  .corner::before,.corner::after{content:"";position:absolute;}
+  .corner::before{width:100%;height:1px;background:linear-gradient(90deg,var(--gold-line),transparent);}
+  .corner::after{width:1px;height:100%;background:linear-gradient(180deg,var(--gold-line),transparent);}
+  .corner-tl{top:18px;left:18px;}
+  .corner-tr{top:18px;right:18px;transform:scaleX(-1);}
+  .corner-bl{bottom:18px;left:18px;transform:scaleY(-1);}
+  .corner-br{bottom:18px;right:18px;transform:scale(-1);}
+
+  /* ========== 顶栏 ========== */
+  .topbar{
+    position:relative;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:24px 40px;
+  }
+  .brand{display:flex;align-items:center;gap:14px;margin-right:auto;}
+  .brand-mark{
+    width:38px;height:38px;border:1px solid var(--gold-line-strong);
+    border-radius:50%;display:grid;place-items:center;background:var(--gold-soft);
+    transition:border-color .5s var(--ease);
+  }
+  .brand-mark svg{width:20px;height:20px;fill:var(--gold);}
+  .brand-text{display:flex;flex-direction:column;gap:3px;}
+  .brand-name{
+    font-size:15px;font-weight:600;letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand-sub{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.32em;text-indent:.32em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+
+  .level-chip{
+    display:flex;align-items:center;gap:9px;height:44px;padding:0 16px;
+    border:1px solid var(--gold-line);background:var(--gold-soft);
+  }
+  .level-chip .chip-label{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.26em;color:var(--text-muted);text-transform:uppercase;
+  }
+  .level-chip .chip-value{font-size:11.5px;letter-spacing:.14em;color:var(--gold);}
+  .level-chip .chip-sep{width:1px;height:16px;background:var(--gold-line);}
+
+  .theme-toggle{
+    position:relative;width:44px;height:44px;
+    border:1px solid var(--gold-line);border-radius:50%;
+    display:grid;place-items:center;transition:all .4s var(--ease);background:var(--gold-soft);
+  }
+  .theme-toggle:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,151,85,.2);}
+  .theme-toggle svg{width:18px;height:18px;transition:all .5s var(--ease);}
+  .theme-toggle .icon-sun{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:rotate(-90deg) scale(.5);position:absolute;}
+  .theme-toggle .icon-moon{fill:var(--gold);opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:rotate(90deg) scale(.5);}
+  .theme-toggle::after{
+    content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold-bright);box-shadow:0 0 8px rgba(201,151,85,.6);
+    opacity:0;transform:scale(.3);transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+  }
+  .theme-toggle.is-auto::after{opacity:1;transform:scale(1);}
+
+  .back-btn{
+    display:inline-flex;align-items:center;gap:7px;height:44px;padding:0 18px;
+    border:1px solid var(--gold-line);border-radius:22px;
+    background:var(--gold-soft);color:var(--gold);
+    font-family:inherit;font-size:12px;letter-spacing:.16em;text-indent:.16em;
+    transition:all .4s var(--ease);white-space:nowrap;flex-shrink:0;
+  }
+  .back-btn:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(201,151,85,.2);transform:translateY(-1px);}
+  .back-btn svg{
+    width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;transition:transform .35s var(--ease);
+  }
+  .back-btn:hover svg{transform:translateX(-3px);}
+
+  /* 左上角返回组 */
+  .topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .back-btn.alt{
+    background:transparent;
+    color:var(--text-muted);
+    border-color:var(--gold-line);
+  }
+  .back-btn.alt:hover{
+    color:var(--gold);
+    border-color:var(--gold-line-strong);
+    background:var(--gold-soft);
+  }
+  .back-btn.alt svg{stroke-width:1.8;}
+
+  /* ========== 主内容 ========== */
+  .main{position:relative;z-index:5;max-width:1180px;margin:0 auto;padding:26px 40px 56px;}
+
+  .header{text-align:center;padding:14px 0 26px;}
+  .eyebrow{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;letter-spacing:.42em;text-indent:.42em;
+    color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;
+  }
+  .main-title{
+    font-size:clamp(26px,3vw,36px);font-weight:600;
+    letter-spacing:.14em;text-indent:.14em;line-height:1.35;
+    background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 45%,var(--gold-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));
+  }
+  .title-rule{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 18px;}
+  .title-rule i{display:block;width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .title-rule i:last-child{transform:scaleX(-1);}
+  .title-rule b{display:block;width:5px;height:5px;border:1px solid var(--gold);transform:rotate(45deg);}
+  .subtitle{
+    font-size:13.5px;line-height:1.85;letter-spacing:.04em;
+    color:var(--text-secondary);max-width:600px;margin:0 auto;
+  }
+  .subtitle .highlight{color:var(--gold);font-weight:500;}
+
+  /* ========== 笔记工具条 ========== */
+  .toolbar{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:16px 24px;margin-bottom:22px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);backdrop-filter:blur(10px);
+    box-shadow:var(--shadow-card);position:relative;
+  }
+  .toolbar::before,.toolbar::after{
+    content:"";position:absolute;width:8px;height:8px;border:1px solid var(--gold-line-strong);
+  }
+  .toolbar::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .toolbar::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .tb-label{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.26em;color:var(--text-muted);text-transform:uppercase;
+  }
+  .tb-stat{
+    display:flex;align-items:baseline;gap:6px;
+    font-family:Georgia,"Times New Roman",serif;
+  }
+  .tb-stat b{
+    font-size:20px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tb-stat span{font-size:10px;letter-spacing:.14em;color:var(--text-muted);}
+  .tb-divider{width:1px;height:22px;background:var(--divider);}
+  .tb-note{font-size:11px;color:var(--text-muted);letter-spacing:.04em;}
+
+  /* ========== 布局 ========== */
+  .notes-layout{display:grid;grid-template-columns:196px minmax(0,1fr);gap:22px;align-items:start;}
+
+  /* 目录 */
+  .toc{position:sticky;top:24px;}
+  .toc-inner{
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:18px 16px;position:relative;
+  }
+  .toc-inner::before,.toc-inner::after{
+    content:"";position:absolute;width:7px;height:7px;border:1px solid var(--gold-line-strong);
+  }
+  .toc-inner::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .toc-inner::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .toc-kicker{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.28em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:14px;
+  }
+  .toc-list{display:flex;flex-direction:column;gap:2px;}
+  .toc-item{
+    display:flex;align-items:center;gap:9px;
+    padding:7px 8px;
+    font-size:11.5px;line-height:1.5;color:var(--text-muted);
+    letter-spacing:.04em;text-align:left;
+    border-left:1px solid transparent;
+    transition:all .3s var(--ease);
+  }
+  .toc-item em{
+    font-family:Georgia,"Times New Roman",serif;font-style:normal;
+    font-size:9px;color:var(--gold-dim);min-width:15px;
+  }
+  .toc-item:hover{color:var(--text-secondary);background:var(--gold-soft);}
+  .toc-item.on{color:var(--gold);border-left-color:var(--gold);background:var(--gold-soft);}
+  .toc-item.on em{color:var(--gold);}
+  .toc-foot{
+    margin-top:14px;padding-top:12px;border-top:1px dashed var(--divider);
+    font-size:10px;line-height:1.7;color:var(--text-muted);letter-spacing:.02em;
+  }
+
+  /* 笔记正文 */
+  .notes{display:flex;flex-direction:column;gap:18px;min-width:0;}
+
+  .nb{
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:24px 26px 22px;
+    scroll-margin-top:24px;
+    position:relative;
+  }
+  .nb::after{
+    content:"";position:absolute;top:9px;right:9px;
+    width:12px;height:12px;
+    border-top:1px solid var(--gold-line);border-right:1px solid var(--gold-line);
+    pointer-events:none;
+  }
+  .nb-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+  .nb-num{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:11px;letter-spacing:.14em;color:var(--gold-dim);
+  }
+  .nb-title{font-size:16px;font-weight:600;letter-spacing:.1em;color:var(--text-primary);}
+  .nb-tag{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;
+    padding:3px 8px;border:1px solid var(--gold-line);color:var(--text-muted);
+  }
+  .nb-tag.must{color:var(--gold-bright);border-color:var(--gold-line-strong);background:var(--gold-soft);}
+  .nb-tag.trap{color:var(--warning);border-color:var(--warning-line);}
+  .nb-sub{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9.5px;letter-spacing:.22em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:16px;
+  }
+  .nb-body{font-size:12.5px;line-height:1.9;color:var(--text-secondary);letter-spacing:.02em;}
+  .nb-body b{color:var(--text-primary);font-weight:600;}
+  .nb-body .k{color:var(--gold);}
+
+  /* 速览列表 */
+  .briefs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--divider);}
+  .brief{
+    display:flex;gap:13px;align-items:flex-start;
+    padding:12px 2px;border-bottom:1px solid var(--divider);
+  }
+  .brief:last-child{border-bottom:none;}
+  .brief em{
+    flex-shrink:0;width:18px;text-align:right;
+    font-family:Georgia,"Times New Roman",serif;font-style:normal;
+    font-size:10px;color:var(--gold-dim);line-height:1.95;
+  }
+  .brief span{font-size:12.5px;line-height:1.85;color:var(--text-secondary);}
+  .brief span b{color:var(--text-primary);font-weight:600;}
+
+  /* 表格 */
+  .rows{border:1px solid var(--divider);margin-top:14px;}
+  .row{display:grid;grid-template-columns:88px 1fr 1fr;}
+  .row + .row{border-top:1px solid var(--divider);}
+  .row > div{padding:10px 12px;font-size:11.5px;line-height:1.7;color:var(--text-secondary);}
+  .row > div + div{border-left:1px solid var(--divider);}
+  .row.head > div{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.18em;color:var(--text-muted);
+    text-transform:uppercase;background:var(--gold-soft);padding:8px 12px;
+  }
+  .row > div:first-child{color:var(--gold);font-weight:500;}
+  .row.head > div:first-child{color:var(--text-muted);font-weight:400;}
+  .rows.two .row{grid-template-columns:1fr 1fr;}
+  .rows.three-even .row{grid-template-columns:1fr 1.1fr .9fr;}
+
+  /* 模板句 */
+  .tmpl{
+    margin-top:14px;padding:16px 18px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-inset);
+    position:relative;
+  }
+  .tmpl-label{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.24em;color:var(--gold-dim);
+    text-transform:uppercase;margin-bottom:10px;
+  }
+  .tmpl-text{
+    font-size:13px;line-height:2.05;color:var(--text-primary);letter-spacing:.02em;
+  }
+  .tmpl-text .blank{
+    color:var(--gold-bright);
+    border-bottom:1px dashed var(--gold-line-strong);
+    padding:0 4px;
+    font-style:normal;
+  }
+  .tmpl-text .plain{color:var(--text-secondary);}
+  .copy-btn{
+    position:absolute;top:12px;right:12px;
+    display:inline-flex;align-items:center;gap:5px;
+    padding:4px 9px;
+    border:1px solid var(--gold-line);
+    font-size:9.5px;letter-spacing:.12em;color:var(--text-muted);
+    transition:all .3s var(--ease);
+  }
+  .copy-btn:hover{color:var(--gold);border-color:var(--gold-line-strong);background:var(--gold-soft);}
+  .copy-btn svg{width:10px;height:10px;fill:currentColor;}
+  .copy-btn.copied{color:var(--success);border-color:var(--success-line);}
+
+  /* 措辞替换 */
+  .swap{margin-top:14px;border:1px solid var(--divider);}
+  .swap-row{
+    display:grid;grid-template-columns:1fr 34px 1.15fr;
+    align-items:center;
+  }
+  .swap-row + .swap-row{border-top:1px solid var(--divider);}
+  .swap-row > div{padding:10px 13px;font-size:11.5px;line-height:1.65;}
+  .swap-from{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--gold-line);}
+  .swap-arrow{
+    display:grid;place-items:center;
+    color:var(--gold-dim);font-size:11px;
+  }
+  .swap-to{color:var(--text-primary);opacity:.92;}
+
+  /* 公式 */
+  .formula{
+    display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;
+  }
+  .fx{
+    flex:1 1 190px;
+    border:1px solid var(--divider);
+    padding:13px 15px;
+    background:var(--bg-inset);
+  }
+  .fx-name{
+    font-size:10px;letter-spacing:.16em;color:var(--text-muted);
+    margin-bottom:7px;
+  }
+  .fx-val{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:13.5px;color:var(--gold-bright);letter-spacing:.03em;
+    line-height:1.5;
+  }
+  .fx-desc{font-size:10.5px;line-height:1.7;color:var(--text-muted);margin-top:6px;}
+
+  /* 清单 */
+  .checks{display:flex;flex-direction:column;border-top:1px solid var(--divider);margin-top:4px;}
+  .check{
+    display:flex;gap:12px;align-items:flex-start;
+    padding:11px 2px;border-bottom:1px solid var(--divider);
+    text-align:left;width:100%;
+    transition:all .3s var(--ease);
+  }
+  .check:last-child{border-bottom:none;}
+  .check:hover .check-text{color:var(--text-primary);}
+  .check-box{
+    flex-shrink:0;width:14px;height:14px;margin-top:3px;
+    border:1px solid var(--gold-line-strong);
+    display:grid;place-items:center;
+    transition:all .3s var(--ease);
+  }
+  .check-box svg{width:9px;height:9px;fill:var(--success);opacity:0;transition:opacity .3s var(--ease);}
+  .check-text{font-size:12px;line-height:1.8;color:var(--text-secondary);transition:color .3s var(--ease);}
+  .check.on .check-box{background:rgba(184,212,163,.12);border-color:var(--success-line);}
+  .check.on .check-box svg{opacity:1;}
+  .checks-actions{
+    display:flex;align-items:center;justify-content:flex-end;gap:14px;
+    margin-top:16px;flex-wrap:wrap;
+  }
+  .checks-hint{
+    font-size:10px;letter-spacing:.08em;color:var(--text-muted);
+    transition:color .4s var(--ease);
+  }
+  .checks-hint.ok{color:var(--success);}
+  .check.on .check-text{color:var(--text-muted);}
+
+  /* 批注 */
+  .memo-wrap{margin-top:14px;position:relative;}
+  .memo{
+    width:100%;min-height:156px;resize:vertical;
+    background-color:var(--bg-inset);
+    border:1px solid var(--gold-line);
+    padding:16px 18px;
+    color:var(--text-primary);
+    font-family:inherit;font-size:12.5px;line-height:26px;
+    letter-spacing:.02em;
+    outline:none;
+    transition:border-color .35s var(--ease),box-shadow .35s var(--ease);
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(26px - 1px),
+        var(--divider) calc(26px - 1px),
+        var(--divider) 26px
+      ),
+      linear-gradient(var(--bg-inset), var(--bg-inset));
+    background-origin:content-box, border-box;
+    background-clip:content-box, border-box;
+    background-attachment:local, local;
+  }
+  .memo:focus{border-color:var(--gold-line-strong);box-shadow:0 0 22px rgba(201,151,85,.12);}
+  .memo::placeholder{color:var(--text-muted);font-size:11.5px;letter-spacing:.03em;}
+  .memo-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:9px;font-size:10px;letter-spacing:.1em;color:var(--text-muted);
+    flex-wrap:wrap;
+  }
+  .memo-state{transition:color .3s var(--ease);}
+  .memo-state.ok{color:var(--success);}
+  .memo-actions{
+    display:flex;align-items:center;justify-content:flex-end;gap:16px;
+    margin-top:16px;flex-wrap:wrap;
+  }
+  .memo-actions-hint{
+    font-size:10px;letter-spacing:.08em;color:var(--text-muted);
+  }
+
+  /* 按钮 */
+  .btn-gold{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 20px;
+    border:1px solid var(--gold-line-strong);
+    background:linear-gradient(180deg,rgba(201,160,97,.15),rgba(139,113,73,.08));
+    color:var(--gold-bright);
+    font-size:12px;letter-spacing:.15em;
+    transition:all .4s var(--ease);
+    position:relative;overflow:hidden;
+  }
+  .btn-gold::before{
+    content:"";position:absolute;top:0;left:-100%;
+    width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(239,215,168,.15),transparent);
+    transition:left .6s var(--ease);
+  }
+  .btn-gold:hover::before{left:100%;}
+  .btn-gold:hover{border-color:var(--gold);color:var(--ivory);box-shadow:0 0 18px rgba(201,151,85,.25);}
+  .btn-gold svg{width:12px;height:12px;fill:currentColor;}
+  .btn-gold.ghost{background:transparent;color:var(--text-muted);border-color:var(--gold-line);}
+  .btn-gold.ghost:hover{color:var(--text-secondary);border-color:var(--gold-line-strong);}
+  .btn-gold.sm{padding:8px 15px;font-size:11px;letter-spacing:.1em;}
+
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 26px;
+    background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    color:var(--text-on-gold);
+    font-size:12.5px;font-weight:600;letter-spacing:.14em;
+    transition:all .4s var(--ease);
+    box-shadow:0 4px 16px rgba(201,151,85,.2);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,151,85,.35);}
+  .btn-primary svg{width:14px;height:14px;fill:currentColor;}
+
+  /* 底部操作条 */
+  .notes-actions{
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    flex-wrap:wrap;margin-top:26px;padding-top:22px;
+    border-top:1px solid var(--divider);
+  }
+  @media (max-width:768px){
+    .notes-actions .btn-gold,.notes-actions .btn-primary{flex:1;justify-content:center;}
+  }
+
+  /* 底部 */
+  .page-foot{margin-top:44px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .foot-rule{display:flex;align-items:center;gap:8px;width:min(260px,50vw);}
+  .foot-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .foot-rule i:last-child{transform:scaleX(-1);}
+  .foot-rule b{width:3px;height:3px;border:1px solid var(--gold-line-strong);transform:rotate(45deg);}
+  .foot-text{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.3em;text-indent:.3em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);
+    z-index:100;padding:13px 24px;
+    border:1px solid var(--gold-line-strong);
+    background:rgba(18,11,5,.95);
+    color:var(--gold-bright);
+    font-size:12px;letter-spacing:.1em;
+    box-shadow:0 8px 32px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;
+    transition:all .45s var(--ease);
+    backdrop-filter:blur(10px);
+  }
+  :root[data-theme="light"] .toast{background:rgba(255,252,246,.97);color:var(--gold);}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  /* 响应式 */
+  @media (max-width:1080px){
+    .notes-layout{grid-template-columns:170px minmax(0,1fr);}
+    .nb{padding:22px 20px 20px;}
+  }
+  @media (max-width:900px){
+    .notes-layout{grid-template-columns:minmax(0,1fr);}
+    .toc{position:static;order:-1;}
+    .toc-inner{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px;}
+    .toc-kicker{margin-bottom:0;width:100%;}
+    .toc-list{flex-direction:row;flex-wrap:wrap;gap:6px;}
+    .toc-item{border-left:none;border:1px solid var(--gold-line);padding:5px 10px;font-size:10.5px;}
+    .toc-item.on{border-color:var(--gold);}
+    .toc-foot{display:none;}
+  }
+  @media (max-width:768px){
+    .topbar{padding:18px 20px;flex-wrap:wrap;gap:12px;}
+    .main{padding:20px 20px 60px;}
+    .corner{width:32px;height:32px;}
+    .corner-tl,.corner-tr{top:12px;}
+    .corner-tl,.corner-bl{left:12px;}
+    .corner-tr,.corner-br{right:12px;}
+    .corner-bl,.corner-br{bottom:12px;}
+    .main-title{font-size:22px;letter-spacing:.1em;}
+    .toolbar{padding:14px 16px;gap:10px;}
+    .tb-divider{display:none;}
+    .checks-actions,.memo-actions{justify-content:flex-start;}
+    .checks-actions .btn-gold,.memo-actions .btn-gold{flex:1;justify-content:center;}
+    .row,.rows.two .row,.rows.three-even .row{grid-template-columns:1fr;}
+    .row > div + div{border-left:none;border-top:1px solid var(--divider);}
+    .row.head{display:none;}
+    .swap-row{grid-template-columns:1fr;gap:0;}
+    .swap-arrow{padding:2px 13px;justify-items:start;}
+    .swap-arrow::before{content:"↓";}
+    .fx{flex:1 1 100%;}
+    .level-chip{height:40px;padding:0 12px;}
+    .level-chip .chip-label{display:none;}
+  }
+  @media (max-width:560px){
+    .brand-sub{display:none;}
+    .topbar-left{gap:6px;}
+    .back-btn{padding:0 11px;height:40px;font-size:11px;letter-spacing:.06em;text-indent:.06em;}
+    .back-btn svg{display:none;}
+    .nb{padding:20px 16px 18px;}
+    .copy-btn{position:static;margin-bottom:10px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ========== 打印 ========== */
+  @media print{
+    @page{margin:16mm 14mm;}
+    html,body{background:#fff!important;color:#1a1208!important;}
+    .page-bg,.grain,.corner,.topbar,.toc,.toolbar,.copy-btn,.memo-foot,
+    .memo-actions,.checks-actions,.notes-actions,.page-foot,.toast{display:none!important;}
+    .main{max-width:none;padding:0;}
+    .header{padding:0 0 14px;text-align:left;}
+    .main-title{
+      font-size:22pt;background:none;-webkit-text-fill-color:#1a1208;
+      color:#1a1208;filter:none;letter-spacing:.08em;
+    }
+    .eyebrow{color:#8a7352;margin-bottom:8px;}
+    .subtitle{color:#4a3a22;max-width:none;font-size:10pt;}
+    .title-rule i{background:#c9a061;}
+    .notes-layout{display:block;}
+    .notes{gap:10px;}
+    .nb{
+      background:#fff!important;border:1px solid #d8c8a8;
+      box-shadow:none;break-inside:avoid;page-break-inside:avoid;
+      padding:12px 14px;
+    }
+    .nb::after{display:none;}
+    .nb-title,.nb-body b,.brief span b,.swap-to{color:#1a1208!important;}
+    .nb-body,.brief span,.row > div,.check-text,.fx-desc{color:#3a2c18!important;}
+    .tmpl,.fx,.memo,.rows,.swap{border-color:#d8c8a8!important;background:#faf6ec!important;}
+    .tmpl-text,.fx-val{color:#5c451c!important;}
+    .memo{min-height:56px;background-image:none!important;}
+    .check-box{border-color:#a08a60!important;}
+    .row.head > div{background:#f0e6d2!important;color:#6b5636!important;}
+    .page-foot{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page-bg"></div>
+<div class="grain"></div>
+
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <div class="topbar-left">
+    <button class="back-btn" onclick="location.href='learning-level2.html'" aria-label="返回课程">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>返回课程</span>
+    </button>
+    <button class="back-btn alt" onclick="location.href='index.html'" aria-label="返回学习地图">
+      <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+      <span>学习地图</span>
+    </button>
+  </div>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">外交谈判模拟器</div>
+      <div class="brand-sub">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="level-chip">
+      <span class="chip-label">NOTES</span>
+      <span class="chip-value">02 中场博弈</span>
+      <span class="chip-sep"></span>
+      <span class="chip-value">一页速查</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme(event)" aria-label="切换主题" title="单击切换亮暗，长按恢复跟随系统时间">
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4V4.8M12 21.6V19.2M2.4 12H4.8M21.6 12H19.2M5.2 5.2L6.9 6.9M18.8 18.8L17.1 17.1M5.2 18.8L6.9 17.1M18.8 5.2L17.1 6.9"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</div>
+
+<main class="main">
+
+  <header class="header">
+    <div class="eyebrow">STUDY NOTES · LEVEL 02</div>
+    <h1 class="main-title">中场博弈 · 学习笔记</h1>
+    <div class="title-rule"><i></i><b></b><i></i></div>
+    <p class="subtitle">
+      把四个知识点压缩成一张可以带上谈判桌的纸：<span class="highlight">表格、模板句、自检清单</span>。
+      清单可勾选、批注可保存，也可直接打印。
+    </p>
+  </header>
+
+  <!-- 工具条 -->
+  <div class="toolbar">
+    <div>
+      <div class="tb-label">CHECKLIST</div>
+    </div>
+    <div class="tb-stat"><b id="checkCount">0</b><span>/ 8 已自检</span></div>
+    <div class="tb-divider"></div>
+    <div class="tb-note" id="tbNote">勾选清单项，确认你已经能独立完成中场的四个动作</div>
+  </div>
+
+  <div class="notes-layout">
+
+    <!-- 目录 -->
+    <aside class="toc">
+      <div class="toc-inner">
+        <div class="toc-kicker">CONTENTS</div>
+        <div class="toc-list">
+          <button class="toc-item on" data-go="n1"><em>01</em>六条核心结论</button>
+          <button class="toc-item" data-go="n2"><em>02</em>让步四铁律</button>
+          <button class="toc-item" data-go="n3"><em>03</em>交换三结构</button>
+          <button class="toc-item" data-go="n4"><em>04</em>BATNA 速查</button>
+          <button class="toc-item" data-go="n5"><em>05</em>施压应对</button>
+          <button class="toc-item" data-go="n6"><em>06</em>易错清单</button>
+          <button class="toc-item" data-go="n7"><em>07</em>上场自检</button>
+          <button class="toc-item" data-go="n8"><em>08</em>我的批注</button>
+        </div>
+        <div class="toc-foot">建议用法：被施压前扫一遍 05，报价前看一眼 02 的对价句式。</div>
+      </div>
+    </aside>
+
+    <!-- 笔记正文 -->
+    <div class="notes">
+
+      <!-- 01 核心结论 -->
+      <section class="nb" id="n1">
+        <div class="nb-head">
+          <span class="nb-num">01</span>
+          <h2 class="nb-title">六条核心结论</h2>
+          <span class="nb-tag must">必背</span>
+        </div>
+        <div class="nb-sub">SIX TAKEAWAYS</div>
+        <div class="nb-body">
+          <div class="briefs">
+            <div class="brief"><em>01</em><span>让步永远有条件：先「<b>如果</b>」后「<b>那么</b>」。单方让步是降价信号，不是善意。</span></div>
+            <div class="brief"><em>02</em><span>幅度递减 <b>30 → 20 → 10</b>。等幅让步等于宣告「我还有空间」。</span></div>
+            <div class="brief"><em>03</em><span>交换发生在<b>估值错位处</b>：找出我方低成本、对方高估值的那一项。</span></div>
+            <div class="brief"><em>04</em><span>打包成交：议题捆成一个方案同时过，各方<b>赢在不同的包里</b>。</span></div>
+            <div class="brief"><em>05</em><span>BATNA 决定底气：谈不成的去处越具体，桌上越不需要赢每句话。</span></div>
+            <div class="brief"><em>06</em><span>面对施压<b>不接情绪、接程序</b>：拆条件、回文本、备好三种应答。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 让步四铁律 -->
+      <section class="nb" id="n2">
+        <div class="nb-head">
+          <span class="nb-num">02</span>
+          <h2 class="nb-title">让步四铁律</h2>
+          <span class="nb-tag">速查</span>
+        </div>
+        <div class="nb-sub">CONCESSION · FOUR RULES</div>
+        <div class="nb-body">
+          <div class="briefs">
+            <div class="brief"><em>①</em><span><b>永不单方让步</b>　以对方行动为条件，先条件后移动。</span></div>
+            <div class="brief"><em>②</em><span><b>幅度递减</b>　30% → 20% → 10%，递减传递「接近底线」。</span></div>
+            <div class="brief"><em>③</em><span><b>拆步走</b>　大让步拆成小步，多换几次，也给对方「赢」的感觉。</span></div>
+            <div class="brief"><em>④</em><span><b>定格入账</b>　让步后立刻小结：「我方在 X 上移动，对应贵方在 Y 上动作。」</span></div>
+          </div>
+
+          <div class="tmpl">
+            <button class="copy-btn" data-copy>
+              <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+              复制
+            </button>
+            <div class="tmpl-label">对价句式 · 可直接套用</div>
+            <div class="tmpl-text">
+              如果<span class="blank">贵方在 X 项上写入文本</span>，那么我方可以在<span class="blank">Y 项</span>上
+              接受<span class="blank">分阶段 / 有条件</span>方案。
+            </div>
+          </div>
+
+          <p style="margin-top:14px;font-size:11.5px;line-height:1.85;color:var(--text-muted)">
+            <b style="color:var(--gold)">忌</b>　用「大幅」「史无前例」形容让步——数字自会说话，形容词只会泄底。
+          </p>
+        </div>
+      </section>
+
+      <!-- 03 交换三结构 -->
+      <section class="nb" id="n3">
+        <div class="nb-head">
+          <span class="nb-num">03</span>
+          <h2 class="nb-title">交换三结构</h2>
+          <span class="nb-tag must">必背</span>
+        </div>
+        <div class="nb-sub">INTEREST TRADING · PACKAGE / TIME</div>
+        <div class="nb-body">
+          <div class="rows three-even">
+            <div class="row head"><div>结构</div><div>典型动作</div><div>代价 / 风险</div></div>
+            <div class="row">
+              <div>单项对价</div>
+              <div>A 换 B：先估值、再打包报价</div>
+              <div>最易被拆开逐项清算</div>
+            </div>
+            <div class="row">
+              <div>议题打包</div>
+              <div>三五个议题捆成一个方案同时成交</div>
+              <div>准备重、案文工作量大</div>
+            </div>
+            <div class="row">
+              <div>差异化时间</div>
+              <div>过渡期、分期执行、评估后升级</div>
+              <div>远期承诺需配套核查</div>
+            </div>
+          </div>
+
+          <div class="tmpl">
+            <button class="copy-btn" data-copy>
+              <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+              复制
+            </button>
+            <div class="tmpl-label">交换探询句 · 填空即用</div>
+            <div class="tmpl-text">
+              我方注意到贵方对<span class="blank">A</span>最为在意，而<span class="blank">B</span>对我方最关键。
+              是否可以探讨：<span class="blank">A 的安排</span>，相应地<span class="blank">B 的对价</span>？
+            </div>
+          </div>
+
+          <p style="margin-top:12px;font-size:11.5px;line-height:1.85;color:var(--text-muted)">
+            先点出<b style="color:var(--gold)">「你在意什么、我在意什么」</b>再提交换——对方拒绝一个被点名的利益，成本远高于拒绝一个数字。
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 BATNA -->
+      <section class="nb" id="n4">
+        <div class="nb-head">
+          <span class="nb-num">04</span>
+          <h2 class="nb-title">BATNA 速查</h2>
+          <span class="nb-tag">实战</span>
+        </div>
+        <div class="nb-sub">BEST ALTERNATIVE · BUILD &amp; SIGNAL</div>
+        <div class="nb-body">
+          <div class="briefs" style="border-top:none">
+            <div class="brief"><em>①</em><span><b>列清单</b>　谈不成的可行替代至少三条：另结安排、区域机制、推迟议程。</span></div>
+            <div class="brief"><em>②</em><span><b>估值</b>　覆盖面、约束力、成本、时间，四维比较。</span></div>
+            <div class="brief"><em>③</em><span><b>选最优</b>　最高的一条即 BATNA，它划出保留价——低于它的协议不如不签。</span></div>
+            <div class="brief"><em>④</em><span><b>可信化</b>　谈判期间推进的每一步（他国接触、机制筹备）都是 BATNA 的一部分。</span></div>
+          </div>
+
+          <div class="formula">
+            <div class="fx">
+              <div class="fx-name">保留价</div>
+              <div class="fx-val">= BATNA 价值</div>
+              <div class="fx-desc">谈成的结果低于它，不如不签。</div>
+            </div>
+            <div class="fx">
+              <div class="fx-name">让步下限</div>
+              <div class="fx-val">&gt; 保留价</div>
+              <div class="fx-desc">任何让步后的成交价，都不得越过这条线。</div>
+            </div>
+            <div class="fx">
+              <div class="fx-name">重估频率</div>
+              <div class="fx-val">每轮一次</div>
+              <div class="fx-desc">形势变了，退路的价值也变了。</div>
+            </div>
+          </div>
+
+          <div class="tmpl">
+            <button class="copy-btn" data-copy>
+              <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+              复制
+            </button>
+            <div class="tmpl-label">给对方退路定价 · 一句话</div>
+            <div class="tmpl-text">
+              「<span class="blank">替代安排</span>一直是选项之一，我方尊重各方判断。不过我方更关注：
+              它无法覆盖<span class="blank">关键缺口</span>——这可能才是各方真正要评估的成本。」
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 施压应对 -->
+      <section class="nb" id="n5">
+        <div class="nb-head">
+          <span class="nb-num">05</span>
+          <h2 class="nb-title">施压应对</h2>
+          <span class="nb-tag">实战</span>
+        </div>
+        <div class="nb-sub">PRESSURE · IDENTIFY &amp; REPLY</div>
+        <div class="nb-body">
+          <div class="briefs" style="border-top:none">
+            <div class="brief"><em>①</em><span><b>限时压力</b>　「本周内必须答复」——本质：压缩你的内部决策时间。</span></div>
+            <div class="brief"><em>②</em><span><b>最后通牒</b>　「不接受就退出」——本质：以退场做赌注，测试依赖度。</span></div>
+            <div class="brief"><em>③</em><span><b>联盟孤立</b>　拉拢多数、边缘化你——本质：用席位数量替代理由质量。</span></div>
+            <div class="brief"><em>④</em><span><b>情绪攻势</b>　拍桌、红白脸——本质：打乱节奏，诱导情绪化让步。</span></div>
+          </div>
+
+          <div class="tmpl">
+            <button class="copy-btn" data-copy>
+              <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+              复制
+            </button>
+            <div class="tmpl-label">应对三句 · 择一使用</div>
+            <div class="tmpl-text">
+              ①「这一时限来自<span class="blank">技术约束</span>，还是<span class="blank">程序安排</span>？」（拆条件）<br>
+              ②「若属正式立场，请以<span class="blank">书面修正案</span>形式送达。」（回文本）<br>
+              ③「请主席确认：现有文本尚有几项<span class="blank">未关闭的括号</span>。」（转程序）
+            </div>
+          </div>
+
+          <div class="misread" style="margin-top:14px;border:1px solid var(--warning-line);border-left:2px solid var(--warning);background:var(--gold-soft);padding:13px 15px">
+            <div style="font-family:Georgia,'Times New Roman',serif;font-size:10px;letter-spacing:.2em;color:var(--warning);margin-bottom:8px;text-transform:uppercase">TRAPS</div>
+            <div style="font-size:11.5px;line-height:1.85;color:var(--text-secondary)">
+              ① 通牒当晚绝不重大让步——让步时机本身在训练对方使用通牒。<br>
+              ② 不对等升级情绪，别接下对方选定的战场。<br>
+              ③ 目标是好协议，不是任何协议——「避免破裂」不是目标。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 易错 -->
+      <section class="nb" id="n6">
+        <div class="nb-head">
+          <span class="nb-num">06</span>
+          <h2 class="nb-title">易错清单</h2>
+          <span class="nb-tag trap">易错</span>
+        </div>
+        <div class="nb-sub">COMMON MISTAKES</div>
+        <div class="nb-body">
+          <div class="briefs" style="border-top:none">
+            <div class="brief"><em>✕</em><span>为了让谈判「有进展」而先让步——进展是给对方的，成本是自己的。</span></div>
+            <div class="brief"><em>✕</em><span>让步后不复述、不入账，被默认为新底线。</span></div>
+            <div class="brief"><em>✕</em><span>把打包方案拆开逐项表决，联合最大值立刻消失。</span></div>
+            <div class="brief"><em>✕</em><span>交换承诺不进文本——中场建立的信用，终局全部蒸发。</span></div>
+            <div class="brief"><em>✕</em><span>把 BATNA 说成威胁；被拆穿一次，整场信用清零。</span></div>
+            <div class="brief"><em>✕</em><span>对情绪攻势对等升级，接下对方选定的战场。</span></div>
+            <div class="brief"><em>✕</em><span>把「避免破裂」当目标——你的目标是好协议，不是任何协议。</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 自检 -->
+      <section class="nb" id="n7">
+        <div class="nb-head">
+          <span class="nb-num">07</span>
+          <h2 class="nb-title">上场自检</h2>
+          <span class="nb-tag must">逐项勾选</span>
+        </div>
+        <div class="nb-sub">PRE-MEETING CHECKLIST · 8 ITEMS</div>
+        <div class="nb-body">
+          <div class="checks" id="checks">
+            <button class="check" data-check="c1">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">我方让步清单已排好序：先让什么、后让什么、绝不什么</span>
+            </button>
+            <button class="check" data-check="c2">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">每一项准备给出的让步，都配有一条明确的对价条件</span>
+            </button>
+            <button class="check" data-check="c3">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">我找出了至少一项「我方低成本、对方高估值」的交换点</span>
+            </button>
+            <button class="check" data-check="c4">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">交换准备写入文本，而不是停留在口头</span>
+            </button>
+            <button class="check" data-check="c5">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">我能说出我方 BATNA 的具体内容与保留价</span>
+            </button>
+            <button class="check" data-check="c6">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">我已评估对方 BATNA 的强度，并备好给它「定价」的话术</span>
+            </button>
+            <button class="check" data-check="c7">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">面对限时与通牒，我已有接受、拒绝、反提案三种预案</span>
+            </button>
+            <button class="check" data-check="c8">
+              <span class="check-box"><svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></span>
+              <span class="check-text">我不会在压力时刻做出任何「第一次让步」</span>
+            </button>
+          </div>
+          <div class="checks-actions">
+            <span class="checks-hint" id="checksHint">8 项全部通过 · 可以带着这张纸上谈判桌了</span>
+            <button class="btn-gold ghost sm" id="resetChecks">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              重置清单
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 08 批注 -->
+      <section class="nb" id="n8">
+        <div class="nb-head">
+          <span class="nb-num">08</span>
+          <h2 class="nb-title">我的批注</h2>
+          <span class="nb-tag">自动保存</span>
+        </div>
+        <div class="nb-sub">PERSONAL MEMO</div>
+        <div class="nb-body">
+          <div class="memo-wrap">
+            <textarea class="memo" id="memo" placeholder="写下你自己的观察：哪一种施压最容易让你失稳？你的 BATNA 还差哪一块拼图？&#10;例：我最怕「过时不候」——下次先问一句「时限来自哪里」。" spellcheck="false"></textarea>
+            <div class="memo-foot">
+              <span class="memo-state" id="memoState">输入内容将自动保存在本机</span>
+              <span id="memoCount">0 字</span>
+            </div>
+            <div class="memo-actions">
+              <span class="memo-actions-hint">把这份笔记带走 · 自检与批注一并打印</span>
+              <button class="btn-gold sm" onclick="window.print()">
+                <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM18 3H6v4h12V3z"/></svg>
+                打印 / 存 PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- 底部操作 -->
+  <div class="notes-actions">
+    <button class="btn-gold ghost" onclick="location.href='learning-level2.html'">返回课程</button>
+    <button class="btn-gold ghost" onclick="location.href='index.html'">学习地图</button>
+    <button class="btn-primary" id="nextLevel" onclick="location.href='learning-level3.html'" disabled>
+      进入下一关：终局收束
+      <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+    </button>
+  </div>
+
+  <div class="page-foot">
+    <div class="foot-rule"><i></i><b></b><i></i></div>
+    <div class="foot-text">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast">已复制</div>
+
+<script src="../assets/theme.js"></script>
+<script>
+  document.getElementById('nextLevel').disabled = !LearningProgress.isComplete(2);
+
+  /* ========== Toast ========== */
+  let toastTimer = null;
+  function toast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+
+  /* ========== 状态 ========== */
+  const KEY = 'neg-l2-notes';
+  const state = { checks: {}, memo: '' };
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      if(p && typeof p === 'object'){
+        if(p.checks && typeof p.checks === 'object') state.checks = p.checks;
+        if(typeof p.memo === 'string') state.memo = p.memo;
+      }
+    }
+  }catch(e){}
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ========== 清单 ========== */
+  const checks = Array.from(document.querySelectorAll('.check'));
+  function renderChecks(){
+    let n = 0;
+    checks.forEach(c => {
+      const on = !!state.checks[c.getAttribute('data-check')];
+      c.classList.toggle('on', on);
+      if(on) n++;
+    });
+    document.getElementById('checkCount').textContent = n;
+    const note = document.getElementById('tbNote');
+    if(n === 0) note.textContent = '勾选清单项，确认你已经能独立完成中场的四个动作';
+    else if(n < checks.length) note.textContent = '已完成 ' + n + ' / ' + checks.length + '，继续核对剩余项';
+    else note.textContent = '八项全部通过 · 可以带着这张纸上谈判桌了';
+    const hint = document.getElementById('checksHint');
+    if(hint){
+      hint.classList.toggle('ok', n === checks.length);
+      hint.textContent = (n === checks.length)
+        ? '8 / 8 · 可以带着这张纸上谈判桌了'
+        : ('还差 ' + (checks.length - n) + ' 项未确认');
+    }
+  }
+  checks.forEach(c => {
+    c.addEventListener('click', () => {
+      const k = c.getAttribute('data-check');
+      state.checks[k] = !state.checks[k];
+      save();
+      renderChecks();
+    });
+  });
+  document.getElementById('resetChecks').addEventListener('click', () => {
+    state.checks = {};
+    save();
+    renderChecks();
+    toast('清单已重置');
+  });
+
+  /* ========== 批注 ========== */
+  const memo = document.getElementById('memo');
+  const memoState = document.getElementById('memoState');
+  const memoCount = document.getElementById('memoCount');
+  memo.value = state.memo || '';
+  memoCount.textContent = (state.memo || '').length + ' 字';
+
+  let memoTimer = null;
+  memo.addEventListener('input', () => {
+    memoCount.textContent = memo.value.length + ' 字';
+    memoState.textContent = '正在保存…';
+    memoState.classList.remove('ok');
+    clearTimeout(memoTimer);
+    memoTimer = setTimeout(() => {
+      state.memo = memo.value;
+      save();
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      memoState.textContent = '已保存 · ' + hh + ':' + mm;
+      memoState.classList.add('ok');
+    }, 420);
+  });
+
+  /* ========== 复制 ========== */
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const box = btn.closest('.tmpl');
+      const textEl = box ? box.querySelector('.tmpl-text') : null;
+      if(!textEl) return;
+      const text = textEl.innerText.replace(/\s+\n/g, '\n').trim();
+      const done = () => {
+        btn.classList.add('copied');
+        const old = btn.innerHTML;
+        btn.innerHTML = '已复制';
+        toast('已复制到剪贴板');
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = old; }, 1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      }else{
+        fallbackCopy(text, done);
+      }
+    });
+  });
+
+  function fallbackCopy(text, cb){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); cb(); }catch(e){ toast('复制失败，请手动选择'); }
+    document.body.removeChild(ta);
+  }
+
+  /* ========== 目录跳转与高亮 ========== */
+  const tocItems = Array.from(document.querySelectorAll('.toc-item'));
+  const sections = tocItems.map(i => document.getElementById(i.getAttribute('data-go'))).filter(Boolean);
+
+  tocItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const t = document.getElementById(item.getAttribute('data-go'));
+      if(t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  });
+
+  function setActive(id){
+    tocItems.forEach(i => i.classList.toggle('on', i.getAttribute('data-go') === id));
+  }
+
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if(e.isIntersecting) setActive(e.target.id);
+      });
+    }, { rootMargin:'-15% 0px -70% 0px', threshold:0 });
+    sections.forEach(s => io.observe(s));
+  }
+
+  renderChecks();
+</script>
+
+<!-- webdemo 2.0 · 学完进入实战 -->
+<div id="learnCta" style="position:fixed;right:26px;bottom:26px;z-index:1200;display:flex;gap:10px;align-items:center">
+  <a href="../index.html" style="font-size:13px;padding:9px 16px;border:1px solid rgba(201,160,97,.45);color:#c9a061;text-decoration:none;background:rgba(201,160,97,.08)">返回首页</a>
+  <a href="../select/start.html" style="font-size:13px;padding:9px 18px;border:1px solid #c9a061;color:#120d07;background:#c9a061;text-decoration:none;font-weight:600">学完了，去谈判 →</a>
+</div>
+</body>
+</html>

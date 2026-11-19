@@ -1,0 +1,1254 @@
+{
+  "_meta": {
+    "id": "unclos",
+    "name": "联合国海洋法公约 · 第三次海洋法会议",
+    "year": "1973–1982",
+    "parties": [
+      "cn",
+      "us",
+      "su",
+      "br",
+      "id",
+      "jp",
+      "in",
+      "eg",
+      "sg"
+    ],
+    "source": "事实卡_UNCLOS观战版.xlsx",
+    "note": "会议制度与进程(CF)为公共事实，所有角色共享；其余按代表团分列。",
+    "phases": [
+      {
+        "label": "1973–1974 加拉加斯 · 议程与领海宽度",
+        "order": [
+          "cn",
+          "su",
+          "us",
+          "jp",
+          "id",
+          "in",
+          "br",
+          "eg",
+          "sg"
+        ]
+      },
+      {
+        "label": "1974–1975 日内瓦 · 群岛国与海峡通行",
+        "order": [
+          "id",
+          "sg",
+          "jp",
+          "us",
+          "su",
+          "cn",
+          "in",
+          "br",
+          "eg"
+        ]
+      },
+      {
+        "label": "1976–1979 纽约 · 专属经济区与海底制度",
+        "order": [
+          "jp",
+          "su",
+          "us",
+          "br",
+          "in",
+          "cn",
+          "eg",
+          "sg",
+          "id"
+        ]
+      },
+      {
+        "label": "1980–1982 纽约 · 一揽子交易与表决",
+        "order": [
+          "us",
+          "su",
+          "cn",
+          "jp",
+          "br",
+          "in",
+          "id",
+          "eg",
+          "sg"
+        ]
+      }
+    ],
+    "phase_rounds": 9,
+    "stances": {
+      "cn": {
+        "position": "support",
+        "reason": "支持群岛国与专属经济区主张",
+        "conditions": [
+          "海峡通行保留无害通过"
+        ]
+      },
+      "us": {
+        "position": "oppose",
+        "reason": "反对群岛水域扩大化，坚持海峡自由通行",
+        "conditions": [
+          "海峡过境通行不受限制"
+        ]
+      },
+      "su": {
+        "position": "swing",
+        "reason": "支持宽度主张但强调海峡通行的军事含义",
+        "conditions": [
+          "军舰通行另行议定"
+        ]
+      },
+      "br": {
+        "position": "support",
+        "reason": "沿海国集团，支持扩大管辖海域",
+        "conditions": [
+          "资源管辖权明确"
+        ]
+      },
+      "id": {
+        "position": "support",
+        "reason": "群岛国原则的发起方",
+        "conditions": [
+          "群岛水域整体性获承认"
+        ]
+      },
+      "jp": {
+        "position": "swing",
+        "reason": "海运国，关注通行与渔业",
+        "conditions": [
+          "通行自由写入公约"
+        ]
+      },
+      "in": {
+        "position": "swing",
+        "reason": "关注海峡与资源双重议题",
+        "conditions": [
+          "过境通行与资源划分平衡"
+        ]
+      },
+      "eg": {
+        "position": "swing",
+        "reason": "海峡国，要求通行须经沿岸国同意",
+        "conditions": [
+          "通行事先通知"
+        ]
+      },
+      "sg": {
+        "position": "swing",
+        "reason": "海峡国，安全与航运并重",
+        "conditions": [
+          "航道安全合作机制"
+        ]
+      }
+    },
+    "decks": {
+      "cn": {
+        "batna": {
+          "name": "另起炉灶",
+          "line": "若海洋秩序无法反映发展中国家诉求，我方将推动另一套区域安排。"
+        },
+        "chips": [
+          {
+            "name": "群岛原则",
+            "line": "我方支持把群岛水域作为一个整体对待。"
+          },
+          {
+            "name": "渔业合作",
+            "line": "我方可以开放近海渔业合作配额。"
+          },
+          {
+            "name": "航道数据",
+            "line": "我方可以共享部分航道测绘数据。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "远洋能力",
+            "line": "我方远洋护航能力有限，需要海峡国配合。"
+          }
+        ],
+        "info": [
+          {
+            "name": "通行关切",
+            "line": "我方可以透露：海峡通行必须留出无害通过的空间。"
+          }
+        ]
+      },
+      "us": {
+        "batna": {
+          "name": "航行自由行动",
+          "line": "若通行规则受限，我方将继续以航行自由行动维持现状。"
+        },
+        "chips": [
+          {
+            "name": "科研合作",
+            "line": "我方可以开放海洋科研联合项目。"
+          },
+          {
+            "name": "卫星数据",
+            "line": "我方可以提供航道卫星监测数据。"
+          },
+          {
+            "name": "援助计划",
+            "line": "我方愿为沿岸国提供海上执法培训。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "批准难关",
+            "line": "国内参议院对公约批准态度强硬，我方难以承诺深度履约。"
+          }
+        ],
+        "info": [
+          {
+            "name": "过境通行",
+            "line": "我方可以透露：过境通行不容谈判。"
+          }
+        ]
+      },
+      "su": {
+        "batna": {
+          "name": "拒绝签署",
+          "line": "若核心条款不利，我方不排除不签署公约。"
+        },
+        "chips": [
+          {
+            "name": "渔业配额",
+            "line": "我方可以出让部分远洋渔业配额。"
+          },
+          {
+            "name": "北极经验",
+            "line": "我方可以分享极地航道管理经验。"
+          },
+          {
+            "name": "技术援助",
+            "line": "我方愿提供港口与灯塔建设援助。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "基地依赖",
+            "line": "我方海外基地依赖几处海峡通道，强硬到底会自伤。"
+          }
+        ],
+        "info": [
+          {
+            "name": "军舰通行",
+            "line": "我方可以透露：军舰通行必须另行议定。"
+          }
+        ]
+      },
+      "jp": {
+        "batna": {
+          "name": "海运国集团",
+          "line": "若通行受限，我方将联合海运国另组集团施压。"
+        },
+        "chips": [
+          {
+            "name": "航道测绘",
+            "line": "我方可以共享海峡水文与测绘数据。"
+          },
+          {
+            "name": "技术资金",
+            "line": "我方愿出资协助沿岸国建设助航设施。"
+          },
+          {
+            "name": "港口服务",
+            "line": "我方可以开放港口中转服务。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "能源航线",
+            "line": "我方能源运输高度依赖海峡，任何限制都会立刻反噬。"
+          }
+        ],
+        "info": [
+          {
+            "name": "通行底线",
+            "line": "我方可以透露：通行自由是绝对底线。"
+          }
+        ]
+      },
+      "in": {
+        "batna": {
+          "name": "不结盟转向",
+          "line": "若诉求被忽视，我方将不加入任何一方集团。"
+        },
+        "chips": [
+          {
+            "name": "印度洋合作",
+            "line": "我方可以开放印度洋航道联合巡逻。"
+          },
+          {
+            "name": "渔业协定",
+            "line": "我方可以签署双边渔业协定。"
+          },
+          {
+            "name": "培训名额",
+            "line": "我方愿提供海洋法人才培训名额。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "海军有限",
+            "line": "我方海军投送能力有限，难以长期对抗。"
+          }
+        ],
+        "info": [
+          {
+            "name": "经济区诉求",
+            "line": "我方要的是专属经济区的资源管辖权。"
+          }
+        ]
+      },
+      "br": {
+        "batna": {
+          "name": "区域安排",
+          "line": "若全球公约无果，我方将推动区域海洋安排。"
+        },
+        "chips": [
+          {
+            "name": "渔业准入",
+            "line": "我方可以开放部分渔业准入。"
+          },
+          {
+            "name": "港口合作",
+            "line": "我方可以开放港口补给与维修。"
+          },
+          {
+            "name": "南方协调",
+            "line": "我方可以协调拉美国家共同立场。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "财政有限",
+            "line": "我方财政空间有限，难以承担高额出资。"
+          }
+        ],
+        "info": [
+          {
+            "name": "海底资源",
+            "line": "我方真实关切是海底资源的分配规则。"
+          }
+        ]
+      },
+      "id": {
+        "batna": {
+          "name": "坚持群岛原则",
+          "line": "若群岛原则被削弱，我方不会在最终文本上签字。"
+        },
+        "chips": [
+          {
+            "name": "航道数据",
+            "line": "我方可以共享群岛海域的航道数据。"
+          },
+          {
+            "name": "渔业合作",
+            "line": "我方可以开放部分渔业合作。"
+          },
+          {
+            "name": "海峡协调",
+            "line": "我方可以协调沿岸国统一通行程序。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "海峡安全",
+            "line": "我方对海峡安全能力不足，需要外部合作。"
+          }
+        ],
+        "info": [
+          {
+            "name": "水域整体",
+            "line": "我方可以透露：群岛水域必须作为整体对待。"
+          }
+        ]
+      },
+      "eg": {
+        "batna": {
+          "name": "关闭海峡",
+          "line": "若通行规则无视沿岸国主权，我方可以关闭海峡。"
+        },
+        "chips": [
+          {
+            "name": "运河合作",
+            "line": "我方可以开放运河与海峡的联合管理经验。"
+          },
+          {
+            "name": "过境便利",
+            "line": "我方可以给缔约国过境便利。"
+          },
+          {
+            "name": "培训支持",
+            "line": "我方愿提供航道管理培训。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "运河依赖",
+            "line": "我方经济高度依赖运河收入，长期对抗不可持续。"
+          }
+        ],
+        "info": [
+          {
+            "name": "事先通知",
+            "line": "我方可以透露：通行须事先通知沿岸国。"
+          }
+        ]
+      },
+      "sg": {
+        "batna": {
+          "name": "依靠航运",
+          "line": "若秩序崩坏，我方只能依靠国际航运集团自保。"
+        },
+        "chips": [
+          {
+            "name": "港口服务",
+            "line": "我方可以提供高效港口与补给服务。"
+          },
+          {
+            "name": "航运数据",
+            "line": "我方可以共享海峡航运数据。"
+          },
+          {
+            "name": "金融便利",
+            "line": "我方可以提供航运金融与保险便利。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "无战略纵深",
+            "line": "我方没有战略纵深，任何封锁都难以承受。"
+          }
+        ],
+        "info": [
+          {
+            "name": "通行受限",
+            "line": "我方可以透露：海峡通行不能设置事前许可。"
+          }
+        ]
+      }
+    }
+  },
+  "common": {
+    "positions": [
+      {
+        "id": "CF-01",
+        "date": "1970-12-17",
+        "text": "联大第2749(XXV)号决议宣布国家管辖范围以外的海床洋底及其资源为「人类共同继承财产」",
+        "value": "—",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "同决议规定任何国家不得对该区域主张主权或主权权利，其利用应仅供和平目的"
+      },
+      {
+        "id": "CF-03",
+        "date": "1973-11-16",
+        "text": "会议通过「君子协定」：实质问题尽力协商一致，穷尽努力前不付诸表决",
+        "value": "—",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "经第28届联大核准，作为声明附于会议议事规则；1982-04-30 表决即在此背景下发生"
+      }
+    ],
+    "actions": [
+      {
+        "id": "CF-02",
+        "date": "1970-12-17",
+        "text": "联大第2750(XXV)号决议决定召开第三次海洋法会议；第一期会议于纽约开幕",
+        "value": "—",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "第一期会议 1973-12-03 至 12-15，纽约，主要处理组织事项"
+      },
+      {
+        "id": "CF-06",
+        "date": "1982-04-30",
+        "text": "1982年4月30日表决：130票赞成、4票反对、17票弃权",
+        "value": "130／4／17",
+        "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+        "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+        "conf": "A",
+        "note": "美方备忘录记载：美国要求就公约草案进行表决"
+      },
+      {
+        "id": "CF-07",
+        "date": "1982-04-30",
+        "text": "投弃权票者含苏联及除罗马尼亚外的东欧国家，以及英、西德、比、意、卢、荷、西、泰",
+        "value": "17方",
+        "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+        "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+        "conf": "A",
+        "note": "反对票4国为美国、以色列、土耳其、委内瑞拉；日本、法国投赞成票"
+      },
+      {
+        "id": "CF-09",
+        "date": "1982-12-10",
+        "text": "公约在牙买加蒙特哥贝开放签署；斐济当天签署并同时批准，为最先批准公约的国家",
+        "value": "—",
+        "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+        "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+        "conf": "A",
+        "note": "会议最终会期 1982-12-06 至 12-10"
+      },
+      {
+        "id": "CF-12",
+        "date": "1994-07-28",
+        "text": "联大通过《关于执行第十一部分的协定》，该协定于1996年7月28日生效",
+        "value": "—",
+        "source": "联合国海洋事务与海洋法司 ·《关于执行第十一部分的协定》概览",
+        "link": "https://www.un.org/Depts/los/convention_agreements/convention_overview_part_xi.htm",
+        "conf": "A",
+        "note": "协定的目的是解决公约第十一部分（国际海底区域）的适用困难"
+      },
+      {
+        "id": "CF-14",
+        "date": "1981-03-13",
+        "text": "会议选举新加坡的许通美为主席，接替1980年12月4日逝世的阿梅拉辛格",
+        "value": "—",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "阿梅拉辛格为斯里兰卡人，自会议开始即任主席"
+      },
+      {
+        "id": "CF-15",
+        "date": "1982-04",
+        "text": "美国与比利时、法国、联邦德国、意大利、日本、英国共同提出海底条款修正案",
+        "value": "A/CONF.62/L.121",
+        "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+        "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+        "conf": "B",
+        "note": "修正案未获通过；美方同期推动海底采矿「互惠国协定」"
+      }
+    ],
+    "numbers": [
+      {
+        "id": "CF-04",
+        "date": "1973-12 / 1982-12",
+        "text": "会议自1973年12月至1982年12月共举行11期会议及多次续会",
+        "value": "11期",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "第二期在加拉加斯，其余主要在美国纽约与瑞士日内瓦，最后一期在牙买加蒙特哥贝"
+      },
+      {
+        "id": "CF-05",
+        "date": "1982",
+        "text": "公约正文320条、附件9个，被称为「海洋宪法」",
+        "value": "320条／9附件",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "AVL词条表述为「正文与9个附件的400余条条文」"
+      },
+      {
+        "id": "CF-10",
+        "date": "1994-11-16",
+        "text": "公约于1994年11月16日生效，依据第308条第1款即第60份批准书交存满12个月",
+        "value": "1994-11-16",
+        "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+        "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+        "conf": "A",
+        "note": "联合国条约集登记号第31363号"
+      },
+      {
+        "id": "CF-11",
+        "date": "2026-10-24",
+        "text": "截至2026年10月24日：公约签署方157个，缔约方172个",
+        "value": "157／172",
+        "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+        "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+        "conf": "A",
+        "note": "条约集状态表统计日期"
+      },
+      {
+        "id": "CF-13",
+        "date": "1973–1982",
+        "text": "第一委员会主席为喀麦隆的恩戈，第二委员会主席为委内瑞拉的阿吉拉尔",
+        "value": "—",
+        "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+        "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+        "conf": "A",
+        "note": "第二委员会负责领海、毗连区、专属经济区、大陆架与国际海峡等议题"
+      }
+    ],
+    "quotes": [
+      {
+        "id": "CF-08",
+        "date": "1982-05-05",
+        "text": "黑格备忘录：「我们在海底条款之外什么也没有失去——航行、飞越以及其他问题都保持完好。」",
+        "value": "—",
+        "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+        "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+        "conf": "A",
+        "note": "原文：The US lost nothing outside of the seabed provisions"
+      }
+    ],
+    "thinktank": []
+  },
+  "parties": {
+    "cn": {
+      "positions": [
+        {
+          "id": "CN-01",
+          "date": "1973-07",
+          "text": "中国支持沿海国在12海里范围内确定领海宽度，认为这属于国家主权范围",
+          "value": "12海里",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "B",
+          "note": "中国代表团1973年7月向海底委员会提交《关于国家管辖范围内海域的工作文件》"
+        },
+        {
+          "id": "CN-02",
+          "date": "1973",
+          "text": "中国主张用于国际航行的海峡水域属于沿岸国领海，外国军舰通过须经许可",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "B",
+          "note": "美方同期评估文件记录了中国在海峡水域性质与军舰通过问题上的立场"
+        },
+        {
+          "id": "CN-03",
+          "date": "1973",
+          "text": "中国支持专属经济区制度，同时主张经济区内的航行与飞越自由不应受影响",
+          "value": "200海里",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "B",
+          "note": "中国支持拉美国家200海里海洋权主张"
+        },
+        {
+          "id": "CN-04",
+          "date": "1970s",
+          "text": "中国支持「国际海底区域及其资源是人类共同继承财产」，反对少数国家垄断深海资源",
+          "value": "—",
+          "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+          "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+          "conf": "A",
+          "note": "与联大第2749(XXV)号决议确立的原则一致"
+        }
+      ],
+      "actions": [
+        {
+          "id": "CN-05",
+          "date": "1982-12-10 / 1996-06-07",
+          "text": "中国于1982年12月10日签署公约，1996年6月7日交存批准书",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "签署日为公约开放签署首日"
+        },
+        {
+          "id": "CN-06",
+          "date": "1994-07-29",
+          "text": "中国首批签署《关于执行第十一部分的协定》",
+          "value": "—",
+          "source": "联合国海洋事务与海洋法司 ·《关于执行第十一部分的协定》概览",
+          "link": "https://www.un.org/Depts/los/convention_agreements/convention_overview_part_xi.htm",
+          "conf": "A",
+          "note": "协定1994年7月28日由联大通过"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "CN-07",
+          "date": "1991-03-05",
+          "text": "中国大洋协会登记为国际海底开发先驱投资者，获15万平方公里开辟区",
+          "value": "15万平方公里",
+          "source": "国际海底管理局（ISA）官网",
+          "link": "https://www.isa.org.jm/",
+          "conf": "B",
+          "note": "矿区位于东北太平洋克拉里昂－克林帕顿区；中文资料另有「20万平方公里」一说"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    },
+    "us": {
+      "positions": [
+        {
+          "id": "US-01",
+          "date": "1973",
+          "text": "美国表示可以接受12海里领海，但以国际海峡自由无阻通行与飞越为前提",
+          "value": "12海里",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "A",
+          "note": "美方评估文件反复强调这一交换条件"
+        },
+        {
+          "id": "US-02",
+          "date": "1982",
+          "text": "美国反对第十一部分：反对强制技术转让、生产限额与企业部的特殊地位",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "美方认为企业部特权制度歧视私营企业和国家采矿者"
+        }
+      ],
+      "actions": [
+        {
+          "id": "US-03",
+          "date": "1982-04-30",
+          "text": "美国要求就公约草案进行表决，并投下反对票",
+          "value": "反对",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "打破会议一贯的协商一致做法"
+        },
+        {
+          "id": "US-05",
+          "date": "1982",
+          "text": "美国推动缔结海底采矿「互惠国协定」，为绕开公约第十一部分作准备",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "备忘录称荷兰、西德、意大利、比利时及苏联的弃权是有利迹象"
+        },
+        {
+          "id": "US-06",
+          "date": "1982-07 / 1983-03-10",
+          "text": "美国宣布不签署公约，其后发表海洋政策声明，接受非海底部分并宣布200海里专属经济区",
+          "value": "200海里",
+          "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+          "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+          "conf": "B",
+          "note": "美国至今未成为公约缔约方，但于1994年签署第十一部分执行协定"
+        },
+        {
+          "id": "US-07",
+          "date": "1994-07-29",
+          "text": "美国1994年7月29日签署《关于执行第十一部分的协定》，但仍未加入公约",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "条约集缔约方名单中无美国"
+        }
+      ],
+      "numbers": [],
+      "quotes": [
+        {
+          "id": "US-04",
+          "date": "1982-05-05",
+          "text": "黑格：「我们在海底条款之外什么也没有失去；航行、飞越以及其他问题保持完好。」",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "对表决结果的初步评估结论"
+        }
+      ],
+      "thinktank": []
+    },
+    "su": {
+      "positions": [
+        {
+          "id": "SU-01",
+          "date": "1974-07-29",
+          "text": "苏联与保加利亚、东德、波兰联合提出《关于领海的条款草案》，主张领海不超过12海里",
+          "value": "A/CONF.62/C.2/L.26",
+          "source": "联合国数字图书馆 · A/CONF.62/C.2/L.26《关于领海的条款草案》（保加利亚、德意志民主共和国、波兰、苏联，1974-07-29）",
+          "link": "https://digitallibrary.un.org/record/4048606",
+          "conf": "A",
+          "note": "草案同时规定各国船舶享有无害通过权"
+        },
+        {
+          "id": "SU-02",
+          "date": "1973–1975",
+          "text": "会议前期苏联与美国立场接近：限制领海宽度、为国际航行海峡建立过境通行制度",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "B",
+          "note": "苏联1958年批准《领海及毗连区公约》时曾就政府船舶豁免与军舰通过许可制度提出保留"
+        }
+      ],
+      "actions": [
+        {
+          "id": "SU-03",
+          "date": "1976-12-10",
+          "text": "苏联设立200海里临时渔业区，1984年改为专属经济区",
+          "value": "200海里",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "B",
+          "note": "1976–1977年各国相继设立200海里水域；苏联法令与1984年改制的具体日期见备注"
+        },
+        {
+          "id": "SU-04",
+          "date": "1982-04-30",
+          "text": "苏联在公约草案表决中投弃权票，东欧国家除罗马尼亚外均弃权",
+          "value": "弃权",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "美方评估视其为有利迹象"
+        },
+        {
+          "id": "SU-05",
+          "date": "1982-12-10 / 1997-03-12",
+          "text": "苏联于1982年12月10日签署公约，俄罗斯联邦1997年3月12日批准",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "苏联是最初签署公约的国家之一"
+        }
+      ],
+      "numbers": [],
+      "quotes": [
+        {
+          "id": "SU-06",
+          "date": "1985-12-10",
+          "text": "苏联代表在联大表示「苏联是最初签署《公约》的国家」，并批评只取用有利条款的做法",
+          "value": "—",
+          "source": "联合国海洋事务与海洋法司（DOALOS）官网",
+          "link": "https://www.un.org/Depts/los/index.htm",
+          "conf": "B",
+          "note": "见联合国大会第40届会议逐字记录 A/40/PV.110"
+        }
+      ],
+      "thinktank": []
+    },
+    "br": {
+      "positions": [
+        {
+          "id": "BR-02",
+          "date": "1974",
+          "text": "会议前期巴西主张标准200海里领海，后接受12海里领海加200海里专属经济区的折中",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "B",
+          "note": "专属经济区成为发达国家与发展中国家之间的折中方案"
+        },
+        {
+          "id": "BR-04",
+          "date": "1975–1980",
+          "text": "巴西支持国际海底区域的保留区制度，主张区域资源由所有国家共享",
+          "value": "—",
+          "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+          "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+          "conf": "B",
+          "note": "保留区制度是平行开发制的核心安排之一"
+        }
+      ],
+      "actions": [
+        {
+          "id": "BR-01",
+          "date": "1970-03-25",
+          "text": "巴西通过法令将领海由传统宽度扩展至200海里，是南美200海里主张的代表",
+          "value": "200海里",
+          "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+          "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+          "conf": "B",
+          "note": "AVL词条记述：领海以外海域的专属或主权权利主张最初仅由南美国家提出"
+        },
+        {
+          "id": "BR-03",
+          "date": "1982-12-10 / 1988-12-22",
+          "text": "巴西于1982年12月10日签署公约，1988年12月22日批准，是较早的批准国之一",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "签署日为公约开放签署首日"
+        },
+        {
+          "id": "BR-05",
+          "date": "1993-01-04",
+          "text": "巴西以国内立法将领海确定为12海里，正式取代1970年的200海里主张",
+          "value": "12海里",
+          "source": "联合国海洋事务与海洋法司 · 各国海洋立法与条约数据库",
+          "link": "https://www.un.org/Depts/los/LEGISLATIONANDTREATIES/depositpublicity.htm",
+          "conf": "B",
+          "note": "各国海洋立法数据库可查该国立法沿革"
+        }
+      ],
+      "numbers": [],
+      "quotes": [],
+      "thinktank": []
+    },
+    "id": {
+      "positions": [
+        {
+          "id": "ID-01",
+          "date": "1974-08-09",
+          "text": "印尼与斐济、毛里求斯、菲律宾联合提出《关于群岛国的条款草案》",
+          "value": "A/CONF.62/C.2/L.49",
+          "source": "联合国数字图书馆 · A/CONF.62/C.2/L.49《关于群岛国的条款草案》（斐济、印度尼西亚、毛里求斯、菲律宾，1974-08-09）",
+          "link": "https://digitallibrary.un.org/record/4052267",
+          "conf": "A",
+          "note": "草案规定：直线基线、群岛水域属群岛国主权、各国船舶享有无害通过权、群岛国可指定海道"
+        },
+        {
+          "id": "ID-05",
+          "date": "1974–1980",
+          "text": "印尼认为群岛水域与专属经济区是两个层次的权利，对群岛国均不可或缺",
+          "value": "—",
+          "source": "联合国数字图书馆 · A/CONF.62/C.2/L.49《关于群岛国的条款草案》（斐济、印度尼西亚、毛里求斯、菲律宾，1974-08-09）",
+          "link": "https://digitallibrary.un.org/record/4052267",
+          "conf": "B",
+          "note": "群岛水域属主权范围，专属经济区属资源管辖范围"
+        }
+      ],
+      "actions": [
+        {
+          "id": "ID-02",
+          "date": "1974-08-12",
+          "text": "保加利亚、东德、波兰对群岛国条款草案提出修正案，围绕群岛水域主权与海道条款谈判",
+          "value": "A/CONF.62/C.2/L.52",
+          "source": "联合国数字图书馆 · A/CONF.62/C.2/L.52（保加利亚、德意志民主共和国、波兰对L.49的修正案，1974-08-12）",
+          "link": "https://digitallibrary.un.org/record/4052454",
+          "conf": "A",
+          "note": "修正案涉及第1条、第4条与第5条若干款"
+        },
+        {
+          "id": "ID-04",
+          "date": "1982-12-10 / 1986-02-03",
+          "text": "印度尼西亚于1982年12月10日签署公约，1986年2月3日批准",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "批准时间早于多数发展中国家"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "ID-03",
+          "date": "1977-02 / 1977-11",
+          "text": "马六甲海峡沿岸三国发表共同声明，宣布安全航行与防污染措施；同年IMCO大会确立通航规则",
+          "value": "—",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "日本外务省外交青书对上述过程的记述"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    },
+    "jp": {
+      "positions": [
+        {
+          "id": "JP-01",
+          "date": "1976–1977",
+          "text": "日本长期主张专属经济区在法律性质上属公海，反对将其作为独立制度",
+          "value": "—",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "日本外交青书原文：「経済水域が公海であるとの立場をわが国はとって来た」"
+        },
+        {
+          "id": "JP-04",
+          "date": "1977-07-01",
+          "text": "日本在《领海法》中对五处海峡维持3海里，理由是国际海峡通航制度尚在审议、须顾及综合国益",
+          "value": "5处海峡／3海里",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "五处为宗谷海峡、津轻海峡、对马海峡东水道、对马海峡西水道、大隅海峡，规定「当分の間」"
+        },
+        {
+          "id": "JP-06",
+          "date": "1976–1977",
+          "text": "日本主张大陆架外部界限采用200海里距离标准，边界划定以中间线为第一基准",
+          "value": "200海里",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "同期自然延伸说仍占上风"
+        }
+      ],
+      "actions": [
+        {
+          "id": "JP-02",
+          "date": "1977-03-29 / 1977-05-02",
+          "text": "日本内阁决定设立200海里渔业水域；《关于渔业水域的临时措施法》5月2日成立公布、7月1日实施",
+          "value": "200海里",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "日本外交青书明确：该法与日苏渔业谈判的进展有关"
+        },
+        {
+          "id": "JP-03",
+          "date": "1977-07-01",
+          "text": "《领海法》施行，日本领海由3海里扩大至12海里",
+          "value": "12海里",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "1977年3月29日领海法案提交国会"
+        },
+        {
+          "id": "JP-07",
+          "date": "1982-04-30",
+          "text": "日本在公约草案表决中投赞成票",
+          "value": "赞成",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1981–1988年第41卷第159号（黑格致里根备忘录，1982-05-05）",
+          "link": "https://history.state.gov/historicaldocuments/frus1981-88v41/d159",
+          "conf": "A",
+          "note": "美方备忘录：「两个盟国日本与法国投了赞成票」"
+        },
+        {
+          "id": "JP-08",
+          "date": "1983-02-07 / 1996-06-20",
+          "text": "日本于1983年2月7日签署公约，1996年6月20日批准",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "日本未在公约开放签署首日签署"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "JP-05",
+          "date": "1977-12",
+          "text": "1976至1977年各国相继设立200海里水域，至1977年底已有40余国设立",
+          "value": "40余国",
+          "source": "日本外务省《外交青书》1978年版 第2部第2章第6节《海をめぐる諸問題》",
+          "link": "https://www.mofa.go.jp/mofaj/gaiko/bluebook/1978/s53-2-2-6.htm",
+          "conf": "A",
+          "note": "日本外交青书对当时态势的记述"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    },
+    "in": {
+      "positions": [
+        {
+          "id": "IN-02",
+          "date": "1976-08-25",
+          "text": "印度立法理由明确：专属经济区概念由发展中国家倡议提出，并已获国际社会接受",
+          "value": "—",
+          "source": "印度《1976年领海、大陆架、专属经济区及其他海洋区域法》（1976年第80号法）全文",
+          "link": "https://indiankanoon.org/doc/152459075/",
+          "conf": "A",
+          "note": "见该法「立法目的与理由」部分"
+        },
+        {
+          "id": "IN-04",
+          "date": "1970s",
+          "text": "印度支持「人类共同继承财产」原则，主张区域制度应保证所有国家平等参与",
+          "value": "—",
+          "source": "联合国法律事务厅《国际法视听图书馆》· 联合国海洋法公约词条",
+          "link": "https://legal.un.org/avl/ha/uncls/uncls.html",
+          "conf": "B",
+          "note": "印度是77国集团成员，也是深海采矿先驱投资者之一"
+        }
+      ],
+      "actions": [
+        {
+          "id": "IN-01",
+          "date": "1976-08-25",
+          "text": "印度公布施行《领海、大陆架、专属经济区及其他海洋区域法》：领海12、毗连区24、经济区200海里",
+          "value": "12／24／200海里",
+          "source": "印度《1976年领海、大陆架、专属经济区及其他海洋区域法》（1976年第80号法）全文",
+          "link": "https://indiankanoon.org/doc/152459075/",
+          "conf": "A",
+          "note": "1976年第80号法，公布与施行同日；大陆架采自然延伸至大陆边外缘或200海里"
+        },
+        {
+          "id": "IN-03",
+          "date": "1982-12-10 / 1995-06-29",
+          "text": "印度于1982年12月10日签署公约，1995年6月29日批准",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "签署日为公约开放签署首日"
+        },
+        {
+          "id": "IN-05",
+          "date": "1987",
+          "text": "印度登记为国际海底开发先驱投资者，在中央印度洋海盆持有多金属结核勘探合同",
+          "value": "—",
+          "source": "国际海底管理局（ISA）官网",
+          "link": "https://www.isa.org.jm/",
+          "conf": "B",
+          "note": "印度是公约生效前已登记的先行投资者之一"
+        }
+      ],
+      "numbers": [],
+      "quotes": [],
+      "thinktank": []
+    },
+    "eg": {
+      "positions": [
+        {
+          "id": "EG-03",
+          "date": "1983-08-26",
+          "text": "埃及批准公约时声明：外国军舰通过其领海须事先通知；核动力船舶须事先获授权",
+          "value": "—",
+          "source": "联合国海洋事务与海洋法司 · 各国海洋立法与条约数据库",
+          "link": "https://www.un.org/Depts/los/LEGISLATIONANDTREATIES/depositpublicity.htm",
+          "conf": "B",
+          "note": "埃及同时声明毗连区扩大至24海里"
+        },
+        {
+          "id": "EG-04",
+          "date": "1983-08-26",
+          "text": "埃及声明在地中海与红海行使专属经济区权利",
+          "value": "200海里",
+          "source": "联合国海洋事务与海洋法司 · 各国海洋立法与条约数据库",
+          "link": "https://www.un.org/Depts/los/LEGISLATIONANDTREATIES/depositpublicity.htm",
+          "conf": "B",
+          "note": "与毗连区扩至24海里的声明同时作出"
+        },
+        {
+          "id": "EG-05",
+          "date": "1983-08-26",
+          "text": "埃及就蒂朗海峡与亚喀巴湾通过问题发表声明，将1979年埃以和约的相关安排纳入海峡制度框架",
+          "value": "—",
+          "source": "联合国海洋事务与海洋法司 · 各国海洋立法与条约数据库",
+          "link": "https://www.un.org/Depts/los/LEGISLATIONANDTREATIES/depositpublicity.htm",
+          "conf": "B",
+          "note": "声明将其归入公约第三部分关于用于国际航行的海峡的一般制度"
+        },
+        {
+          "id": "EG-06",
+          "date": "1974",
+          "text": "作为海峡沿岸国，埃及强调领海制度的完整性与沿岸国安全利益不可分割",
+          "value": "—",
+          "source": "美国国务院《美国对外关系文件（FRUS）》1969–1976年E-3卷《全球议题（1973–1976）》· 海洋法",
+          "link": "https://history.state.gov/historicaldocuments/frus1969-76ve03/ch1",
+          "conf": "C",
+          "note": "美方评估文件记录：若干阿拉伯国家在会外积极活动，抵制无阻碍过境的表述"
+        }
+      ],
+      "actions": [
+        {
+          "id": "EG-01",
+          "date": "1958-02",
+          "text": "埃及以总统令将领海由6海里扩大至12海里",
+          "value": "12海里",
+          "source": "联合国海洋事务与海洋法司 · 各国海洋立法与条约数据库",
+          "link": "https://www.un.org/Depts/los/LEGISLATIONANDTREATIES/depositpublicity.htm",
+          "conf": "B",
+          "note": "1951年1月法令经1958年2月修正"
+        },
+        {
+          "id": "EG-02",
+          "date": "1982-12-10 / 1983-08-26",
+          "text": "埃及于1982年12月10日签署公约，1983年8月26日批准，是最早的批准国之一",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "签署日为公约开放签署首日"
+        }
+      ],
+      "numbers": [],
+      "quotes": [],
+      "thinktank": []
+    },
+    "sg": {
+      "positions": [
+        {
+          "id": "SG-01",
+          "date": "1973–1982",
+          "text": "新加坡因海域被邻国主张包围、几乎无专属经济区空间，加入「内陆国与地理不利国集团」",
+          "value": "—",
+          "source": "新加坡国立大学《新加坡法学杂志》1994年卷 · Beckman等《Environmental Protection of the Seas in Singapore》",
+          "link": "https://law.nus.edu.sg/sjls/wp-content/uploads/sites/14/2024/07/1480-1994-sjls-jul-52.pdf",
+          "conf": "B",
+          "note": "英文名为 Group of Landlocked and Geographically Disadvantaged States；该集团由约30个内陆国与地理条件不利国组成"
+        },
+        {
+          "id": "SG-05",
+          "date": "1974–1982",
+          "text": "新加坡力推以12海里领海普遍化换取用于国际航行海峡的过境通行制",
+          "value": "—",
+          "source": "许通美（Tommy Koh）·《马六甲海峡与新加坡海峡》，CIL工作论文（2015-11-03）",
+          "link": "https://cil.nus.edu.sg/wp-content/uploads/2010/12/Tommy-Koh-STRAITS-OF-MALACCA-AND-SINGAPORE-3Nov2015.pdf",
+          "conf": "B",
+          "note": "过境通行（transit passage）保证船舶与飞机继续不停、迅速过境，写入公约第三部分；马六甲—新加坡海峡为其生命线"
+        },
+        {
+          "id": "SG-07",
+          "date": "1974–1982",
+          "text": "新加坡主张海峡使用国与沿岸国按第43条合作维护航行安全与防污染，沿岸国不得强制引航或收费",
+          "value": "第43条",
+          "source": "许通美（Tommy Koh）·《马六甲海峡与新加坡海峡》，CIL工作论文（2015-11-03）",
+          "link": "https://cil.nus.edu.sg/wp-content/uploads/2010/12/Tommy-Koh-STRAITS-OF-MALACCA-AND-SINGAPORE-3Nov2015.pdf",
+          "conf": "B",
+          "note": "公约第43条规定使用国与沿岸国应对航行安全与防污染进行合作"
+        }
+      ],
+      "actions": [
+        {
+          "id": "SG-02",
+          "date": "1973–1982",
+          "text": "贾亚库马尔与赵锡燊等组建地理不利国联合体，把分散的小国诉求拧成谈判合力",
+          "value": "—",
+          "source": "新加坡外交部 · 2015年S·拉惹勒南讲座：李显龙总理演讲《选择与信念——新加坡的外交政策》（2015-11-28）",
+          "link": "https://www.mfa.gov.sg/newsroom/press-statements-transcripts-and-photos/2015-s-rajaratnam-lecture-by-prime-minister-lee-hsien-loong-choice-and-conviction--the-foreign-polic-28-nov-2015/",
+          "conf": "B",
+          "note": "贾亚库马尔时任新加坡常驻联合国代表；李显龙2015年演讲回顾了该集团的组建过程"
+        },
+        {
+          "id": "SG-04",
+          "date": "1982-12-10 / 1994-11-17",
+          "text": "新加坡1982年12月10日首日签署公约，1994年11月17日批准",
+          "value": "—",
+          "source": "联合国条约集 第XXI-6章 · 联合国海洋法公约（签署／批准／生效状态）",
+          "link": "https://treaties.un.org/Pages/ViewDetailsIII.aspx?src=TREATY&mtdsg_no=XXI-6&chapter=21&Temp=mtdsg3&clang=_en",
+          "conf": "A",
+          "note": "签署日为公约开放签署首日；1994-11-17同时以确定签署方式加入第十一部分执行协定并自1994-11-16临时适用"
+        },
+        {
+          "id": "SG-08",
+          "date": "1981-03-13",
+          "text": "新加坡的许通美1981年3月13日当选会议主席，主持公约通过与开放签署",
+          "value": "—",
+          "source": "新加坡外交部 · 联合国海洋法公约40周年纪念部长声明与许通美主旨演讲（2022-04-30）",
+          "link": "https://www.mfa.gov.sg/Newsroom/Press-Statements-Transcripts-and-Photos/2022/04/20220430-min-ny",
+          "conf": "A",
+          "note": "接替1980年12月4日逝世的阿梅拉辛格；主席身份为会议公职，新加坡代表团立场另见SG-01~SG-07"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "SG-03",
+          "date": "1980-09-15",
+          "text": "新加坡长期沿用3海里领海（源自1878年英国领海管辖法），1980年声明原则接受12海里",
+          "value": "3→12海里",
+          "source": "新加坡国立大学《新加坡法学杂志》1994年卷 · Beckman等《Environmental Protection of the Seas in Singapore》",
+          "link": "https://law.nus.edu.sg/sjls/wp-content/uploads/sites/14/2024/07/1480-1994-sjls-jul-52.pdf",
+          "conf": "A",
+          "note": "1980年9月15日政府声明同时宣布接受专属经济区概念；当时未单独立法，12海里领海后由国内立法落实"
+        },
+        {
+          "id": "SG-06",
+          "date": "1973–1982",
+          "text": "世界上有116条宽度不足24海里的国际航行海峡，将领海扩至12海里即会被领海覆盖",
+          "value": "116条",
+          "source": "许通美（Tommy Koh）·《马六甲海峡与新加坡海峡》，CIL工作论文（2015-11-03）",
+          "link": "https://cil.nus.edu.sg/wp-content/uploads/2010/12/Tommy-Koh-STRAITS-OF-MALACCA-AND-SINGAPORE-3Nov2015.pdf",
+          "conf": "B",
+          "note": "许通美关于马六甲与新加坡海峡的研究引述该数字，说明海峡制度是普遍性问题而非个别水道问题"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    }
+  }
+}

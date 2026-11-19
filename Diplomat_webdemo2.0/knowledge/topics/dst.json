@@ -1,0 +1,1774 @@
+{
+  "_meta": {
+    "id": "dst",
+    "name": "数字服务税与跨境征税权分配",
+    "parties": [
+      "cn",
+      "us",
+      "eu",
+      "in",
+      "uk",
+      "tr"
+    ],
+    "source": "数字服务税与跨境征税权分配_事实卡_六国.xlsx",
+    "stances": {
+      "cn": {
+        "position": "support",
+        "reason": "支持征税权向市场国倾斜",
+        "conditions": [
+          "发展中国家差别待遇"
+        ]
+      },
+      "us": {
+        "position": "oppose",
+        "reason": "反对单边数字服务税，主张全球最低税框架",
+        "conditions": [
+          "取消单边 DST"
+        ]
+      },
+      "eu": {
+        "position": "swing",
+        "reason": "推进数字税但担心报复",
+        "conditions": [
+          "与全球框架衔接"
+        ]
+      },
+      "in": {
+        "position": "swing",
+        "reason": "要求市场国征税权",
+        "conditions": [
+          "来源地规则让步"
+        ]
+      },
+      "uk": {
+        "position": "support",
+        "reason": "已开征数字服务税，主张保留",
+        "conditions": [
+          "过渡期安排"
+        ]
+      },
+      "tr": {
+        "position": "support",
+        "reason": "第7194号法要求扩大市场国征税权",
+        "conditions": [
+          "承认单边措施合法性"
+        ]
+      }
+    },
+    "decks": {
+      "cn": {
+        "batna": {
+          "name": "转向联合国",
+          "line": "若全球框架不反映发展中国家诉求，我方将推动在联合国另开税收公约谈判。"
+        },
+        "chips": [
+          {
+            "name": "市场准入",
+            "line": "我方可以对遵守规则的数字平台开放市场准入。"
+          },
+          {
+            "name": "数据弹性",
+            "line": "我方可以在数据本地化要求上给出过渡期。"
+          },
+          {
+            "name": "征管经验",
+            "line": "我方可以分享数字税收征管系统的建设经验。"
+          },
+          {
+            "name": "南方协调",
+            "line": "我方可以协调发展中国家形成共同征税权立场。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "税基流失",
+            "line": "我方跨境平台税基流失严重，需要可落地的征税权。"
+          },
+          {
+            "name": "外资顾虑",
+            "line": "过度征税会吓退外资，国内也有反对声音。"
+          }
+        ],
+        "info": [
+          {
+            "name": "治理席位",
+            "line": "我方真实目标是拿到规则制定的席位。"
+          },
+          {
+            "name": "征税权底线",
+            "line": "我方可以透露：市场国优先的征税权不能让。"
+          }
+        ]
+      },
+      "us": {
+        "batna": {
+          "name": "301 报复",
+          "line": "若单边数字税不撤，我方将依据 301 条款恢复报复性关税。"
+        },
+        "chips": [
+          {
+            "name": "关税豁免",
+            "line": "我方可以对取消数字税的国家给予关税豁免。"
+          },
+          {
+            "name": "安全港",
+            "line": "我方可以接受有限的安全港安排。"
+          },
+          {
+            "name": "征管技术",
+            "line": "我方可以开放数字税收征管技术合作。"
+          },
+          {
+            "name": "盟友协调",
+            "line": "我方可以说服盟友接受统一的最低税安排。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "科技巨头",
+            "line": "国内科技巨头是数字税的主要靶子，我方必须替它们出头。"
+          },
+          {
+            "name": "盟友离心",
+            "line": "盟友自己也在征数字税，强硬过头会把它们推向对手。"
+          }
+        ],
+        "info": [
+          {
+            "name": "歧视红线",
+            "line": "我方可以透露：歧视性单边税不能接受。"
+          },
+          {
+            "name": "最低税底线",
+            "line": "我方真实底线是保住全球最低税框架。"
+          }
+        ]
+      },
+      "eu": {
+        "batna": {
+          "name": "自有资源",
+          "line": "若全球框架无果，欧盟将以自有资源方式在联盟层面推进数字税。"
+        },
+        "chips": [
+          {
+            "name": "分级征管",
+            "line": "我方可以提供数字税征管的分级方案。"
+          },
+          {
+            "name": "市场开放",
+            "line": "我方可以开放部分数字市场准入。"
+          },
+          {
+            "name": "发展援助",
+            "line": "我方愿出资支持发展中国家的税收能力建设。"
+          },
+          {
+            "name": "框架衔接",
+            "line": "我方可以推动欧盟规则与 OECD 框架衔接。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "内部裂痕",
+            "line": "成员国对数字税态度不一，低税国强烈反对。"
+          },
+          {
+            "name": "产业短板",
+            "line": "欧洲本土平台弱，征税收益有限但政治收益高。"
+          }
+        ],
+        "info": [
+          {
+            "name": "分级底线",
+            "line": "我方可以透露：数字税必须写进多边框架，不能只靠单边。"
+          },
+          {
+            "name": "自有资源",
+            "line": "我方真实目标是让数字税收入直接进入联盟预算。"
+          }
+        ]
+      },
+      "in": {
+        "batna": {
+          "name": "均衡税独立",
+          "line": "若全球框架继续拖延，印度将维持并扩大均衡税，不等共识。"
+        },
+        "chips": [
+          {
+            "name": "市场体量",
+            "line": "我方可以以市场准入换取征税权的承认。"
+          },
+          {
+            "name": "技术人才",
+            "line": "我方可以开放数字服务外包与人才合作。"
+          },
+          {
+            "name": "南方代表",
+            "line": "我方可以代表发展中国家在会场发声。"
+          },
+          {
+            "name": "过渡期",
+            "line": "我方可以接受分阶段实施的过渡安排。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "外资依赖",
+            "line": "我方数字产业依赖外资，税负过重会伤及自身。"
+          },
+          {
+            "name": "追溯争议",
+            "line": "追溯征税引发外资诉讼，我方需要国际支持。"
+          }
+        ],
+        "info": [
+          {
+            "name": "均衡税立场",
+            "line": "我方可以透露：均衡税不会单方面取消。"
+          },
+          {
+            "name": "席位诉求",
+            "line": "我方要的是规则制定中的发言权。"
+          }
+        ]
+      },
+      "uk": {
+        "batna": {
+          "name": "保留 DST",
+          "line": "若全球方案不能替代，英国将保留 2% 数字服务税。"
+        },
+        "chips": [
+          {
+            "name": "过渡安排",
+            "line": "我方可以接受分阶段回撤的时间表。"
+          },
+          {
+            "name": "金融合作",
+            "line": "我方可以开放绿色金融与税收合作。"
+          },
+          {
+            "name": "数据流动",
+            "line": "我方可以在数据跨境规则上配合。"
+          },
+          {
+            "name": "国际论坛",
+            "line": "我方可以在多边场合为框架背书。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "脱欧孤立",
+            "line": "脱欧后我方缺少盟友，单打独斗成本很高。"
+          },
+          {
+            "name": "财政收入",
+            "line": "数字税已计入财政预算，取消需要替代来源。"
+          }
+        ],
+        "info": [
+          {
+            "name": "回撤条件",
+            "line": "我方可以透露：只有全球方案落地才会考虑取消。"
+          },
+          {
+            "name": "过渡底线",
+            "line": "我方真实要求是拿到足够长的过渡期。"
+          }
+        ]
+      },
+      "tr": {
+        "batna": {
+          "name": "单边征税",
+          "line": "若谈判无果，土耳其将继续依第 7194 号法单边征税。"
+        },
+        "chips": [
+          {
+            "name": "税率弹性",
+            "line": "我方可以在税率上给出让步空间。"
+          },
+          {
+            "name": "市场通道",
+            "line": "我方可以作为区域市场通道提供便利。"
+          },
+          {
+            "name": "基建合作",
+            "line": "我方可以开放数字基建项目合作。"
+          },
+          {
+            "name": "区域协调",
+            "line": "我方可以协调周边国家形成共同立场。"
+          }
+        ],
+        "weakness": [
+          {
+            "name": "里拉压力",
+            "line": "本币贬值压力下，我方急需税收收入。"
+          },
+          {
+            "name": "投资外流",
+            "line": "过度征税已导致部分投资外流。"
+          }
+        ],
+        "info": [
+          {
+            "name": "7194 底线",
+            "line": "我方可以透露：承认第 7194 号法是底线。"
+          },
+          {
+            "name": "税率空间",
+            "line": "我方真实空间在税率，而不在是否征税。"
+          }
+        ]
+      }
+    }
+  },
+  "common": {
+    "positions": [],
+    "actions": [],
+    "numbers": [],
+    "quotes": [],
+    "thinktank": []
+  },
+  "parties": {
+    "cn": {
+      "positions": [
+        {
+          "id": "CN-06",
+          "date": "2021-03-13",
+          "text": "“十四五”规划纲要提出，积极参与数据安全、数字货币、数字税等国际规则制定",
+          "value": "",
+          "source": "新华社（纲要受权发布）",
+          "link": "http://www.xinhuanet.com/politics/2021lh/2021-03/13/c_1127205564_6.htm",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜纲要2021-03-11全国人大通过、2021-03-13全文发布；第十八章第四节"
+        },
+        {
+          "id": "CN-09",
+          "date": "2021-10-08",
+          "text": "中国加入136个辖区的双支柱声明，接受撤销单边数字税的安排",
+          "value": "",
+          "source": "OECD",
+          "link": "https://www.oecd.org/en/about/news/announcements/2021/10/statement-on-a-two-pillar-solution-to-address-the-tax-challenges-arising-from-the-digitalisation-of-the-economy-october-2021.html",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜声明要求多边公约缔约方撤销所有数字服务税并承诺不再引入"
+        },
+        {
+          "id": "CN-12",
+          "date": "2021-12-01",
+          "text": "国家税务总局：单边数字税易致过度征税、双重征税并引发贸易报复",
+          "value": "",
+          "source": "中国税务报（国家税务总局国际税务司研究小组）",
+          "link": "https://finance.sina.com.cn/jjxw/2021-12-01/doc-ikyamrmy6167939.shtml",
+          "conf": "B",
+          "note": "P3｜双支柱政治协议与过渡安排｜《国家税务总局权威解答：数字经济税收“双支柱”问题（上）》；主管部门口径的解读文章"
+        },
+        {
+          "id": "CN-15",
+          "date": "2023-03",
+          "text": "中国向联合国提交书面意见，支持联合国在国际税收规则制定中发挥更积极作用",
+          "value": "",
+          "source": "联合国经社部（中方提交材料）",
+          "link": "https://financing.desa.un.org/sites/default/files/2023-03/The%20People%27s%20Republic%20of%20China_Input%20Tax%20Report.pdf",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜原文仅标月份；原文含“支持联合国在国际税收规则制定和国际税收协调中发挥更加积极作用”"
+        },
+        {
+          "id": "CN-16",
+          "date": "2023-12-22",
+          "text": "联大通过第78/230号决议启动联合国税务公约进程，中国投赞成票",
+          "value": "",
+          "source": "联合国大会（投票记录）",
+          "link": "https://un-project.org/votes/resolution/A-RES-78-230/",
+          "conf": "B",
+          "note": "P4｜公约难产与联合国转向｜111票赞成、46票反对、10票弃权；美英法反对，中俄赞成；官方逐国记录A/78/PV.50"
+        },
+        {
+          "id": "CN-18",
+          "date": "2024-06",
+          "text": "中国就联合国框架公约职权范围零案提交书面意见",
+          "value": "",
+          "source": "联合国经社部（中方提交材料）",
+          "link": "https://financing.desa.un.org/sites/default/files/2024-06/China_Inputs_AHC%20Tax_2nd%20%5BCN%5D.pdf",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜原文仅见2024-06发布批次，未标具体日；涉及征税权分配、能力建设等"
+        },
+        {
+          "id": "CN-19",
+          "date": "2024-08-17",
+          "text": "中办、国办：参与应对经济数字化国际税收规则制定，探索更公平的税收分配",
+          "value": "",
+          "source": "新华社（人民网转载）",
+          "link": "http://politics.people.com.cn/BIG5/n1/2024/1128/c1001-40371359.html",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜《关于数字贸易改革创新发展的意见》成文2024-08-17、2024-11-28发布；原文另有“税收利益分配更加合理、税收负担更加公平”"
+        }
+      ],
+      "actions": [
+        {
+          "id": "CN-01",
+          "date": "2016-04-06",
+          "text": "财税〔2016〕36号明确向境外提供、完全在境外消费的数字服务适用增值税零税率",
+          "value": "",
+          "source": "国家税务总局上海市税务局",
+          "link": "http://shanghai.chinatax.gov.cn/tax/zcfw/zcjd/201604/t422817.html",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜文件成文2016-03-23；跨境数字服务增值税口径，中国未设单边数字服务税的制度背景"
+        },
+        {
+          "id": "CN-02",
+          "date": "2017-06-07",
+          "text": "中国签署BEPS多边公约（MLI），参与跨境征税权与避免双重征税规则重构",
+          "value": "",
+          "source": "OECD",
+          "link": "https://www.oecd.org/en/topics/beps-multilateral-instrument.html",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜首批76个签署方之一；中国参与征税权分配规则的起点"
+        },
+        {
+          "id": "CN-03",
+          "date": "2019-01-01",
+          "text": "《电子商务法》施行，要求电商经营者依法办理登记并履行纳税义务",
+          "value": "",
+          "source": "人民日报海外版（中央网信办转载）",
+          "link": "https://www.cac.gov.cn/2019-01/07/c_1123954767.htm",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜法律2018-08-31通过、2019-01-01施行"
+        },
+        {
+          "id": "CN-05",
+          "date": "2020-11-15",
+          "text": "中国等15国签署RCEP，协定设电子商务章并首次纳入数据流动条款",
+          "value": "",
+          "source": "中国商务部",
+          "link": "https://www.mofcom.gov.cn/zwjg/jmxw/yz/art/2020/art_d222127d0b8043d79ab7cbb121efade3.html",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜商务部部长钟山署名文章；区域协定层面的数字贸易规则安排"
+        },
+        {
+          "id": "CN-08",
+          "date": "2021-09-16",
+          "text": "中国正式申请加入CPTPP",
+          "value": "",
+          "source": "中国商务部",
+          "link": "http://www.mofcom.gov.cn/article/xwfb/xwfyrth/202109/20210903198266.shtml",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜商务部部长王文涛向CPTPP保存方新西兰提交申请；涉及数字贸易章节"
+        },
+        {
+          "id": "CN-11",
+          "date": "2021-11-01",
+          "text": "中国正式申请加入《数字经济伙伴关系协定》（DEPA）",
+          "value": "",
+          "source": "中国商务部",
+          "link": "https://www.peopleapp.com/column/30039251521-500004242838",
+          "conf": "B",
+          "note": "P3｜双支柱政治协议与过渡安排｜商务部部长王文涛致函DEPA保存方新西兰"
+        },
+        {
+          "id": "CN-13",
+          "date": "2022-01-12",
+          "text": "国务院印发“十四五”数字经济发展规划，提出核心产业增加值占GDP达10%",
+          "value": "",
+          "source": "中国政府网",
+          "link": "https://www.gov.cn/zhengce/content/2022-01/12/content_5667817.htm",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜国发〔2021〕29号，成文2021-12-12、发布2022-01-12；基准2020年7.8%"
+        },
+        {
+          "id": "CN-14",
+          "date": "2023-02-27",
+          "text": "《数字中国建设整体布局规划》发布，部署数字领域国际规则参与",
+          "value": "",
+          "source": "新华社",
+          "link": "https://www.gov.cn/zhengce/2023-02/27/content_5743484.htm",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜中共中央、国务院印发"
+        },
+        {
+          "id": "CN-17",
+          "date": "2024-03-22",
+          "text": "商务部公布全国版跨境服务贸易负面清单，2024-04-21起施行",
+          "value": "",
+          "source": "国务院公报",
+          "link": "http://www.gov.cn/gongbao/2024/issue_11366/202405/content_6954195.html",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜商务部令2024年第1号；全国版与自贸试验区版同步"
+        },
+        {
+          "id": "CN-21",
+          "date": "2024-11-28",
+          "text": "《关于数字贸易改革创新发展的意见》公布，提出2029年数字服务占比45%以上",
+          "value": "",
+          "source": "新华社",
+          "link": "http://www.news.cn/20241128/0e4e131823864db7adbabf7e5f779950/c.html",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜中办、国办印发；2035年目标为50%以上"
+        },
+        {
+          "id": "CN-24",
+          "date": "2025-11-10",
+          "text": "联合国框架公约第三轮政府间谈判在内罗毕举行，中国参与",
+          "value": "",
+          "source": "中国税务报",
+          "link": "https://www.ctaxnews.net.cn/paper/pc/con/202511/11/content_231286.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2025-11-10至11-19；审议《框架公约模板》草案与争议解决说明文件"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "CN-04",
+          "date": "2019-04-18",
+          "text": "2018年中国数字经济规模31.3万亿元，占GDP比重34.8%",
+          "value": "31.3万亿元 / 34.8%",
+          "source": "中国信息通信研究院（新华网发布）",
+          "link": "https://www.cac.gov.cn/2019-04/19/c_1124389256.htm",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜《中国数字经济发展与就业白皮书（2019年）》2019-04-18发布；统计年度2018年"
+        },
+        {
+          "id": "CN-20",
+          "date": "2024-08-28",
+          "text": "2023年中国数字经济规模53.9万亿元，占GDP比重42.8%",
+          "value": "53.9万亿元 / 42.8%",
+          "source": "中国信息通信研究院（人民日报海外版）",
+          "link": "http://paper.people.com.cn/hwbwap/html/2024-08/28/content_26077261.htm",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜《中国数字经济发展研究报告（2024年）》2024-08-27发布；统计年度2023年"
+        },
+        {
+          "id": "CN-22",
+          "date": "2025-01-13",
+          "text": "2024年中国跨境电商进出口同比增长10.8%",
+          "value": "+10.8%",
+          "source": "海关总署（中国政府网图解）",
+          "link": "https://www.gov.cn/zhengce/jiedu/tujie/202501/content_6998286.htm",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜统计年度2024年；海关总署2025-01-13发布"
+        },
+        {
+          "id": "CN-23",
+          "date": "2025-09-26",
+          "text": "2024年中国可数字化交付的服务进出口2.9万亿元，同比增长6.5%",
+          "value": "2.9万亿元 / +6.5%",
+          "source": "商务部《中国数字贸易发展报告2025》",
+          "link": "https://s.cyol.com/articles/2025-09/26/content_6znj66UG.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2025-09-26第四届全球数字贸易博览会发布；统计年度2024年"
+        },
+        {
+          "id": "CN-26",
+          "date": "2026-03-26",
+          "text": "2024年中国数字经济规模59.2万亿元，占GDP比重43.8%",
+          "value": "59.2万亿元 / 43.8%",
+          "source": "中国信息通信研究院《中国数字经济发展研究报告（2025年）》",
+          "link": "https://dzswgf.mofcom.gov.cn/news/phone/43/2026/3/m-1774504026037.html",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜商务部电子商务司网站转载人民邮电报2026-03-26；统计年度2024年，较上年提升1个百分点"
+        }
+      ],
+      "quotes": [
+        {
+          "id": "CN-07",
+          "date": "2021-07-02",
+          "text": "外交部汪文斌：中方支持就全球税收合作达成全面和更具包容性的共识方案",
+          "value": "",
+          "source": "中国新闻网",
+          "link": "http://news.cnhubei.com/content/2021-07/02/content_13903839.html",
+          "conf": "B",
+          "note": "P3｜双支柱政治协议与过渡安排｜外交部例行记者会答问；另称应充分照顾发展中国家利益、秉持协商一致原则"
+        },
+        {
+          "id": "CN-10",
+          "date": "2021-10-14",
+          "text": "财政部长刘昆：中方一贯支持并努力推动达成多边共识方案，消除单边措施",
+          "value": "",
+          "source": "新华社",
+          "link": "https://www.news.cn/fortune/2021-10/14/c_1127958218.htm",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜2021-10-13 G20财长和央行行长会议（视频）发言；原话含“重塑更加公平、更加稳定、更加可持续的国际税收体系”"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "CN-25",
+          "date": "2025-11-11",
+          "text": "中国税务报：公约草案第4条确认市场国独立征税权，为数字税提供多边依据",
+          "value": "",
+          "source": "中国税务报",
+          "link": "https://www.ctaxnews.net.cn/paper/pc/con/202511/11/content_231286.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜草案第4条“公平分配征税权”：商业活动发生地、价值创造地、市场所在地均享有征税权；属媒体解读，非政府表态"
+        }
+      ]
+    },
+    "us": {
+      "positions": [
+        {
+          "id": "US-03",
+          "date": "2020-06-17",
+          "text": "美国退出OECD数字税谈判，贸易代表莱特希泽公开确认谈判停滞",
+          "value": "",
+          "source": "路透社",
+          "link": "https://www.reuters.com/article/us-usa-trade-digital-idUSKBN23O36B/",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜2020-06-12美方致函OECD暂停谈判，莱特希泽2020-06-17公开确认"
+        },
+        {
+          "id": "US-15",
+          "date": "2025-01-20",
+          "text": "特朗普备忘录：OECD全球税改协议在美国“无效力”",
+          "value": "",
+          "source": "美国白宫",
+          "link": "https://www.govinfo.gov/content/pkg/FR-2025-01-30/html/2025-02043.htm",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜要求通知OECD，并限60天提出保护措施选项；载《联邦公报》90 FR 8483"
+        },
+        {
+          "id": "US-18",
+          "date": "2025-02-21",
+          "text": "特朗普点名法、英、意、西、奥、土、加七国数字税，考虑重启301调查",
+          "value": "",
+          "source": "美国白宫",
+          "link": "https://www.whitehouse.gov/presidential-actions/2025/02/defending-american-companies-and-innovators-from-overseas-extortion-and-unfair-fines-and-penalties/",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜备忘录《保护美国企业与创新者免受海外勒索与不公平罚款》；另援引IRC第891条"
+        },
+        {
+          "id": "US-22",
+          "date": "2025-06-28",
+          "text": "G7声明：构建“并行体系”，就数字经济征税与各国税收主权开展建设性对话",
+          "value": "",
+          "source": "加拿大财政部（G7主席国）",
+          "link": "https://www.canada.ca/en/department-finance/news/2025/06/g7-statement-on-global-minimum-taxes.html",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜原文“including a constructive dialogue on the taxation of the digital economy and on preserving the tax sovereignty of all countries”"
+        }
+      ],
+      "actions": [
+        {
+          "id": "US-01",
+          "date": "2019-07-10",
+          "text": "美国首次以301条款调查法国3%数字服务税，指其针对美国企业",
+          "value": "",
+          "source": "美国贸易代表办公室（USTR）",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2019/july/ustr-announces-initiation-section-301",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜法国DST：3%，全球营收7.5亿欧元、法国营收2500万欧元门槛"
+        },
+        {
+          "id": "US-02",
+          "date": "2020-06-02",
+          "text": "美国对欧盟、印度、英国、土耳其等10个经济体数字税发起301调查",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/june/ustr-announces-and-immediately-suspends-tariffs-section-301-digital-services-taxes-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜10个经济体：奥地利、巴西、捷克、欧盟、印度、印尼、意大利、西班牙、土耳其、英国"
+        },
+        {
+          "id": "US-04",
+          "date": "2021-01-06",
+          "text": "美国认定印度、意大利、土耳其数字税歧视美国企业",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/january/ustr-releases-findings-dst-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜认定“歧视美企、违背国际税收原则、限制美国商务”"
+        },
+        {
+          "id": "US-06",
+          "date": "2021-01-14",
+          "text": "美国认定奥地利、西班牙、英国数字税歧视美国企业",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/january/ustr-releases-findings-and-updates-dst-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜同日发布对巴西、捷克、欧盟、印尼（未实施DST）的进展说明"
+        },
+        {
+          "id": "US-07",
+          "date": "2021-03-26",
+          "text": "美国终止巴西、捷克、欧盟、印尼四项301调查，保留六国措施",
+          "value": "",
+          "source": "USTR",
+          "link": "https://www.ustr.gov/about-us/policy-offices/press-office/press-releases/2021/march/ustr-announces-next-steps-section-301-digital-services-taxes-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜保留奥地利、印度、意大利、西班牙、土耳其、英国六项调查"
+        },
+        {
+          "id": "US-09",
+          "date": "2021-06-02",
+          "text": "美国对印度、英国、土耳其等六国商品加征25%关税，但暂缓180天",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/june/ustr-announces-and-immediately-suspends-tariffs-section-301-digital-services-taxes-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜暂缓期为OECD/G20多边谈判留出时间"
+        },
+        {
+          "id": "US-11",
+          "date": "2021-10-21",
+          "text": "美国与奥、法、意、西、英达成DST过渡协议，印度、土耳其未加入",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/october/ustr-welcomes-agreement-austria-france-italy-spain-and-united-kingdom-digital-services-taxes",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜过渡期内DST可抵免未来Amount A税负，美方终止已暂缓的关税"
+        },
+        {
+          "id": "US-12",
+          "date": "2021-11-22",
+          "text": "美国与土耳其就DST过渡安排达成协议，适用同样条款",
+          "value": "",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/news/press-releases/jy0500",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜联合声明明确美土适用2021-10-21六方协议同一条款"
+        },
+        {
+          "id": "US-13",
+          "date": "2022-02-22",
+          "text": "美国反对加拿大数字服务税立法提案，警告将采取贸易应对",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2022/february/ustr-opposes-canadas-digital-services-tax-act-proposal",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜USTR向加方提交意见，要求放弃单边措施、加快支柱一；称保留贸易协定与国内法选项"
+        },
+        {
+          "id": "US-16",
+          "date": "2025-01-20",
+          "text": "“美国优先贸易政策”备忘录要求审查外国数字税等非对等做法",
+          "value": "",
+          "source": "美国白宫",
+          "link": "https://www.whitehouse.gov/presidential-actions/2025/01/america-first-trade-policy/",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜责成USTR、财政部、商务部联合审查"
+        },
+        {
+          "id": "US-17",
+          "date": "2025-02-20",
+          "text": "美国贸易代表办公室就数字税等“非对等贸易安排”公开征求意见",
+          "value": "",
+          "source": "USTR（安永2025-0549报道）",
+          "link": "https://taxnews.ey.com/news/2025-0549-us-initiates-review-of-other-countries-imposition-of-digital-services-taxes-on-us-companies-and-opens-comment-period-on-nonreciprocal-trade-arrangements",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜征求意见截止2025-03-11；依据“公平与对等计划”联邦公报通知"
+        },
+        {
+          "id": "US-20",
+          "date": "2025-05-08",
+          "text": "美英“经济繁荣协议”未包含取消英国数字税的内容",
+          "value": "",
+          "source": "美国白宫（Politico报道）",
+          "link": "https://www.whitehouse.gov/fact-sheets/2025/05/fact-sheet-u-s-uk-reach-historic-trade-deal/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜美方官员称将继续施压；英方称无正式解决程序"
+        },
+        {
+          "id": "US-23",
+          "date": "2025-06-28",
+          "text": "美参议院版本删除第899条“报复性税收”，G7声明称其至关重要",
+          "value": "",
+          "source": "安永（2025-1414）",
+          "link": "https://taxnews.ey.com/news/2025-1414-canada-g7-releases-statement-on-global-minimum-tax-pillar-two-and-canada-rescinds-digital-services-tax",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜第899条拟对“不公平外国税”国家征收附加税，DST被列为核心触发项"
+        },
+        {
+          "id": "US-24",
+          "date": "2025-07-04",
+          "text": "特朗普签署“大而美”法案，第899条最终未入法",
+          "value": "",
+          "source": "美国国会（H.R.1）",
+          "link": "https://www.congress.gov/bill/119th-congress/house-bill/1",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜法案2025-07-04签署；参议院版本已于2025-06-28删除第899条"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "US-10",
+          "date": "2021-10-08",
+          "text": "OECD估算：支柱一金额A每年重新分配约2000亿美元利润的征税权",
+          "value": "$200bn/年",
+          "source": "OECD",
+          "link": "https://www.oecd.org/en/about/news/announcements/2021/10/statement-on-a-two-pillar-solution-to-address-the-tax-challenges-arising-from-the-digitalisation-of-the-economy-october-2021.html",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜全球口径，非美国单独数据；金额A适用全球营收200亿欧元以上、利润率10%以上的跨国企业"
+        },
+        {
+          "id": "US-14",
+          "date": "2024-03",
+          "text": "美国国会税收联合委员会估算：支柱一将使美国联邦税收每年减少12亿美元",
+          "value": "-$1.2bn/年",
+          "source": "美国国会税收联合委员会（JCX-7-24）",
+          "link": "https://www.jct.gov/publications/2024/jcx-7-24/",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜报告编号JCX-7-24，2024-03发布；Tax Foundation 2024-05-07文章引述"
+        },
+        {
+          "id": "US-26",
+          "date": "2026-03",
+          "text": "2024年美国对欧洲可数字化交付服务出口3610亿美元，占对欧服务出口49.5%",
+          "value": "$361bn / 49.5%",
+          "source": "美欧商会《跨大西洋经济2026》",
+          "link": "https://transatlantic.amchameu.eu/wp-content/uploads/2026/03/Transatlantic_Economy_2026_Chapter-2.pdf.pdf",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜统计年度2024年；报告2026-03发布，原文为 digitally deliverable services"
+        }
+      ],
+      "quotes": [
+        {
+          "id": "US-05",
+          "date": "2021-01-14",
+          "text": "莱特希泽：最好结果是各国共同寻找解决方案",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/january/ustr-releases-findings-and-updates-dst-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜原话“The best outcome would be for countries to come together to find a solution”"
+        },
+        {
+          "id": "US-08",
+          "date": "2021-06-02",
+          "text": "戴琪：美国仍致力于通过OECD和G20进程达成国际税收共识",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/june/ustr-announces-and-immediately-suspends-tariffs-section-301-digital-services-taxes-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜时任美国贸易代表；同时表示保留301关税选项"
+        },
+        {
+          "id": "US-19",
+          "date": "2025-04-29",
+          "text": "财长贝森特称数字服务税是美欧贸易谈判的症结之一",
+          "value": "",
+          "source": "彭博社",
+          "link": "https://www.bloomberg.com/news/articles/2025-04-29/bessent-cites-digital-services-tax-as-sticking-point-in-eu-talks",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜贝森特要求欧盟在贸易协议中处理DST；欧盟成员国需先形成统一立场"
+        },
+        {
+          "id": "US-21",
+          "date": "2025-06-27",
+          "text": "特朗普：因加拿大开征数字税，立即终止与加拿大的所有贸易谈判",
+          "value": "",
+          "source": "新华社",
+          "link": "https://english.news.cn/20250628/ddd3b17c90b44a88825345d3ffd0e044/c.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜原话“we are hereby terminating ALL discussions on Trade with Canada, effective immediately”；另称加拿大在效仿欧盟"
+        },
+        {
+          "id": "US-25",
+          "date": "2025-08-25",
+          "text": "特朗普：对设数字税的国家加征“大幅”额外关税并限制芯片出口",
+          "value": "",
+          "source": "韩联社",
+          "link": "https://en.yna.co.kr/view/AEN20250826006100315",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜原话“I will impose substantial additional Tariffs ... and institute Export restrictions on our Highly Protected Technology and Chips”"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "US-27",
+          "date": "2026-05-04",
+          "text": "Tax Foundation：欧洲8国9项数字税，支柱一落地后本应撤销",
+          "value": "",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜评估性结论；数字税以营收为税基、主要由美国企业承担"
+        }
+      ]
+    },
+    "eu": {
+      "positions": [
+        {
+          "id": "EU-10",
+          "date": "2021-10-08",
+          "text": "欧盟加入136个辖区的双支柱声明，承诺撤销数字服务税",
+          "value": "",
+          "source": "OECD",
+          "link": "https://www.oecd.org/en/about/news/announcements/2021/10/statement-on-a-two-pillar-solution-to-address-the-tax-challenges-arising-from-the-digitalisation-of-the-economy-october-2021.html",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜声明要求缔约方撤销所有DST并承诺未来不再引入"
+        },
+        {
+          "id": "EU-16",
+          "date": "2025-04-12",
+          "text": "爱尔兰财长反对以数字税作为对美反制工具",
+          "value": "",
+          "source": "RTÉ",
+          "link": "https://www.rte.ie/news/business/2025/0412/1507298-eu-finance-ministers-warsaw/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜多诺霍在华沙欧盟财长会期间称DST“对爱尔兰经济有害”"
+        }
+      ],
+      "actions": [
+        {
+          "id": "EU-03",
+          "date": "2018-03-21",
+          "text": "欧委会提出3%临时数字服务税与“显著数字存在”指令两项提案",
+          "value": "",
+          "source": "新华社（欧盟委员会发布会）",
+          "link": "http://www.xinhuanet.com/english/2018-03/22/c_137055711.htm",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜COM(2018)148；另一提案为“显著数字存在”（digital permanent establishment）"
+        },
+        {
+          "id": "EU-04",
+          "date": "2018-11-30",
+          "text": "瑞典、丹麦、芬兰、爱尔兰反对欧盟DST妥协案，德荷要求更多时间",
+          "value": "",
+          "source": "RTÉ（转引路透社）",
+          "link": "https://www.rte.ie/news/world/2018/1130/1014434-europe-digital-tax/",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜奥地利主席国将生效推迟至2022年仍未过关"
+        },
+        {
+          "id": "EU-05",
+          "date": "2018-12-04",
+          "text": "欧盟财长会（ECOFIN）未能就数字服务税指令达成一致",
+          "value": "",
+          "source": "Orbitax（引欧盟理事会发布）",
+          "link": "https://orbitax.com/news/country/article/ECOFIN-Fails-to-Reach-Agreemen-34688",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜部分代表团出于政治原则不能接受文本，妥协案未获必要支持"
+        },
+        {
+          "id": "EU-07",
+          "date": "2019-03-12",
+          "text": "欧盟财长会放弃统一DST，转向支持OECD全球方案",
+          "value": "",
+          "source": "RTÉ（转引路透社）",
+          "link": "https://www.rte.ie/news/business/2019/0312/1035895-european-digital-tax/",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜北欧国家与爱尔兰持续反对；若OECD改革延期欧盟将重启讨论"
+        },
+        {
+          "id": "EU-08",
+          "date": "2020-06",
+          "text": "比利时重启3%数字服务税提案",
+          "value": "",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜原文仅标月份；2019年1月首提、3月被否后重提，长期停滞"
+        },
+        {
+          "id": "EU-09",
+          "date": "2021-07-12",
+          "text": "欧委会暂停数字税“自有资源”立法，为全球协议让路",
+          "value": "",
+          "source": "爱尔兰时报",
+          "link": "https://www.irishtimes.com/business/economy/eu-halts-work-on-digital-levy-to-boost-chance-of-global-corporation-tax-deal-1.4618016",
+          "conf": "B",
+          "note": "P3｜双支柱政治协议与过渡安排｜欧委会发言人称“put on hold our work on our new digital levy as a new EU own resource”"
+        },
+        {
+          "id": "EU-11",
+          "date": "2021-10-21",
+          "text": "欧盟四成员国（奥、法、意、西）与美英就DST过渡达成妥协",
+          "value": "",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P3｜双支柱政治协议与过渡安排｜过渡期DST可抵免未来Amount A税负；美国终止301措施"
+        },
+        {
+          "id": "EU-12",
+          "date": "2022-12-15",
+          "text": "欧盟理事会通过全球最低税指令，成员国须在2023年底前转化",
+          "value": "",
+          "source": "欧盟理事会（EUR-Lex 永久链接）",
+          "link": "https://eur-lex.europa.eu/eli/dir/2022/2523/oj",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜指令(EU)2022/2523；支柱二在欧盟落地，与支柱一（征税权分配）进度分离"
+        },
+        {
+          "id": "EU-14",
+          "date": "2024-01-01",
+          "text": "丹麦对流媒体服务开征2%数字服务税",
+          "value": "",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜另有3%附加税，适用于丹麦内容投资不足营收5%者"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "EU-02",
+          "date": "2018-03-21",
+          "text": "欧盟DST：3%税率，全球营收7.5亿欧元、欧盟营收5000万欧元门槛，年增收约50亿欧元",
+          "value": "3% / €750m+€50m / €5bn",
+          "source": "新华社（引欧盟委员会估算）",
+          "link": "http://www.xinhuanet.com/english/2018-03/22/c_137055711.htm",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜欧委会估算；初创企业豁免"
+        },
+        {
+          "id": "EU-13",
+          "date": "2024-01-01",
+          "text": "法国对音乐流媒体另征1.2%税，门槛为法国营收2000万欧元",
+          "value": "1.2% / €20m",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜与法国3%通用DST并行"
+        },
+        {
+          "id": "EU-18",
+          "date": "2026-05-04",
+          "text": "欧洲OECD国家约半数已宣布、提出或实施数字服务税",
+          "value": "约50%",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜欧盟统一DST失败后各国单边立法的结果"
+        },
+        {
+          "id": "EU-19",
+          "date": "2026-06-18",
+          "text": "欧盟DST若按3%上限征收，年收入约50亿欧元，仅占欧盟税收0.07%",
+          "value": "€5bn / 0.07%",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/research/all/eu/digital-services-taxes-eu-budget/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜按50亿欧元上限估算；与欧盟税收总额比较"
+        },
+        {
+          "id": "EU-20",
+          "date": "2026-06-18",
+          "text": "欧盟数字服务增值税收入2024年超330亿欧元，约为DST收入上限的7倍",
+          "value": "€33bn",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/research/all/eu/digital-services-taxes-eu-budget/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2015年约30亿欧元增至2024年逾330亿欧元"
+        }
+      ],
+      "quotes": [
+        {
+          "id": "EU-01",
+          "date": "2018-03-21",
+          "text": "莫斯科维奇：这不是反美税，也不是反GAFA税，这是数字税",
+          "value": "",
+          "source": "新华社",
+          "link": "http://www.xinhuanet.com/english/2018-03/22/c_137055711.htm",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜时任欧盟税务专员Pierre Moscovici；回应美方“针对美国企业”的指责"
+        },
+        {
+          "id": "EU-06",
+          "date": "2019-03-12",
+          "text": "特奥多罗维奇：谈了很多个月，各方仍未达成一致",
+          "value": "",
+          "source": "RTÉ",
+          "link": "https://www.rte.ie/news/business/2019/0312/1035895-european-digital-tax/",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜罗马尼亚财长、欧盟轮值主席国代表Eugen Teodorovici在财长会公开会议上的表态"
+        },
+        {
+          "id": "EU-15",
+          "date": "2025-04-10",
+          "text": "冯德莱恩：不排除对美科技企业的数字广告收入征税",
+          "value": "",
+          "source": "RTÉ（转引英国《金融时报》访谈）",
+          "link": "https://www.rte.ie/news/business/2025/0412/1507298-eu-finance-ministers-warsaw/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜欧委会主席表示该措施将作为关税在全单一市场适用；属受访表态"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "EU-17",
+          "date": "2025-09-19",
+          "text": "欧洲议会研究服务：支柱一停滞，欧盟须在单边DST与全球方案间取舍",
+          "value": "",
+          "source": "欧洲议会研究服务（EPRS）",
+          "link": "https://epthinktank.eu/2025/09/19/side-by-side-the-future-of-pillar-two-minimum-corporate-tax-rules/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜评估性报告；同时分析G7“并行体系”对欧盟的影响"
+        },
+        {
+          "id": "EU-21",
+          "date": "2026-06-18",
+          "text": "Tax Foundation建议以数字服务增值税替代欧盟统一DST",
+          "value": "",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/research/all/eu/digital-services-taxes-eu-budget/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜理由：DST以营收为税基、负担转嫁消费者、易引发贸易争端"
+        }
+      ]
+    },
+    "in": {
+      "positions": [
+        {
+          "id": "IN-03",
+          "date": "2018-04-01",
+          "text": "印度以“显著经济存在”规则主张对无实体外国数字企业的征税权",
+          "value": "",
+          "source": "Fortune India",
+          "link": "https://fortuneindia-web.quintype.io/opinion/india-scraps-google-tax-a-bold-trade-move-or-a-strategic-retreat/121486",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜2018-19年预算引入“显著经济存在”（SEP）概念，自2018-04-01财年起适用"
+        },
+        {
+          "id": "IN-07",
+          "date": "2021-10-08",
+          "text": "印度加入OECD/G20双支柱声明，共136个辖区",
+          "value": "136",
+          "source": "美国联邦公报（86 FR 30356）",
+          "link": "https://thefederalregister.org/documents/2021-26198/termination-of-action-in-the-digital-services-tax-investigation-of-india-and-further-monitoring",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜印度与美及另外134个辖区共同加入"
+        },
+        {
+          "id": "IN-08",
+          "date": "2021-11-24",
+          "text": "印度以均衡税抵免换取美方终止301关税",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30356）",
+          "link": "https://thefederalregister.org/documents/2021-26198/termination-of-action-in-the-digital-services-tax-investigation-of-india-and-further-monitoring",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜抵免期自2022-04-01起至支柱一实施或2024-03-31"
+        },
+        {
+          "id": "IN-12",
+          "date": "2023-12-22",
+          "text": "联大第78/230号决议表决中印度投赞成票",
+          "value": "",
+          "source": "联合国大会（投票记录）",
+          "link": "https://un-project.org/votes/resolution/A-RES-78-230/",
+          "conf": "B",
+          "note": "P4｜公约难产与联合国转向｜决议111票赞成、46票反对、10票弃权；印度赞成、土耳其弃权、美英法反对"
+        },
+        {
+          "id": "IN-21",
+          "date": "2025-11-19",
+          "text": "印度在联合国税务公约谈判中反对引入强制性仲裁",
+          "value": "",
+          "source": "CESR（联合国税务公约谈判观察）",
+          "link": "https://dev.cesr.org/a-turning-point-for-global-tax-justice-what-the-nairobi-negotiations-revealed/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜内罗毕会议（2025-11-10至19）期间，印度与尼日利亚、赞比亚共同反对仲裁；属会议观察记录"
+        }
+      ],
+      "actions": [
+        {
+          "id": "IN-02",
+          "date": "2016-06-01",
+          "text": "印度依2016年财政法第VIII章开征6%均衡税，2016-06-01生效",
+          "value": "",
+          "source": "安永（EY Global Tax Alert）",
+          "link": "https://globaltaxnews.ey.com/news/2020-5655-india-extends-equalization-levy-scope-to-cover-e-commerce-supplies-or-services",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜针对非居民在线广告及相关服务，由付款方扣缴"
+        },
+        {
+          "id": "IN-05",
+          "date": "2020-04-01",
+          "text": "印度将均衡税扩至非居民电商，2%税率自2020-04-01适用",
+          "value": "2%",
+          "source": "安永（EY Global Tax Alert）",
+          "link": "https://globaltaxnews.ey.com/news/2020-5655-india-extends-equalization-levy-scope-to-cover-e-commerce-supplies-or-services",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜非居民电商运营商自行申报，与6%广告税并行"
+        },
+        {
+          "id": "IN-06",
+          "date": "2021-06-02",
+          "text": "美国301调查认定印度均衡税歧视美企，美方对印商品加税",
+          "value": "",
+          "source": "USTR",
+          "link": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2021/june/ustr-announces-and-immediately-suspends-tariffs-section-301-digital-services-taxes-investigations",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜25%关税暂缓180天，为OECD谈判留时间"
+        },
+        {
+          "id": "IN-09",
+          "date": "2021-11-24",
+          "text": "美印发表联合声明，就印度均衡税达成过渡安排",
+          "value": "",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/news/press-releases/jy0504",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜印度接受均衡税抵免，美方终止301措施；印方为最后一个和解的DST被调查国"
+        },
+        {
+          "id": "IN-10",
+          "date": "2021-11-28",
+          "text": "美国对印度301加征关税终止",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30356）",
+          "link": "https://thefederalregister.org/documents/2021-26198/termination-of-action-in-the-digital-services-tax-investigation-of-india-and-further-monitoring",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜以印度承诺在支柱一下移除DST为条件"
+        },
+        {
+          "id": "IN-11",
+          "date": "2022-04-01",
+          "text": "印度均衡税抵免安排自2022-04-01起算，以支柱一生效为终点",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30356）",
+          "link": "https://thefederalregister.org/documents/2021-26198/termination-of-action-in-the-digital-services-tax-investigation-of-india-and-further-monitoring",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜支柱一迟延期间印度继续征收均衡税，直至2024年才单方面取消2%部分"
+        },
+        {
+          "id": "IN-13",
+          "date": "2024-07-23",
+          "text": "印度2024年财政（第2号）法撤回2%电商均衡税",
+          "value": "",
+          "source": "Digital Policy Alert",
+          "link": "https://digitalpolicyalert.org/event/26407-finance-no2-bill-2024-including-scrapping-equalisation-levy-on-non-resident-digital-service-providers-enters-into-force",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜2024-07-23提交人民院；8月7日下院、8月8日上院通过"
+        },
+        {
+          "id": "IN-14",
+          "date": "2024-08-01",
+          "text": "印度自2024-08-01起停止征收2%电商均衡税",
+          "value": "",
+          "source": "IndiaFilings",
+          "link": "https://www.indiafilings.com/income-tax/equalisation-levy-abolished",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜与TaxGuru口径一致；与美方贸易谈判同步"
+        },
+        {
+          "id": "IN-15",
+          "date": "2024-08-16",
+          "text": "印度总统2024-08-16批准财政（第2号）法，正式撤回2%均衡税",
+          "value": "",
+          "source": "Digital Policy Alert",
+          "link": "https://digitalpolicyalert.org/event/26407-finance-no2-bill-2024-including-scrapping-equalisation-levy-on-non-resident-digital-service-providers-enters-into-force",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜立法程序完成节点"
+        },
+        {
+          "id": "IN-16",
+          "date": "2025-03-24",
+          "text": "印度在2025年财政法案修正中提出取消6%广告均衡税",
+          "value": "",
+          "source": "The Indian Express",
+          "link": "https://indianexpress.com/article/opinion/editorials/scrapping-google-tax-trumps-america-pragmatic-india-9908081/lite/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜报道称“周一”提出，即2025-03-24；同日美国贸易代表团抵印"
+        },
+        {
+          "id": "IN-19",
+          "date": "2025-04-01",
+          "text": "印度6%在线广告均衡税自2025-04-01起停止征收",
+          "value": "",
+          "source": "TaxGuru",
+          "link": "https://taxguru.in/income-tax/equalisation-levy-complete-journey-inception-abolition-new-tax-regime.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2025年财政法；均衡税制度整体终止"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "IN-01",
+          "date": "2016-06-01",
+          "text": "印度6%广告均衡税起征点为对单一非居民年支付超10万卢比",
+          "value": "₹1 lakh",
+          "source": "The Indian Express",
+          "link": "https://indianexpress.com/article/opinion/editorials/scrapping-google-tax-trumps-america-pragmatic-india-9908081/lite/",
+          "conf": "B",
+          "note": "P1｜单边开征与反制起点｜回溯2016年制度；该税至2025-04-01停征"
+        },
+        {
+          "id": "IN-04",
+          "date": "2020-04-01",
+          "text": "印度2%电商均衡税门槛为年收款2000万卢比",
+          "value": "₹2 crore",
+          "source": "安永（EY Global Tax Alert）",
+          "link": "https://globaltaxnews.ey.com/news/2020-5655-india-extends-equalization-levy-scope-to-cover-e-commerce-supplies-or-services",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜仅对在印无常设机构的非居民"
+        },
+        {
+          "id": "IN-17",
+          "date": "2025-03-27",
+          "text": "印度均衡税年征收额略低于4000 crore卢比",
+          "value": "₹4,000 crore（约400亿卢比）",
+          "source": "The Indian Express",
+          "link": "https://indianexpress.com/article/opinion/editorials/scrapping-google-tax-trumps-america-pragmatic-india-9908081/lite/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜年度口径未明；另有报道称累计征收约400亿卢比"
+        },
+        {
+          "id": "IN-20",
+          "date": "2025-08-18",
+          "text": "废除均衡税预计造成短期收入损失超3000 crore卢比",
+          "value": "₹3,000+ crore（约300亿卢比）",
+          "source": "TaxGuru",
+          "link": "https://taxguru.in/income-tax/equalisation-levy-complete-journey-inception-abolition-new-tax-regime.html",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜估算值；日期为文章发布日"
+        }
+      ],
+      "quotes": [],
+      "thinktank": [
+        {
+          "id": "IN-18",
+          "date": "2025-03-31",
+          "text": "印度媒体：撤销均衡税是“对美关税压力的务实让步”",
+          "value": "",
+          "source": "The Indian Express（社论）",
+          "link": "https://indianexpress.com/article/opinion/editorials/scrapping-google-tax-trumps-america-pragmatic-india-9908081/lite/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜评估性观点：印度放弃单边征税以换取美方关税缓和"
+        }
+      ]
+    },
+    "uk": {
+      "positions": [
+        {
+          "id": "UK-03",
+          "date": "2018-10-29",
+          "text": "英国称若达成全球方案，将考虑以之取代英国数字服务税",
+          "value": "",
+          "source": "英国财政部",
+          "link": "https://www.gov.uk/government/speeches/budget-2018-philip-hammonds-speech",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜原话“if one emerges, we will consider adopting it in place of the UK Digital Services Tax”"
+        },
+        {
+          "id": "UK-06",
+          "date": "2020-03-11",
+          "text": "英国承诺国际方案到位后即取消数字服务税",
+          "value": "",
+          "source": "HMRC",
+          "link": "https://www.gov.uk/government/publications/introduction-of-the-digital-services-tax/digital-services-tax",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜原文“committed to dis-applying the Digital Services Tax once an appropriate international solution is in place”"
+        },
+        {
+          "id": "UK-13",
+          "date": "2023-12-22",
+          "text": "英国在联大第78/230号决议表决中投反对票",
+          "value": "",
+          "source": "联合国大会（投票记录）",
+          "link": "https://un-project.org/votes/resolution/A-RES-78-230/",
+          "conf": "B",
+          "note": "P4｜公约难产与联合国转向｜决议111票赞成、46票反对、10票弃权；美英法反对，中俄赞成"
+        },
+        {
+          "id": "UK-20",
+          "date": "2025-11-26",
+          "text": "英国称DST仍是临时措施，全球征税权方案到位即取消",
+          "value": "",
+          "source": "英国财政部（DST五年审查）",
+          "link": "https://www.gov.uk/government/publications/digital-services-tax-review/digital-services-tax-review-report",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜财政大臣依《2020年财税法》法定义务向议会提交审查报告"
+        }
+      ],
+      "actions": [
+        {
+          "id": "UK-07",
+          "date": "2020-04-01",
+          "text": "英国对搜索引擎、社交媒体和在线市场开征2%数字服务税",
+          "value": "2%",
+          "source": "HMRC",
+          "link": "https://www.gov.uk/government/publications/introduction-of-the-digital-services-tax/digital-services-tax",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜2020-04-01起征"
+        },
+        {
+          "id": "UK-10",
+          "date": "2021-10-21",
+          "text": "美英等六方设DST抵免机制，美方终止301关税",
+          "value": "",
+          "source": "英国财政部",
+          "link": "https://www.gov.uk/government/news/uk-agrees-transition-toward-new-global-tax-system",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜美、英、法、意、奥、西六方；已缴DST可抵免未来Amount A税负"
+        },
+        {
+          "id": "UK-14",
+          "date": "2024-02-15",
+          "text": "美英等六方将DST过渡安排延至2024-06-30",
+          "value": "",
+          "source": "英国财政部",
+          "link": "https://www.gov.uk/government/publications/update-to-the-transition-from-existing-digital-services-taxes-to-pillar-1",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜理由为OECD/G20包容性框架谈判仍在继续"
+        },
+        {
+          "id": "UK-18",
+          "date": "2025-05-08",
+          "text": "美英贸易协议未要求英国取消数字税",
+          "value": "",
+          "source": "美国白宫（Politico报道）",
+          "link": "https://www.whitehouse.gov/fact-sheets/2025/05/fact-sheet-u-s-uk-reach-historic-trade-deal/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜美方官员称将继续谈判；英方称无正式解决程序"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "UK-02",
+          "date": "2018-10-29",
+          "text": "英国预算预计数字服务税每年增收逾4亿英镑",
+          "value": "£400m+/年",
+          "source": "英国财政部",
+          "link": "https://www.gov.uk/government/speeches/budget-2018-philip-hammonds-speech",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜演讲原话“expected to raise over £400m a year”，为2018年预算测算"
+        },
+        {
+          "id": "UK-04",
+          "date": "2020-03-11",
+          "text": "英国DST门槛：全球营收5亿英镑、英国营收2500万英镑",
+          "value": "£500m / £25m",
+          "source": "HMRC",
+          "link": "https://www.gov.uk/government/publications/introduction-of-the-digital-services-tax/digital-services-tax",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜仅覆盖搜索引擎、社交媒体、在线市场三类活动"
+        },
+        {
+          "id": "UK-05",
+          "date": "2020-03-11",
+          "text": "英国预算预计2020-21年度DST收入2.8亿英镑",
+          "value": "£280m",
+          "source": "HMRC",
+          "link": "https://www.gov.uk/government/publications/introduction-of-the-digital-services-tax/digital-services-tax",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜2020年预算财政影响表（经OBR认证）；2024-25年度原预计5.15亿英镑"
+        },
+        {
+          "id": "UK-09",
+          "date": "2021-10-21",
+          "text": "DST过渡安排期限为2022-01-01至2023-12-31",
+          "value": "2022-01-01—2023-12-31",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/news/press-releases/jy0419",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜“Interim Period”止于多边公约生效日或2023-12-31孰早"
+        },
+        {
+          "id": "UK-11",
+          "date": "2022-11-23",
+          "text": "2020-21财年英国DST实收3.58亿英镑，超原预测30%",
+          "value": "£358m",
+          "source": "英国国家审计署（NAO）",
+          "link": "https://www.nao.org.uk/press-releases/investigation-into-the-digital-services-tax/",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜HMRC权责发生制口径；原预测2.75亿英镑"
+        },
+        {
+          "id": "UK-12",
+          "date": "2022-11-23",
+          "text": "18个企业集团缴纳英国DST，约九成税款来自5家",
+          "value": "18家 / 5家",
+          "source": "英国国家审计署",
+          "link": "https://www.nao.org.uk/press-releases/investigation-into-the-digital-services-tax/",
+          "conf": "A",
+          "note": "P4｜公约难产与联合国转向｜其中13家所缴DST超过其英国公司税；潜在应税集团数由31家增至101家"
+        },
+        {
+          "id": "UK-15",
+          "date": "2024-03-31",
+          "text": "2023-24财年英国DST收入6.78亿英镑",
+          "value": "£678m",
+          "source": "英国议会（财政部书面答复）",
+          "link": "https://questions-statements.parliament.uk/written-questions/detail/2024-12-18/21048",
+          "conf": "A",
+          "note": "P5｜延期、调整与数据积累｜数字为2023-24财年收入，2025-01-06书面答复公布；现金口径"
+        },
+        {
+          "id": "UK-16",
+          "date": "2025-01-06",
+          "text": "2021-22至2023-24三个财年英国DST合计16.25亿英镑",
+          "value": "£1,625m",
+          "source": "英国议会（财政部书面答复）",
+          "link": "https://questions-statements.parliament.uk/written-questions/detail/2024-12-18/21048",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜3.80亿+5.67亿+6.78亿英镑；与ONS权责发生制口径存在差异"
+        },
+        {
+          "id": "UK-17",
+          "date": "2025-03-31",
+          "text": "2024-25财年英国DST收入约8亿英镑",
+          "value": "£800m",
+          "source": "英国财政部（DST五年审查报告）",
+          "link": "https://www.gov.uk/government/publications/digital-services-tax-review/digital-services-tax-review-report",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜数字为2024-25财年收入，2025-11-26审查报告公布"
+        },
+        {
+          "id": "UK-19",
+          "date": "2025-11-26",
+          "text": "英国DST实施成本630万英镑，五年间未发现避税或欺诈",
+          "value": "£6.3m",
+          "source": "英国财政部（DST五年审查报告）",
+          "link": "https://www.gov.uk/government/publications/digital-services-tax-review/digital-services-tax-review-report",
+          "conf": "A",
+          "note": "P6｜美国退出、G7谅解与规则重构｜争议多源于法律解释分歧而非故意不遵从"
+        }
+      ],
+      "quotes": [
+        {
+          "id": "UK-01",
+          "date": "2018-10-29",
+          "text": "哈蒙德：我们将开征英国数字服务税",
+          "value": "",
+          "source": "英国财政部（预算演讲）",
+          "link": "https://www.gov.uk/government/speeches/budget-2018-philip-hammonds-speech",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜原话“So we will now introduce a UK Digital Services Tax”"
+        },
+        {
+          "id": "UK-08",
+          "date": "2021-10-21",
+          "text": "苏纳克：在迈向2023年的过程中，我们的数字服务税受到保护",
+          "value": "",
+          "source": "英国财政部",
+          "link": "https://www.gov.uk/government/news/uk-agrees-transition-toward-new-global-tax-system",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜时任财政大臣；原话“our Digital Services Tax is protected as we move to 2023”"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "UK-21",
+          "date": "2026-05-04",
+          "text": "Tax Foundation：英国DST约占政府总收入0.1%",
+          "value": "0.1%",
+          "source": "Tax Foundation",
+          "link": "https://taxfoundation.org/data/all/eu/digital-services-taxes-europe/",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜该页另列英国最近年度DST收入9亿英镑，高于财政部8亿英镑口径，存疑"
+        }
+      ]
+    },
+    "tr": {
+      "positions": [
+        {
+          "id": "TR-07",
+          "date": "2021-10-08",
+          "text": "土耳其加入OECD/G20双支柱声明，共136个辖区",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30353）",
+          "link": "https://thefederalregister.org/documents/2021-26116/termination-of-action-in-the-section-301-digital-services-tax-investigation-of-turkey-and-further-monitoring",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜与美及另外134个辖区共同加入"
+        },
+        {
+          "id": "TR-08",
+          "date": "2021-11-22",
+          "text": "土耳其接受DST在过渡期抵免未来支柱一税款",
+          "value": "",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/news/press-releases/jy0500",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜抵免限于联合声明定义的情形"
+        }
+      ],
+      "actions": [
+        {
+          "id": "TR-03",
+          "date": "2019-12-07",
+          "text": "土耳其第7194号法2019-12-07刊登官方公报，创设数字服务税",
+          "value": "",
+          "source": "土耳其官方公报（Resmî Gazete）",
+          "link": "https://www.resmigazete.gov.tr/eskiler/2019/12/20191207-1.htm",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜议会2019-12-05通过；2020-03-01开征"
+        },
+        {
+          "id": "TR-04",
+          "date": "2019-12-07",
+          "text": "土耳其DST覆盖在线广告、数字内容销售与数字平台中介服务",
+          "value": "",
+          "source": "土耳其官方公报（第7194号法第1条）",
+          "link": "https://www.resmigazete.gov.tr/eskiler/2019/12/20191207-1.htm",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜征税范围宽于欧盟DST草案；另含平台中介服务收入"
+        },
+        {
+          "id": "TR-05",
+          "date": "2020-03-01",
+          "text": "土耳其数字服务税自2020-03-01起开征",
+          "value": "",
+          "source": "安永（EY Global Tax Alert）",
+          "link": "https://globaltaxnews.ey.com/news/2020-0102-turkeys-75-percent-digital-services-tax-to-be-effective-1-march-2020",
+          "conf": "B",
+          "note": "P2｜落地征税与OECD谈判破裂｜达到门槛后自第四个月起纳税"
+        },
+        {
+          "id": "TR-06",
+          "date": "2021-06-02",
+          "text": "美国301调查认定土耳其DST歧视美企，美方加税并暂缓180天",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30353）",
+          "link": "https://thefederalregister.org/documents/2021-26116/termination-of-action-in-the-section-301-digital-services-tax-investigation-of-turkey-and-further-monitoring",
+          "conf": "A",
+          "note": "P2｜落地征税与OECD谈判破裂｜2021-01-06发布调查报告；2021-06-02决定加征25%关税并暂缓"
+        },
+        {
+          "id": "TR-09",
+          "date": "2021-11-22",
+          "text": "美土就数字服务税过渡安排发表联合声明",
+          "value": "",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/news/press-releases/jy0500",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜沿用2021-10-21六方妥协条款；土耳其是首个补签的未加入国"
+        },
+        {
+          "id": "TR-10",
+          "date": "2021-11-28",
+          "text": "美国对土耳其301加征关税终止",
+          "value": "",
+          "source": "美国联邦公报（86 FR 30353）",
+          "link": "https://thefederalregister.org/documents/2021-26116/termination-of-action-in-the-section-301-digital-services-tax-investigation-of-turkey-and-further-monitoring",
+          "conf": "A",
+          "note": "P3｜双支柱政治协议与过渡安排｜以土耳其承诺在支柱一下移除DST为条件"
+        },
+        {
+          "id": "TR-12",
+          "date": "2023-12-31",
+          "text": "土耳其宪法法院2023年裁定暂停DST“访问封锁”条款",
+          "value": "",
+          "source": "Bloomberg HT（Caner Samancı）",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P4｜公约难产与联合国转向｜AYM 2023年裁定，具体日期未载明，date为年末；该条款授权对不申报者封锁网站"
+        },
+        {
+          "id": "TR-14",
+          "date": "2025-02-21",
+          "text": "特朗普2025-02-21备忘录将土耳其列入DST调查名单",
+          "value": "",
+          "source": "安永（2025-0549）",
+          "link": "https://taxnews.ey.com/news/2025-0549-us-initiates-review-of-other-countries-imposition-of-digital-services-taxes-on-us-companies-and-opens-comment-period-on-nonreciprocal-trade-arrangements",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜与法、英、意、西、奥、加并列七国"
+        },
+        {
+          "id": "TR-15",
+          "date": "2025-03-07",
+          "text": "土耳其宣布不实施支柱一“金额B”简化转让定价规则",
+          "value": "",
+          "source": "安永（2025-0772）",
+          "link": "https://taxnews.ey.com/news/2025-0772-turkiye-announces-decision-not-to-implement-amount-b-under-pillar-one",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜仅承认与土耳其有有效税收协定的辖区适用"
+        },
+        {
+          "id": "TR-18",
+          "date": "2025-12-25",
+          "text": "土耳其第10767号总统决定：DST自2026年降至5%、2027年降至2.5%",
+          "value": "",
+          "source": "土耳其官方公报（第10767号总统决定）",
+          "link": "https://taxnews.ey.com/news/2026-0117-turkiye-revises-digital-service-tax-rate-for-2026-and-2027",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2025-12-25刊登；2026-01-01起适用，2027-01-01再降"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "TR-01",
+          "date": "2019-12-07",
+          "text": "土耳其数字服务税税率为7.5%，总统有权降至1%或升至15%",
+          "value": "7.5% / 1%–15%",
+          "source": "土耳其官方公报（第7194号法第5条）",
+          "link": "https://www.resmigazete.gov.tr/eskiler/2019/12/20191207-1.htm",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜税率授权见第5条第5款"
+        },
+        {
+          "id": "TR-02",
+          "date": "2019-12-07",
+          "text": "土耳其数字服务税门槛：全球营收7.5亿欧元、土耳其营收2000万里拉",
+          "value": "€750m / ₺20m",
+          "source": "土耳其官方公报（第7194号法第4条）",
+          "link": "https://www.resmigazete.gov.tr/eskiler/2019/12/20191207-1.htm",
+          "conf": "A",
+          "note": "P1｜单边开征与反制起点｜按集团合并报表计算；两项门槛同时满足才纳税"
+        },
+        {
+          "id": "TR-11",
+          "date": "2023-12-31",
+          "text": "土耳其2023年数字服务税法定税率仍为7.5%，全年未调整",
+          "value": "7.5%",
+          "source": "安永（2026-0117回溯）",
+          "link": "https://taxnews.ey.com/news/2026-0117-turkiye-revises-digital-service-tax-rate-for-2026-and-2027",
+          "conf": "B",
+          "note": "P4｜公约难产与联合国转向｜状态性事实，日期为年末；税率自2019年立法至2025-12-25未变"
+        },
+        {
+          "id": "TR-13",
+          "date": "2024-12-31",
+          "text": "2024年土耳其数字服务税收入209亿里拉",
+          "value": "₺20.9bn",
+          "source": "Bloomberg HT（引土耳其财政部数据）",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P5｜延期、调整与数据积累｜2024全年口径，日期为年末；单位为十亿里拉"
+        },
+        {
+          "id": "TR-16",
+          "date": "2025-11-30",
+          "text": "2025年前11个月土耳其数字服务税收入294亿里拉",
+          "value": "₺29.4bn",
+          "source": "Bloomberg HT（引土耳其财政部数据）",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2025年1—11月累计；日期为统计期末"
+        },
+        {
+          "id": "TR-17",
+          "date": "2025-12-25",
+          "text": "降税预计使土耳其2026年DST收入减少125亿里拉",
+          "value": "-₺12.5bn",
+          "source": "Bloomberg HT",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜按约5000亿里拉交易额估算"
+        },
+        {
+          "id": "TR-19",
+          "date": "2025-12-31",
+          "text": "土耳其2026年数字服务税预算收入目标370.4亿里拉",
+          "value": "₺37.04bn",
+          "source": "Bloomberg HT",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜2026年预算目标，2025年底确定；日期为预算年度前一日"
+        },
+        {
+          "id": "TR-20",
+          "date": "2026-01-01",
+          "text": "2026年1月1日起土耳其数字服务税税率为5%",
+          "value": "5%",
+          "source": "安永（2026-0117）",
+          "link": "https://taxnews.ey.com/news/2026-0117-turkiye-revises-digital-service-tax-rate-for-2026-and-2027",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜较7.5%下调2.5个百分点"
+        }
+      ],
+      "quotes": [],
+      "thinktank": [
+        {
+          "id": "TR-21",
+          "date": "2026-01-09",
+          "text": "Bloomberg HT分析：土耳其降税是对美301压力的建设性姿态",
+          "value": "",
+          "source": "Bloomberg HT（Caner Samancı）",
+          "link": "https://www.bloomberght.com/yorum/caner-samanci/3765795-dijital-islem-vergisine-trump-ayari",
+          "conf": "B",
+          "note": "P6｜美国退出、G7谅解与规则重构｜作者为前税务稽查员；属评估性观点"
+        }
+      ]
+    }
+  }
+}

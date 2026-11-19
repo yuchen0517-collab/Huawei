@@ -1,0 +1,1551 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "updated": "2026-10-29",
+    "note": "议题事件卡：compute-chip=算力与芯片出口管制，unclos=第三次联合国海洋法会议，dst=数字服务税与跨境征税权分配，neutral=无指数影响的会场花絮。",
+    "sources": [
+      "https://www.cov.com/en/news-and-insights/insights/2022/10/us-imposes-additional-export-controls-restrictions-on-advanced-computing-and-semiconductor-manufacturing-items",
+      "https://www.reuters.com/technology/nvidia-expects-up-55-billion-charge-first-quarter-2025-04-15/",
+      "https://www.reuters.com/5f374b32b07b/world/china/china-tightens-rare-earth-export-controls-2025-10-09/",
+      "https://www.un.org/depts/los/convention_agreements/convention_20years/Montego%20Bay.htm",
+      "https://www.reaganlibrary.gov/archives/speech/statement-united-states-actions-concerning-conference-law-sea"
+    ]
+  },
+  "compute-chip": [
+    {
+      "id": "C01",
+      "kind": "conflict",
+      "title": "先进芯片管制升级",
+      "text": "美国商务部把先进计算芯片与半导体制造设备纳入新管制，对华出口需逐案许可，全球供应链被迫重排。",
+      "flavor": "一份管制清单，既可能是安全屏障，也可能是谈判桌上最昂贵的墙。",
+      "sources": [
+        "https://www.cov.com/en/news-and-insights/insights/2022/10/us-imposes-additional-export-controls-restrictions-on-advanced-computing-and-semiconductor-manufacturing-items"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -5,
+          "trust_delta": -2
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "管制发起方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": -2,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "受限方",
+            "effects": {
+              "interest_delta": -5,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "jp",
+              "kr"
+            ],
+            "role": "供应链方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "kind": "economy",
+      "title": "镓锗出口反制",
+      "text": "中国对镓、锗相关物项实施出口管制，半导体材料供应收紧，欧美日买家紧急寻找替代来源。",
+      "flavor": "当材料变成筹码，每一张出口许可证都在重新标价。",
+      "sources": [
+        "https://www.aa.com.tr/en/asia-pacific/china-restricts-exports-of-critical-minerals-to-us-in-response-to-chip-restrictions/3412793"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 2,
+          "image_delta": 2,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": -3,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "反制方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 2,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "eu",
+              "jp",
+              "kr"
+            ],
+            "role": "进口方",
+            "effects": {
+              "interest_delta": -3,
+              "trust_delta": -2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C03",
+      "kind": "technology",
+      "title": "荷兰光刻机许可收紧",
+      "text": "荷兰把部分先进光刻设备纳入出口许可，ASML 对华交付周期拉长，欧洲设备链被卷入管制。",
+      "flavor": "最精密的机器，往往也最容易被政治按住开关。",
+      "sources": [
+        "https://www.reuters.com/technology/amid-us-pressure-dutch-announce-new-chip-equipment-export-rules-2023-06-30/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -4,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "eu"
+            ],
+            "role": "管制方",
+            "effects": {
+              "interest_delta": 1,
+              "image_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "受影响方",
+            "effects": {
+              "interest_delta": -4,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "jp",
+              "kr"
+            ],
+            "role": "设备链",
+            "effects": {
+              "interest_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C04",
+      "kind": "economy",
+      "title": "H20 许可与 55 亿美元减记",
+      "text": "美国要求 H20 对华出口逐案许可，英伟达计提约 55 亿美元减值，AI 芯片交付被迫中止。",
+      "flavor": "账面上的减记，是会议室里最直白的一张战损表。",
+      "sources": [
+        "https://www.reuters.com/technology/nvidia-expects-up-55-billion-charge-first-quarter-2025-04-15/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -4,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "管制方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": -2,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "客户方",
+            "effects": {
+              "interest_delta": -4,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "jp",
+              "kr",
+              "eu"
+            ],
+            "role": "供应链方",
+            "effects": {
+              "interest_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C05",
+      "kind": "technology",
+      "title": "DeepSeek R1 冲击",
+      "text": "中国团队发布 R1 推理模型，以更低算力成本逼近前沿水平，市场开始重估算力壁垒与出口管制的效果。",
+      "flavor": "如果算法能省下算力，那堵墙的价格就要重算。",
+      "sources": [
+        "https://aa.com.tr/en/economy/nvidia-calls-deepseek-s-r1-model-an-excellent-ai-advancement/3464061"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 3,
+          "image_delta": 3,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -3,
+          "image_delta": -1,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "突破方",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": 3,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "领先方",
+            "effects": {
+              "interest_delta": -3,
+              "image_delta": -1,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "jp",
+              "kr",
+              "eu"
+            ],
+            "role": "算力需求方",
+            "effects": {
+              "interest_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C06",
+      "kind": "diplomacy",
+      "title": "AI 扩散规则撤销",
+      "text": "美国商务部撤销拜登时期的 AI 扩散框架，改为逐案审批，盟友与对手同时面对政策不确定性。",
+      "flavor": "规则撤得太快，盟友不知道该跟谁对齐。",
+      "sources": [
+        "https://www.kirkland.com/publications/kirkland-alert/2025/05/bis-rescission-of-the-biden-administration"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 2,
+          "image_delta": 1
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "政策方",
+            "effects": {
+              "interest_delta": 1,
+              "image_delta": -2,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "受益方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "jp",
+              "kr"
+            ],
+            "role": "盟友方",
+            "effects": {
+              "interest_delta": 1,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C07",
+      "kind": "scandal",
+      "title": "新加坡芯片转运案",
+      "text": "新加坡检方加控涉嫌经第三地转运英伟达芯片的嫌疑人，转口贸易与最终用户审查成为焦点。",
+      "flavor": "芯片绕了一圈，最后绕回的是执法清单。",
+      "sources": [
+        "https://en.vietnamplus.vn/singapore-adds-charges-to-suspects-in-nvidia-chip-transportation-post311105.vnp"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -2,
+          "trust_delta": -1
+        },
+        "agent": {
+          "image_delta": 2,
+          "trust_delta": 1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "sg"
+            ],
+            "role": "中转方",
+            "effects": {
+              "image_delta": -4,
+              "trust_delta": -3
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "执法方",
+            "effects": {
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "最终用户",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C08",
+      "kind": "technology",
+      "title": "昇腾 910C 量产",
+      "text": "华为昇腾 910C 良率与产能爬坡，国产算力替代提速，海外供应链重新评估中国市场。",
+      "flavor": "被卡住的那一环，正在变成新的谈判筹码。",
+      "sources": [
+        "https://www.tmcnet.com/usubmit/-digitimes-asia-huawei-ascend-910c-reportedly-hits-40-/2025/02/26/10151988.htm"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 3,
+          "image_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -2,
+          "image_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn"
+            ],
+            "role": "突破方",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "领先方",
+            "effects": {
+              "interest_delta": -2,
+              "image_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "jp",
+              "kr"
+            ],
+            "role": "供应链方",
+            "effects": {
+              "interest_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C09",
+      "kind": "diplomacy",
+      "title": "联合国 AI 科学小组",
+      "text": "联合国大会通过设立 AI 科学小组与全球对话机制，发展中国家要求在治理议程中有平等席位。",
+      "flavor": "技术治理的桌子，终于要给更多人加椅子。",
+      "sources": [
+        "https://www.exteriores.gob.es/RepresentacionesPermanentes/onu/en/Comunicacion/Noticias/Paginas/Articulos/The-UN-approves-the-creation-of-a-Scientific-Panel-and-a-Global-Dialogue-on-Artificial-Intelligence.aspx"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "image_delta": 2,
+          "trust_delta": 2
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": 2,
+          "trust_delta": 2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn",
+              "us"
+            ],
+            "role": "主要推动方",
+            "effects": {
+              "interest_delta": 1,
+              "image_delta": 2,
+              "trust_delta": 2
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "jp",
+              "kr",
+              "in",
+              "br"
+            ],
+            "role": "参与方",
+            "effects": {
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "C10",
+      "kind": "economy",
+      "title": "Stargate 5000 亿美元算力计划",
+      "text": "美国宣布 Stargate 计划，拟投入 5000 亿美元建设 AI 数据中心，全球算力军备竞赛升温。",
+      "flavor": "当算力被写成国家计划，谈判桌上的每一度电都开始有立场。",
+      "sources": [
+        "http://english.news.cn/20250122/8ad5da71f08143ef8e5a711ca90b4f7a/c.html",
+        "https://www.bbc.com/news/articles/cy4m84d2xz2o"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -2,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 4,
+          "image_delta": 2,
+          "trust_delta": 1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "发起方",
+            "effects": {
+              "interest_delta": 4,
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "cn",
+              "eu",
+              "jp",
+              "kr"
+            ],
+            "role": "追赶方",
+            "effects": {
+              "interest_delta": -2
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "unclos": [
+    {
+      "id": "U01",
+      "kind": "diplomacy",
+      "title": "加拉加斯会议开幕",
+      "text": "第三次联合国海洋法会议在加拉加斯开幕，150 多个代表团坐到一起，议程与领海宽度成为第一道坎。",
+      "flavor": "会议室里坐满了人，真正的分歧才刚刚上桌。",
+      "sources": [
+        "https://www.un.org/depts/los/convention_agreements/convention_20years/Montego%20Bay.htm"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1
+        },
+        "agent": {
+          "interest_delta": 1
+        }
+      },
+      "observe": {
+        "targets": "all",
+        "effects": {
+          "interest_delta": 1,
+          "trust_delta": 1
+        }
+      }
+    },
+    {
+      "id": "U02",
+      "kind": "economy",
+      "title": "200 海里经济区获广泛支持",
+      "text": "沿海国推动 200 海里专属经济区，渔业与海底资源管辖权成为多数派主张，远洋渔业国开始防守。",
+      "flavor": "海岸线有多长，谈判桌上的胃口就有多大。",
+      "sources": [
+        "https://digitalcommons.law.buffalo.edu/cgi/viewcontent.cgi?article=1796&context=buffalolawreview"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 3,
+          "image_delta": 1
+        },
+        "agent": {
+          "interest_delta": -2,
+          "trust_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn",
+              "br",
+              "id",
+              "in",
+              "eg"
+            ],
+            "role": "沿海国",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "su",
+              "jp"
+            ],
+            "role": "远洋渔业国",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "sg"
+            ],
+            "role": "海峡国",
+            "effects": {
+              "interest_delta": 1,
+              "image_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U03",
+      "kind": "diplomacy",
+      "title": "日内瓦单一谈判文本",
+      "text": "日内瓦会议推出单一谈判文本，把领海、经济区、海峡与海底制度放进一份文件，谈判第一次有了共同底稿。",
+      "flavor": "一份文本，把所有人的要价钉在了同一张纸上。",
+      "sources": [
+        "https://legal.un.org/diplomaticconferences/1973_los/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "image_delta": 1,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": 1,
+          "trust_delta": 1
+        }
+      },
+      "observe": {
+        "targets": "all",
+        "effects": {
+          "interest_delta": 1,
+          "image_delta": 1,
+          "trust_delta": 1
+        }
+      }
+    },
+    {
+      "id": "U04",
+      "kind": "conflict",
+      "title": "群岛国与海峡通行",
+      "text": "群岛国要求用基线连接群岛水域，海峡国强调过境通行不能受限，美苏日等海峡使用国担忧航行自由被切碎。",
+      "flavor": "一片水连成的国家，和一条必须通过的航道，很难同时满意。",
+      "sources": [
+        "https://legal.un.org/diplomaticconferences/1973_los/"
+      ],
+      "effects": {
+        "player": {
+          "image_delta": 1,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -2,
+          "image_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "id"
+            ],
+            "role": "群岛国",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": 2
+            }
+          },
+          {
+            "targets": [
+              "sg"
+            ],
+            "role": "海峡国",
+            "effects": {
+              "interest_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "su",
+              "jp"
+            ],
+            "role": "海峡使用国",
+            "effects": {
+              "interest_delta": -2,
+              "image_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U05",
+      "kind": "diplomacy",
+      "title": "综合谈判文本 ICNT",
+      "text": "主席团把各方提案合并成综合谈判文本，经济区与海底制度首次形成可交易的一揽子框架。",
+      "flavor": "当所有议题被打成一个包，谁都不能只挑自己爱吃的菜。",
+      "sources": [
+        "https://digitallibrary.un.org/nanna/record/4059079/files/A_CONF.62_WP.10_Add.1-EN.pdf"
+      ],
+      "effects": {
+        "player": {
+          "image_delta": 1,
+          "trust_delta": 2
+        },
+        "agent": {
+          "image_delta": 1,
+          "trust_delta": 2
+        }
+      },
+      "observe": {
+        "targets": "all",
+        "effects": {
+          "image_delta": 1,
+          "trust_delta": 2
+        }
+      }
+    },
+    {
+      "id": "U06",
+      "kind": "economy",
+      "title": "海底平行开发制度",
+      "text": "发展中国家坚持海底资源人类共同继承，工业国要求保障企业采矿权，平行开发制度成为交换核心。",
+      "flavor": "海面之下是矿，海面之上是秩序。",
+      "sources": [
+        "https://legal.un.org/diplomaticconferences/1973_los/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 3,
+          "image_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -3,
+          "image_delta": -1,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn",
+              "br",
+              "id",
+              "in",
+              "eg"
+            ],
+            "role": "77 国集团",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "su",
+              "jp"
+            ],
+            "role": "工业国",
+            "effects": {
+              "interest_delta": -3,
+              "image_delta": -1,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "sg"
+            ],
+            "role": "协调方",
+            "effects": {
+              "interest_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U07",
+      "kind": "conflict",
+      "title": "美国新政府重审公约",
+      "text": "里根政府重新审查海底采矿条款，要求修改草案，会议室里的表决时间表被迫推迟。",
+      "flavor": "换了一届政府，海底的矿权就要重新算一遍。",
+      "sources": [
+        "https://www.reaganlibrary.gov/archives/speech/statement-united-states-actions-concerning-conference-law-sea"
+      ],
+      "effects": {
+        "player": {
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": -2,
+          "trust_delta": -3
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "重审方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": -2,
+              "trust_delta": -3
+            }
+          },
+          {
+            "targets": [
+              "cn",
+              "br",
+              "id",
+              "in",
+              "eg",
+              "su",
+              "jp",
+              "sg"
+            ],
+            "role": "其余各方",
+            "effects": {
+              "trust_delta": -2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U08",
+      "kind": "conflict",
+      "title": "1982 年 4 月 30 日表决",
+      "text": "公约草案以 130 票赞成、4 票反对、17 票弃权通过，美国投下反对票，海底制度分歧公开化。",
+      "flavor": "票数落下来那一刻，海底制度的分歧再也藏不住了。",
+      "sources": [
+        "https://www.reaganlibrary.gov/archives/speech/statement-united-states-actions-concerning-conference-law-sea"
+      ],
+      "effects": {
+        "player": {
+          "image_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "image_delta": -4,
+          "trust_delta": -4
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "反对方",
+            "effects": {
+              "image_delta": -4,
+              "trust_delta": -4
+            }
+          },
+          {
+            "targets": [
+              "cn",
+              "su",
+              "br",
+              "id",
+              "jp",
+              "in",
+              "eg",
+              "sg"
+            ],
+            "role": "赞成与弃权方",
+            "effects": {
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U09",
+      "kind": "diplomacy",
+      "title": "蒙特哥贝签署",
+      "text": "1982 年 12 月，119 个代表团在蒙特哥贝签署公约，美国未签，公约进入批准与筹备阶段。",
+      "flavor": "签字笔落下去，九年的讨价还价变成了一份可以批准的文件。",
+      "sources": [
+        "https://www.un.org/depts/los/convention_agreements/convention_20years/Montego%20Bay.htm"
+      ],
+      "effects": {
+        "player": {
+          "image_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "未签方",
+            "effects": {
+              "image_delta": -2,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "cn",
+              "su",
+              "br",
+              "id",
+              "jp",
+              "in",
+              "eg",
+              "sg"
+            ],
+            "role": "签署方",
+            "effects": {
+              "image_delta": 2,
+              "trust_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "U10",
+      "kind": "economy",
+      "title": "技术转让与海洋科研",
+      "text": "77 国集团要求把技术转让与海洋科研能力建设写成硬条款，工业国担心强制转让，文本谈判再度拉锯。",
+      "flavor": "海权不只是舰船，也包括谁能做海洋科研、谁拿得到数据。",
+      "sources": [
+        "https://legal.un.org/diplomaticconferences/1973_los/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -2,
+          "image_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn",
+              "br",
+              "id",
+              "in",
+              "eg"
+            ],
+            "role": "77 国集团",
+            "effects": {
+              "interest_delta": 2,
+              "trust_delta": 1
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "su",
+              "jp"
+            ],
+            "role": "工业国",
+            "effects": {
+              "interest_delta": -2,
+              "image_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "sg"
+            ],
+            "role": "协调方",
+            "effects": {
+              "image_delta": 1
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "neutral": [
+    {
+      "id": "N01",
+      "kind": "interlude",
+      "title": "同声传译短暂中断",
+      "text": "译员频道切换，会议暂停了几分钟，代表们趁机在走廊里交换了几句不在记录里的话。",
+      "flavor": "有时候，走廊里的五分钟比会场里的五十分钟更接近真相。",
+      "no_effect": true,
+      "effects": {},
+      "observe": {
+        "targets": "none"
+      }
+    },
+    {
+      "id": "N02",
+      "kind": "interlude",
+      "title": "会场空调故障",
+      "text": "会议厅空调突然停机，温度升高，代表们解开领口、加快扇风，主席宣布技术休整。",
+      "flavor": "再硬的立场，也怕闷热。",
+      "no_effect": true,
+      "effects": {},
+      "observe": {
+        "targets": "none"
+      }
+    },
+    {
+      "id": "N03",
+      "kind": "interlude",
+      "title": "记者席换机位",
+      "text": "摄影记者重新架设机位，快门声和线缆让会场短暂骚动，安保人员来回清场。",
+      "flavor": "镜头对准谁，谁就得多想一秒再开口。",
+      "no_effect": true,
+      "effects": {},
+      "observe": {
+        "targets": "none"
+      }
+    },
+    {
+      "id": "N04",
+      "kind": "interlude",
+      "title": "茶歇延长",
+      "text": "主席宣布茶歇延长十分钟，代表们端着杯子在会场边三三两两站着，真正的试探在咖啡桌旁继续。",
+      "flavor": "正式议程暂停，非正式外交才刚开始。",
+      "no_effect": true,
+      "effects": {},
+      "observe": {
+        "targets": "none"
+      }
+    }
+  ],
+  "dst": [
+    {
+      "id": "D01",
+      "kind": "economy",
+      "title": "法国开征数字服务税",
+      "text": "法国对全球营收超过门槛的大型科技企业征收 3% 数字服务税，美国科技巨头首当其冲。",
+      "flavor": "第一个开征的人，往往也是第一个被报复的人。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 2,
+          "image_delta": 1,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": -3,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "eu"
+            ],
+            "role": "征税方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 1,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "被征税方",
+            "effects": {
+              "interest_delta": -3,
+              "trust_delta": -2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D02",
+      "kind": "conflict",
+      "title": "美国启动 301 调查",
+      "text": "美国贸易代表办公室对征收数字服务税的国家启动 301 调查，并放出加征关税的风声。",
+      "flavor": "调查是程序，关税才是台词。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -2,
+          "trust_delta": -2
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "调查发起方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": -2,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "uk",
+              "in"
+            ],
+            "role": "被调查方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D03",
+      "kind": "diplomacy",
+      "title": "OECD 双支柱框架达成",
+      "text": "多数辖区就重新分配征税权与全球最低税率达成框架共识，单边数字税被要求逐步回撤。",
+      "flavor": "共识写进了文本，回撤却写进了脚注。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "image_delta": 2,
+          "trust_delta": 3
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": 1,
+          "trust_delta": 2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": "all",
+            "role": "共识参与方",
+            "effects": {
+              "interest_delta": 1,
+              "image_delta": 1,
+              "trust_delta": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D04",
+      "kind": "economy",
+      "title": "英国数字服务税生效",
+      "text": "英国对搜索引擎、社交平台与在线市场征收 2% 数字服务税，并称将在国际方案落地后再议去留。",
+      "flavor": "留着它当筹码，比真的取消更值钱。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": 1,
+          "trust_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "uk"
+            ],
+            "role": "征税方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 1,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "被征税方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D05",
+      "kind": "economy",
+      "title": "印度扩大均衡税范围",
+      "text": "印度把均衡税扩展到境外电商交易，并对追溯征税态度强硬，谈判空间被进一步压缩。",
+      "flavor": "市场在这里，规则就由这里来写。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "image_delta": 1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": 1,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "in"
+            ],
+            "role": "征税方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 1,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "被征税方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D06",
+      "kind": "economy",
+      "title": "土耳其援引第 7194 号法征税",
+      "text": "土耳其依据第 7194 号法对在线广告与数字服务征收 7.5% 税，税率高于多数欧洲国家。",
+      "flavor": "税率开得越高，越像是把谈判桌当成了许愿池。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 3,
+          "image_delta": -1,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "tr"
+            ],
+            "role": "征税方",
+            "effects": {
+              "interest_delta": 3,
+              "image_delta": -1,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "us"
+            ],
+            "role": "被征税方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D07",
+      "kind": "conflict",
+      "title": "加拿大推出追溯性数字税",
+      "text": "加拿大通过数字服务税立法并追溯至往年，美国方面强烈反对，盟友之间的裂缝被公开化。",
+      "flavor": "对自己的盟友动手，往往比对手更难解释。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -1,
+          "trust_delta": -1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": -2,
+          "trust_delta": -2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "反对方",
+            "effects": {
+              "interest_delta": -2,
+              "image_delta": -1,
+              "trust_delta": -2
+            }
+          },
+          {
+            "targets": [
+              "eu",
+              "uk"
+            ],
+            "role": "观望方",
+            "effects": {
+              "interest_delta": 1,
+              "trust_delta": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D08",
+      "kind": "diplomacy",
+      "title": "欧盟推进数字税自有资源",
+      "text": "欧盟提出以数字服务税相关收入作为自有资源，试图把征税权从成员国层面抬到联盟层面。",
+      "flavor": "把税收到自己口袋里，才叫真正的自主。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": -1,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": 2,
+          "image_delta": 2,
+          "trust_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "eu"
+            ],
+            "role": "推动方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 2,
+              "trust_delta": -1
+            }
+          },
+          {
+            "targets": [
+              "us"
+            ],
+            "role": "反对方",
+            "effects": {
+              "interest_delta": -2,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D09",
+      "kind": "diplomacy",
+      "title": "美国暂停报复性关税",
+      "text": "美国宣布暂停对部分国家数字税征收报复性关税，为多边谈判留出窗口期。",
+      "flavor": "暂停不是放弃，是把枪先放回桌上。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 1,
+          "image_delta": 2,
+          "trust_delta": 2
+        },
+        "agent": {
+          "interest_delta": 1,
+          "image_delta": 2,
+          "trust_delta": 2
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": "all",
+            "role": "缓和受益方",
+            "effects": {
+              "image_delta": 1,
+              "trust_delta": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "D10",
+      "kind": "diplomacy",
+      "title": "联合国税收公约谈判启动",
+      "text": "联合国启动国际税收合作框架公约谈判，发展中国家希望把征税权讨论从 OECD 移到更具代表性的平台。",
+      "flavor": "规则由谁制定，比规则写了什么更重要。",
+      "sources": [
+        "https://www.oecd.org/tax/beps/",
+        "https://ustr.gov/issue-areas/enforcement/section-301-investigations",
+        "https://taxation-customs.ec.europa.eu/"
+      ],
+      "effects": {
+        "player": {
+          "interest_delta": 2,
+          "image_delta": 2,
+          "trust_delta": 1
+        },
+        "agent": {
+          "interest_delta": -1,
+          "image_delta": -1
+        }
+      },
+      "observe": {
+        "groups": [
+          {
+            "targets": [
+              "cn",
+              "in"
+            ],
+            "role": "推动方",
+            "effects": {
+              "interest_delta": 2,
+              "image_delta": 2
+            }
+          },
+          {
+            "targets": [
+              "us",
+              "eu"
+            ],
+            "role": "审慎方",
+            "effects": {
+              "interest_delta": -1,
+              "trust_delta": -1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

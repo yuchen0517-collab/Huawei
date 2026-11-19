@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080604">
+  <script>
+  /* 主题引导：首屏绘制前先定主题，避免闪白/闪黑。 */
+  window.THEME_CFG = { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG;
+      var manual = false, saved = null;
+      try{
+        manual = localStorage.getItem('neg-theme-mode') === 'manual';
+        if(manual) saved = localStorage.getItem('neg-theme');
+      }catch(e){}
+      var theme;
+      if(manual){
+        theme = saved === 'light' ? 'light' : 'dark';
+      }else{
+        var now = new Date();
+        var mins = now.getHours() * 60 + now.getMinutes();
+        theme = (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+      var mt = document.querySelector('meta[name="theme-color"]');
+      if(mt) mt.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#080604');
+    }catch(e){}
+  })();
+</script>
+  <title>Diplomat 2.0 · 九方观战</title>
+  <link rel="stylesheet" href="assets/fonts.css?v=20261125a">
+  <link rel="stylesheet" href="assets/styles.css?v=20261125a">
+  <link rel="stylesheet" href="assets/event-card.css?v=20261125a">
+  <link rel="stylesheet" href="assets/secret-card.css?v=20261125a">
+  <link rel="stylesheet" href="assets/live.css?v=20261125a">
+  <link rel="stylesheet" href="assets/readability.css?v=20261125a">
+</head>
+<body data-mode="observe">
+  <svg class="svg-defs" aria-hidden="true">
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.4 9 8 10 4.6-1 8-5 8-10V6z"/><path d="m9 12 2 2 4-5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="i-nodes" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.5 6h7M7.5 8l3.3 7.6M16.5 8l-3.3 7.6"/></symbol>
+    <symbol id="i-matrix" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
+    <symbol id="i-intel" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M10.5 7v7M7 10.5h7"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m3 3 18 9-18 9 3-9-3-9Z"/><path d="M6 12h15"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-tree" viewBox="0 0 24 24"><path d="M12 3v5M6 21v-5h12v5M6 16v-4h12v4M12 8v4"/><circle cx="12" cy="3" r="2"/><circle cx="6" cy="21" r="2"/><circle cx="18" cy="21" r="2"/></symbol>
+  </svg>
+
+  <div class="grain"></div>
+  <header class="topbar no-mode-nav">
+    <div class="brand-zone">
+      <button class="round-button back-button" title="返回起手式" data-home="select/start-watch.html" aria-label="返回大厅"><svg><use href="#i-back"/></svg></button>
+      <div class="brand-mark"><svg><use href="#i-shield"/></svg></div>
+      <div class="brand-copy"><strong>DIPLOMAT</strong><span>外交谈判模拟器</span></div>
+      <span class="concept-badge live-badge">LIVE · 本地引擎</span>
+    </div>
+    <div class="top-actions">
+      <div class="round-status"><span>ROUND</span><strong id="roundNumber">06</strong><small id="roundTotal">/ 15</small></div>
+      <div class="view-picker">
+        <button class="view-button" id="viewButton" aria-expanded="false"><svg><use href="#i-eye"/></svg><span id="viewLabel">策略视图</span><svg class="tiny"><use href="#i-down"/></svg></button>
+        <div class="view-menu" id="viewMenu">
+          <button data-view="simple"><strong>简洁视图</strong><span>只保留主舞台与必要提醒</span></button>
+          <button data-view="strategy" class="selected"><strong>策略视图</strong><span>指数、阵营与风险研判</span></button>
+        </div>
+      </div>
+      <button class="icon-button theme-button theme-toggle" id="themeButton" type="button" onclick="toggleTheme(event)" aria-label="切换明暗主题"><svg class="moon"><use href="#i-moon"/></svg><svg class="sun"><use href="#i-sun"/></svg></button>
+      <button class="restart-button" id="restartButton" type="button">重新推演</button>
+      <button class="end-button">结束观看</button>
+    </div>
+  </header>
+
+  <section class="topicbar">
+    <div class="topic-title"><span class="live-dot"></span><div><span id="topicEyebrow">GLOBAL AI GOVERNANCE</span><strong id="topicTitle">全球 AI 治理框架公约</strong></div></div>
+    <div class="topic-actions"><button class="text-button event-demo" id="eventDemo"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></svg>突发事件<span>1</span></button><button class="text-button" id="openTreeTop"><svg><use href="#i-tree"/></svg>谈判树</button></div>
+  </section>
+
+  <main id="app" class="mode-observe view-strategy" data-mode="observe">
+    <!-- 九方观战 -->
+    <section class="mode-screen active" data-screen="observe">
+      <div class="workspace">
+        <aside class="side-panel left-panel observe-narrator">
+          <div class="panel-heading"><div><span>LIVE ANALYSIS</span><h2>战情解说</h2></div><button class="collapse-button" data-collapse="left"><svg><use href="#i-back"/></svg></button></div>
+          <div class="perspective-card"><div class="perspective-head"><svg><use href="#i-eye"/></svg><strong>观战视角</strong><span id="perspectiveStatus">全知</span></div><div class="perspective-switch" role="group" aria-label="观战视角切换"><button data-perspective="party">跟随某方</button><button class="active" data-perspective="omniscient">全知视角</button></div><div class="party-picker" id="partyPicker" hidden><label for="partySelect">跟随代表团</label><select id="partySelect"><option value="cn">中国</option><option value="us">美国</option><option value="su">苏联</option><option value="br">巴西</option><option value="id" selected>印度尼西亚</option><option value="jp">日本</option><option value="in">印度</option><option value="eg">埃及</option><option value="sg">新加坡</option></select></div><small id="perspectiveExplain">可查看全部 NPC 动机、内部指数与虚构暗线 · 非史实</small></div>
+          <div class="narrator-card"><div class="narrator-status"><span class="live-dot"></span><strong class="persona-label">中立分析师</strong><button data-persona-toggle>更换口吻</button></div><p>印度把<strong>“群岛水域”</strong>放在了程序正义之前。巴西刚刚支持了这一原则，但两国对海峡通行的态度并不一致——这只是议题联盟，不是固定阵营。</p></div>
+          <details class="fold-section" id="darkRadar" open><summary>暗线雷达<span class="purple-text" id="darkRadarBadge">虚构 · 非史实</span></summary><button class="secret-event" data-open="private" data-participants="cn,in"><div><span data-flag="cn"></span><i>······</i><span data-flag="in"></span></div><strong>假想闭门会谈 · 非史实</strong><p>用于演示秘密交换如何影响公开投票，不进入“册载”与史实依据。</p><small>查看假想暗线与边界 →</small></button><button class="secret-event secondary" data-open="camp"><div><span data-flag="br"></span><i>······</i><span data-flag="id"></span></div><strong>议题协同正在形成</strong><p>群岛国与沿海国开始交换文本支持。</p></button></details>
+          <details class="fold-section"><summary>事件历史<span>0</span></summary><div class="fold-placeholder">领海宽度争论 · 海峡国联合声明 · 会场花絮 · 程序投票</div></details>
+        </aside>
+
+        <section class="main-stage observe-stage">
+          <div class="council-hud"><div><span>THIRD UN CONFERENCE · 1973—1982</span><strong>群岛国与海峡通行</strong></div><div class="observe-controls"><button id="autoButton" class="active">AUTO</button><button id="nextSpeech" title="下一条发言">下一条<svg><use href="#i-chevron"/></svg></button></div></div>
+          <div class="council-table observe-table">
+            <div class="table-surface"></div>
+            <button class="seat" style="--x:5%;--y:67%" data-speech="cn"><span data-flag="cn"></span><strong>中国</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:8.44%;--y:44.04%" data-speech="us"><span data-flag="us"></span><strong>美国</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:18.18%;--y:24.57%" data-speech="su"><span data-flag="su"></span><strong>苏联</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:32.96%;--y:11.60%" data-speech="br"><span data-flag="br"></span><strong>巴西</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:50%;--y:7%" data-speech="id"><span data-flag="id"></span><strong>印度尼西亚</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:67.04%;--y:11.60%" data-speech="jp"><span data-flag="jp"></span><strong>日本</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:81.82%;--y:24.57%" data-speech="in"><span data-flag="in"></span><strong>印度</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:91.56%;--y:44.04%" data-speech="eg"><span data-flag="eg"></span><strong>埃及</strong><small>STANDBY</small></button>
+            <button class="seat" style="--x:95%;--y:67%" data-speech="sg"><span data-flag="sg"></span><strong>新加坡</strong><small>STANDBY</small></button>
+          </div>
+          <article class="council-speech observe-speech is-system" aria-live="polite"><div class="broadcast-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-13h-7z"/></svg></div><div class="council-speech-body"><div class="speech-meta"><strong>会议播报 <small class="broadcast-system">SYSTEM</small></strong><span>WAITING</span><em>AUTO</em></div><p>谈判开始 · 请陈述立场</p></div></article>
+          <div class="observe-bottom"><span><i class="live-dot"></i><b id="playStatus">自动推演中</b> · 事件卡出现时将暂停</span><div><button data-open="matrix"><svg><use href="#i-matrix"/></svg>关系矩阵</button><button data-open="tree"><svg><use href="#i-tree"/></svg>公开 / 暗线谈判树</button></div></div>
+        </section>
+
+        <aside class="side-panel right-panel">
+          <div class="panel-heading"><div><span>PARTY MONITOR · 9</span><h2>九方态势</h2></div><button class="collapse-button" data-collapse="right" title="收起右侧栏"><svg><use href="#i-chevron"/></svg></button></div>
+          <details class="fold-section" open><summary>实时指数</summary><div class="party-monitor">
+            <div class="party-head"><span>代表团</span><b>利</b><b>形</b><b>信</b></div>
+            <div><span><i data-flag="cn"></i>中国</span><b>58</b><b>72</b><b>64</b></div>
+            <div><span><i data-flag="us"></i>美国</span><b>51</b><b>49</b><b>51</b></div>
+            <div><span><i data-flag="su"></i>苏联</span><b>54</b><b>53</b><b>50</b></div>
+            <div><span><i data-flag="br"></i>巴西</span><b class="up">63↑</b><b>68</b><b>61</b></div>
+            <div class="speaking-row"><span><i data-flag="id"></i>印尼</span><b>66</b><b>70</b><b class="up">59↑</b></div>
+            <div><span><i data-flag="jp"></i>日本</span><b>50</b><b>56</b><b>54</b></div>
+            <div><span><i data-flag="in"></i>印度</span><b>60</b><b>65</b><b>58</b></div>
+            <div><span><i data-flag="eg"></i>埃及</span><b>57</b><b>62</b><b>55</b></div>
+            <div><span><i data-flag="sg"></i>新加坡</span><b>52</b><b>60</b><b>57</b></div>
+          </div></details>
+          <details class="fold-section" open><summary>当前议题阵营<span>群岛原则</span></summary><button class="camp-preview observe-camp" data-open="camp"><div class="camp-numbers"><span><strong>4</strong>支持</span><span><strong>3</strong>摇摆</span><span><strong>2</strong>反对</span></div><div class="camp-bar"><i style="width:44.5%"></i><i style="width:33%"></i><i style="width:22.5%"></i></div><p><strong>印尼、巴西</strong> 形成议题协同<span>详情 →</span></p></button></details>
+          <button class="analysis-entry" data-open="tree"><svg><use href="#i-nodes"/></svg><span>进入全知分析</span><svg><use href="#i-chevron"/></svg></button>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <button class="reopen-rail reopen-left" data-reopen="left" title="展开左侧栏"><svg><use href="#i-chevron"/></svg><span>局势</span></button>
+  <button class="reopen-rail reopen-right" data-reopen="right" title="展开右侧栏"><svg><use href="#i-back"/></svg><span>态势</span></button>
+
+  <footer class="statusbar"><span>LIVE · 本地引擎 · 知识库与事件卡均已接入 · 九方观战</span><strong>收起详情，不收起状态</strong><span>ESC 关闭抽屉 / 密谈</span></footer>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="analysis-drawer" id="analysisDrawer" aria-hidden="true">
+    <div class="drawer-header"><div><span>INTELLIGENCE &amp; RELATIONS</span><h2>情报与关系分析</h2></div><button class="icon-button" id="closeDrawer" aria-label="关闭分析抽屉"><svg><use href="#i-close"/></svg></button></div>
+    <nav class="drawer-tabs" id="drawerTabs">
+      <button data-tab="intel">底线研判</button><button data-tab="camp">议题阵营</button><button data-tab="matrix">关系矩阵</button><button data-tab="private">外交渠道</button><button data-tab="tree">谈判树</button>
+    </nav>
+    <div class="drawer-content" id="drawerContent"></div>
+  </aside>
+
+  <div class="modal-overlay" id="privateModal" aria-hidden="true">
+    <section class="private-room" role="dialog" aria-modal="true" aria-labelledby="privateTitle">
+      <div class="private-room-head"><div class="private-seal"><svg><use href="#i-lock"/></svg></div><div><span id="privateKicker">INFORMAL CONSULTATION</span><h2 id="privateTitle">非正式沟通 · 印度代表团</h2><p id="privateSubtitle">可交换意向，任何承诺均须公开确认后生效</p></div><button class="icon-button" id="closePrivate" aria-label="关闭非正式沟通"><svg><use href="#i-close"/></svg></button></div>
+      <div class="private-room-body"><div class="private-dialogue"><div class="private-message"><span data-flag="in"></span><div><strong id="privateSpeaker">印度代表团</strong><p id="privateMessage">贵方希望获得我们对公共算力配额条款的支持。我方可以交换非正式意向，但不会接受绕过正式会场的秘密约束。</p></div></div><div class="private-message self"><span data-flag="cn"></span><div><strong>中国代表团 · 我方</strong><p>理解。先记录交换意向，再通过正式议题捆绑卡确认支持义务。</p></div></div><div class="privacy-note"><svg><use href="#i-eye"/></svg><span id="privacyText">受限保密 · 须向授权团队备案</span></div></div>
+      <div class="agreement-draft"><div class="agreement-title"><span id="annexLabel">INFORMAL DRAFT · 01</span><strong id="annexTitle">非正式意向草案</strong><em id="dealStatus">待回复</em></div><div class="deal-terms"><div><span>我方提供</span><strong id="ourTerm">支持能力建设基金 20% 份额</strong><small id="ourTermNote">仅记录意向 · 须进入正式提案</small></div><i>⇄</i><div><span>对方提供</span><strong id="theirTerm">支持公共算力配额第 4 条</strong><small id="theirTermNote">公开确认与最终投票均须履约</small></div></div><div class="deal-rule"><svg><use href="#i-shield"/></svg><p id="dealRuleText">接受意向不立即产生收益，也不形成秘密约束。使用正式卡牌确认后，才结算利益与信任。</p></div><div class="deal-secrecy"><span id="secrecyLabel">披露要求</span><strong id="secrecyValue">须向授权团队备案</strong><small id="secrecyRisk">不进入公开直播</small></div></div></div>
+      <div class="private-room-actions"><button class="secondary-button" id="returnPublic">返回公开会场</button><div><button class="secondary-button" id="modifyDeal">拒绝</button><button class="primary-button" id="acceptDeal"><svg><use href="#i-check"/></svg>接受非正式意向</button></div></div>
+    </section>
+  </div>
+  <div class="toast" id="toast"><span></span></div>
+  <script src="assets/event-card.js?v=20261125a"></script>
+  
+  <script>window.__DIPLOMAT_LIVE__ = true; window.__DIPLOMAT_MODE__ = "observe";</script>
+  <script src="assets/theme.js?v=20261125a"></script>
+  <script src="assets/sample-views.js?v=20261125a"></script>
+  <script src="assets/live.js?v=20261125a"></script>
+</body>
+</html>

@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070402">
+<title>外交谈判模拟器 · 学习地图</title>
+<script>
+  window.THEME_CFG = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG;
+      var manual = localStorage.getItem('neg-theme-mode') === 'manual';
+      var saved = manual ? localStorage.getItem('neg-theme') : null;
+      var now = new Date();
+      var mins = now.getHours() * 60 + now.getMinutes();
+      var theme = manual ? (saved === 'light' ? 'light' : 'dark')
+        : (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60 ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#070402');
+    }catch(e){}
+  })();
+</script>
+<link href="../assets/fonts.css" rel="stylesheet">
+<style>
+  /* ========== 设计令牌 ========== */
+  :root[data-theme="dark"]{
+    --bg:#070402;
+    --bg-soft:#0c0703;
+    --bg-card:rgba(18,11,5,.72);
+    --bg-card-hover:rgba(26,15,7,.85);
+    --gold:#c9a061;
+    --gold-bright:#efd7a8;
+    --gold-dim:#8b7149;
+    --gold-soft:rgba(201,160,97,.15);
+    --gold-line:rgba(201,160,97,.35);
+    --gold-line-strong:rgba(201,160,97,.55);
+    --ivory:#f4e9d4;
+    --text-primary:#f0dcb5;
+    --text-secondary:#b59b74;
+    --text-muted:#8a7352;
+    --text-on-gold:#2a1d0c;
+    --shadow-card:0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(201,151,85,.06);
+    --success:#b8d4a3;
+    --warning:#e9c67a;
+    --locked:#5e4e36;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f9f2e3;
+    --bg-soft:#f4e9d4;
+    --bg-card:rgba(255,255,255,.82);
+    --bg-card-hover:rgba(255,252,246,.95);
+    --gold:#a07c3f;
+    --gold-bright:#c9a061;
+    --gold-dim:#7d6338;
+    --gold-soft:rgba(160,124,63,.1);
+    --gold-line:rgba(160,124,63,.3);
+    --gold-line-strong:rgba(160,124,63,.5);
+    --ivory:#f4e9d4;
+    --text-primary:#2a1d0c;
+    --text-secondary:#5c4a2e;
+    --text-muted:#8c7754;
+    --text-on-gold:#fff8ea;
+    --shadow-card:0 4px 20px rgba(120,90,40,.12),0 0 24px rgba(201,151,85,.04);
+    --success:#5a8c3e;
+    --warning:#b8842a;
+    --locked:#a89470;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  html{background:var(--bg);transition:background .5s var(--ease);}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:"Noto Serif SC","Source Han Serif SC","Songti SC",STSong,"SimSun",serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    transition:background .5s var(--ease),color .5s var(--ease);
+    overflow-x:hidden;
+  }
+  button{font:inherit;cursor:pointer;background:none;border:none;color:inherit;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ========== 背景装饰 ========== */
+  .page-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.06),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(201,160,97,.04),transparent 70%);
+  }
+  :root[data-theme="light"] .page-bg{
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,160,97,.12),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(160,124,63,.06),transparent 70%);
+  }
+
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    opacity:.035;mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:160px 160px;
+  }
+
+  /* ========== 四角细线 ========== */
+  .corner{
+    position:fixed;z-index:10;
+    width:44px;height:44px;pointer-events:none;opacity:.5;
+  }
+  .corner::before,.corner::after{
+    content:"";position:absolute;
+    background:linear-gradient(90deg,var(--gold-line),transparent);
+  }
+  .corner::before{width:100%;height:1px;}
+  .corner::after{width:1px;height:100%;background:linear-gradient(180deg,var(--gold-line),transparent);}
+  .corner-tl{top:18px;left:18px;}
+  .corner-tr{top:18px;right:18px;transform:scaleX(-1);}
+  .corner-bl{bottom:18px;left:18px;transform:scaleY(-1);}
+  .corner-br{bottom:18px;right:18px;transform:scale(-1);}
+
+  /* ========== 顶栏 ========== */
+  .topbar{
+    position:relative;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;
+    padding:24px 40px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:14px;
+    margin-right:auto;
+  }
+  .brand-mark{
+    width:38px;height:38px;
+    border:1px solid var(--gold-line-strong);
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:var(--gold-soft);
+    transition:border-color .5s var(--ease);
+  }
+  .brand-mark svg{width:20px;height:20px;fill:var(--gold);}
+  .brand-text{
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .brand-name{
+    font-size:15px;font-weight:600;letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand-sub{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.32em;text-indent:.32em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+
+  /* 主题切换 */
+  .theme-toggle{
+    position:relative;
+    width:44px;height:44px;
+    border:1px solid var(--gold-line);
+    border-radius:50%;
+    display:grid;place-items:center;
+    transition:all .4s var(--ease);
+    background:var(--gold-soft);
+  }
+  .theme-toggle:hover{
+    border-color:var(--gold);
+    box-shadow:0 0 20px rgba(201,151,85,.2);
+  }
+  .theme-toggle svg{width:18px;height:18px;transition:all .5s var(--ease);}
+  .theme-toggle .icon-sun{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:rotate(-90deg) scale(.5);position:absolute;}
+  .theme-toggle .icon-moon{fill:var(--gold);opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:rotate(90deg) scale(.5);}
+  .theme-toggle::after{
+    content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold-bright);box-shadow:0 0 8px rgba(201,151,85,.6);
+    opacity:0;transform:scale(.3);transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+  }
+  .theme-toggle.is-auto::after{opacity:1;transform:scale(1);}
+
+  /* ========== 主内容 ========== */
+  .main{
+    position:relative;z-index:5;
+    max-width:1180px;
+    margin:0 auto;
+    padding:26px 40px 56px;
+  }
+
+  /* ========== 头部标题 ========== */
+  .header{
+    text-align:center;
+    padding:14px 0 28px;
+  }
+  .eyebrow{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;letter-spacing:.42em;text-indent:.42em;
+    color:var(--text-muted);text-transform:uppercase;
+    margin-bottom:16px;
+  }
+  .main-title{
+    font-size:clamp(26px,3vw,36px);
+    font-weight:600;
+    letter-spacing:.14em;
+    text-indent:.14em;
+    line-height:1.35;
+    background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 45%,var(--gold-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));
+  }
+  .title-rule{
+    display:flex;align-items:center;justify-content:center;
+    gap:10px;margin:16px 0 18px;
+  }
+  .title-rule i{
+    display:block;width:60px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--gold-line));
+  }
+  .title-rule i:last-child{transform:scaleX(-1);}
+  .title-rule b{
+    display:block;width:5px;height:5px;
+    border:1px solid var(--gold);
+    transform:rotate(45deg);
+  }
+  .subtitle{
+    font-size:13.5px;line-height:1.85;letter-spacing:.04em;
+    color:var(--text-secondary);
+    max-width:560px;margin:0 auto;
+  }
+  .subtitle .highlight{color:var(--gold);font-weight:500;}
+
+  /* ========== 进度概览 ========== */
+  .progress-overview{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:24px;
+    padding:20px 28px;
+    margin-bottom:26px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    backdrop-filter:blur(10px);
+    box-shadow:var(--shadow-card);
+    position:relative;
+  }
+  .progress-overview::before,.progress-overview::after{
+    content:"";position:absolute;width:8px;height:8px;
+    border:1px solid var(--gold-line-strong);
+  }
+  .progress-overview::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .progress-overview::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+
+  .progress-info{flex:1;}
+  .progress-stage{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:11px;letter-spacing:.28em;color:var(--text-muted);
+    text-transform:uppercase;margin-bottom:8px;
+  }
+  .progress-text{
+    font-size:14px;color:var(--text-secondary);line-height:1.6;
+  }
+  .progress-text b{
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-weight:600;
+  }
+  .progress-value{
+    text-align:right;
+    flex-shrink:0;
+  }
+  .progress-value-num{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:42px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .progress-value-label{
+    font-size:10px;letter-spacing:.2em;color:var(--text-muted);margin-top:4px;
+  }
+
+  /* ========== 关卡卡片（三列并排） ========== */
+  .level-list{
+    display:flex;
+    flex-direction:row;
+    align-items:stretch;
+    gap:18px;
+  }
+  .level-card{
+    position:relative;
+    flex:1 1 0;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    transition:all .4s var(--ease);
+    cursor:pointer;
+    overflow:hidden;
+  }
+  .level-card:hover{
+    border-color:var(--gold-line-strong);
+    transform:translateY(-2px);
+    background:var(--bg-card-hover);
+  }
+  .level-card.locked{
+    cursor:not-allowed;
+    opacity:.6;
+  }
+  .level-card.locked:hover{transform:none;}
+
+  .level-card-header{
+    flex:1;
+    display:flex;flex-direction:column;align-items:flex-start;gap:0;
+    padding:26px 22px 22px;
+  }
+
+  /* 圆形徽章 */
+  .level-badge{
+    flex-shrink:0;
+    align-self:flex-start;
+    width:72px;height:72px;
+    border-radius:50%;
+    border:1.5px solid var(--gold-line-strong);
+    display:grid;place-items:center;
+    position:relative;
+    background:var(--gold-soft);
+    transition:all .4s var(--ease);
+  }
+  .level-card:hover .level-badge{
+    box-shadow:0 0 24px rgba(201,151,85,.2);
+    border-color:var(--gold);
+  }
+  .level-badge::before{
+    content:"";
+    position:absolute;inset:4px;
+    border-radius:50%;
+    border:1px dashed var(--gold-line);
+  }
+  .level-badge-num{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:26px;font-weight:700;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .level-badge.completed{
+    border-color:var(--success);
+    background:rgba(130,170,100,.12);
+  }
+  .level-badge.completed .level-badge-num{
+    font-size:22px;
+  }
+  .level-badge.completed::before{border-color:rgba(184,212,163,.3);}
+  .level-badge.locked{
+    border-color:var(--locked);
+    background:rgba(100,80,50,.1);
+  }
+  .level-badge.locked .level-badge-num{
+    color:var(--locked);
+    background:none;-webkit-text-fill-color:var(--locked);
+  }
+  .level-badge.locked::before{border-color:var(--locked);}
+
+  .level-info{width:100%;min-width:0;margin-top:20px;}
+  .level-title-row{
+    display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+    margin-bottom:12px;
+  }
+  .level-title{
+    font-size:18px;font-weight:600;letter-spacing:.08em;
+    color:var(--text-primary);
+  }
+  .level-status{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;letter-spacing:.2em;
+    padding:4px 10px;
+    border-radius:2px;
+    text-transform:uppercase;
+  }
+  .level-status.completed{
+    color:var(--success);
+    border:1px solid rgba(184,212,163,.4);
+    background:rgba(184,212,163,.08);
+  }
+  .level-status.active{
+    color:var(--gold-bright);
+    border:1px solid var(--gold-line-strong);
+    background:var(--gold-soft);
+    animation:pulse-glow 2s ease-in-out infinite;
+  }
+  .level-status.locked{
+    color:var(--text-muted);
+    border:1px solid var(--gold-line);
+    background:transparent;
+  }
+  .level-desc{
+    font-size:12.5px;color:var(--text-secondary);line-height:1.7;
+    letter-spacing:.02em;margin-bottom:10px;
+  }
+  .level-meta{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    font-size:11px;color:var(--text-muted);
+  }
+  .level-meta-item{
+    display:flex;align-items:center;gap:5px;
+  }
+  .level-meta-item svg{width:12px;height:12px;fill:var(--gold-dim);}
+  .level-meta-divider{
+    width:3px;height:3px;border-radius:50%;background:var(--gold-dim);
+  }
+
+  .level-action{
+    margin-top:auto;padding-top:20px;width:100%;
+  }
+  .level-action .btn-gold{
+    width:100%;justify-content:center;
+  }
+  .btn-gold{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 22px;
+    border:1px solid var(--gold-line-strong);
+    background:linear-gradient(180deg,rgba(201,160,97,.15),rgba(139,113,73,.08));
+    color:var(--gold-bright);
+    font-size:12px;letter-spacing:.15em;
+    transition:all .4s var(--ease);
+    position:relative;
+    overflow:hidden;
+  }
+  .btn-gold::before{
+    content:"";position:absolute;top:0;left:-100%;
+    width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(239,215,168,.15),transparent);
+    transition:left .6s var(--ease);
+  }
+  .btn-gold:hover::before{left:100%;}
+  .btn-gold:hover{
+    border-color:var(--gold);
+    color:var(--ivory);
+    box-shadow:0 0 18px rgba(201,151,85,.25);
+  }
+  .btn-gold svg{width:12px;height:12px;fill:currentColor;}
+  .btn-gold.ghost{
+    background:transparent;
+    color:var(--text-muted);
+    border-color:var(--gold-line);
+  }
+  .btn-gold.ghost:hover{
+    color:var(--text-secondary);
+    border-color:var(--gold-line-strong);
+  }
+
+  /* 关卡详情 */
+  .level-detail{
+    max-height:0;overflow:hidden;
+    transition:max-height .5s var(--ease);
+    border-top:1px solid transparent;
+  }
+  .level-card.active .level-detail{
+    max-height:680px;
+    border-top:1px solid var(--gold-line);
+  }
+  .level-detail-inner{
+    padding:20px 22px 24px;
+  }
+  .detail-section-title{
+    font-size:12px;letter-spacing:.25em;color:var(--gold);
+    margin-bottom:14px;display:flex;align-items:center;gap:10px;
+  }
+  .detail-section-title::before{
+    content:"";display:block;width:4px;height:4px;
+    background:var(--gold);transform:rotate(45deg);
+  }
+  .knowledge-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:12px;margin-bottom:20px;
+  }
+  .knowledge-item{
+    padding:12px 14px;
+    border:1px solid var(--gold-line);
+    background:var(--gold-soft);
+    font-size:12px;color:var(--text-secondary);line-height:1.5;
+    transition:all .3s var(--ease);
+  }
+  .knowledge-item:hover{
+    border-color:var(--gold-line-strong);
+    color:var(--text-primary);
+  }
+  .detail-actions{
+    display:flex;gap:12px;flex-wrap:wrap;
+  }
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 28px;
+    background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    color:var(--text-on-gold);
+    font-size:12.5px;font-weight:600;letter-spacing:.14em;
+    transition:all .4s var(--ease);
+    box-shadow:0 4px 16px rgba(201,151,85,.2);
+  }
+  .btn-primary:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 24px rgba(201,151,85,.35);
+  }
+  .btn-primary svg{width:14px;height:14px;fill:currentColor;}
+
+  @keyframes pulse-glow{
+    0%,100%{box-shadow:0 0 0 rgba(201,151,85,0);}
+    50%{box-shadow:0 0 12px rgba(201,151,85,.25);}
+  }
+
+  /* ========== 底部 ========== */
+  .page-foot{
+    margin-top:44px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .foot-rule{
+    display:flex;align-items:center;gap:8px;
+    width:min(260px,50vw);
+  }
+  .foot-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .foot-rule i:last-child{transform:scaleX(-1);}
+  .foot-rule b{width:3px;height:3px;border:1px solid var(--gold-line-strong);transform:rotate(45deg);}
+  .foot-text{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.3em;text-indent:.3em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+
+  /* ========== 响应式 ========== */
+  /* 中等屏：三列变窄，收紧内边距 */
+  @media (max-width:1100px){
+    .level-card-header{padding:22px 18px 18px;}
+    .level-badge{width:64px;height:64px;}
+    .level-badge-num{font-size:23px;}
+    .level-title{font-size:16.5px;}
+    .level-detail-inner{padding:18px 18px 22px;}
+  }
+  /* 窄屏：回落为纵向堆叠，避免挤压变形 */
+  @media (max-width:900px){
+    .level-list{flex-direction:column;}
+    .level-card-header{padding:24px 24px 22px;}
+  }
+  @media (max-width:768px){
+    .topbar{padding:18px 20px;}
+    .main{padding:20px 20px 60px;}
+    .corner{width:32px;height:32px;}
+    .corner-tl,.corner-tr{top:12px;}
+    .corner-tl,.corner-bl{left:12px;}
+    .corner-tr,.corner-br{right:12px;}
+    .corner-bl,.corner-br{bottom:12px;}
+    .main-title{font-size:22px;letter-spacing:.1em;}
+    .progress-overview{flex-direction:column;align-items:flex-start;gap:16px;padding:18px 20px;}
+    .progress-value{text-align:left;}
+    .level-card-header{padding:20px;}
+    .level-info{margin-top:16px;}
+    .level-action{padding-top:16px;}
+    .knowledge-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:480px){
+    .knowledge-grid{grid-template-columns:1fr;}
+    .level-badge{width:60px;height:60px;}
+    .level-badge-num{font-size:22px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+  }
+  /* ========== 返回按钮 ========== */
+  .back-btn{
+    display:inline-flex;align-items:center;gap:7px;
+    height:44px;padding:0 18px;
+    border:1px solid var(--gold-line);
+    border-radius:22px;
+    background:var(--gold-soft);
+    color:var(--gold);
+    font-family:inherit;
+    font-size:12px;letter-spacing:.16em;text-indent:.16em;
+    cursor:pointer;
+    transition:all .4s var(--ease);
+    white-space:nowrap;flex-shrink:0;
+  }
+  .back-btn:hover{
+    border-color:var(--gold);
+    box-shadow:0 0 20px rgba(201,151,85,.2);
+    transform:translateY(-1px);
+  }
+  .back-btn:active{transform:translateY(0);}
+  .back-btn svg{
+    width:15px;height:15px;
+    fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;
+    transition:transform .35s var(--ease);
+  }
+  .back-btn:hover svg{transform:translateX(-3px);}
+  /* 开启谈判完成条 */
+  .launch-strip{
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+    margin-top:24px;padding:22px 28px;
+    border:1px solid var(--gold-line-strong);
+    background:
+      linear-gradient(90deg,var(--gold-soft),transparent 70%),
+      var(--bg-card);
+    box-shadow:var(--shadow-card);
+    position:relative;flex-wrap:wrap;
+  }
+  .launch-strip::before,.launch-strip::after{
+    content:"";position:absolute;width:8px;height:8px;border:1px solid var(--gold-line-strong);
+  }
+  .launch-strip::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .launch-strip::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .launch-kicker{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9.5px;letter-spacing:.28em;color:var(--gold);
+    text-transform:uppercase;margin-bottom:7px;
+  }
+  .launch-text{font-size:13px;line-height:1.7;color:var(--text-secondary);letter-spacing:.03em;}
+  .launch-btn{
+    padding:13px 30px;font-size:13px;font-weight:600;flex-shrink:0;
+  }
+  @media (max-width:768px){
+    .launch-strip{flex-direction:column;align-items:flex-start;padding:18px 20px;}
+    .launch-btn{width:100%;justify-content:center;}
+  }
+
+  @media (max-width:600px){
+    .back-btn{padding:0 13px;letter-spacing:.06em;text-indent:.06em;}
+    .back-btn span{display:none;}
+  }
+
+</style>
+</head>
+<body>
+
+<!-- 背景装饰 -->
+<div class="page-bg"></div>
+<div class="grain"></div>
+
+<!-- 四角 -->
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回上一页">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <span>返回</span>
+  </button>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">外交谈判模拟器</div>
+      <div class="brand-sub">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+    </div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme(event)" aria-label="切换主题" title="单击切换亮暗，长按恢复跟随系统时间">
+    <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4V4.8M12 21.6V19.2M2.4 12H4.8M21.6 12H19.2M5.2 5.2L6.9 6.9M18.8 18.8L17.1 17.1M5.2 18.8L6.9 17.1M18.8 5.2L17.1 6.9"/></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</div>
+
+<!-- 主内容 -->
+<main class="main">
+
+  <!-- 标题区 -->
+  <header class="header">
+    <div class="eyebrow">LEARNING MODE</div>
+    <h1 class="main-title">三关练成谈判高手</h1>
+    <div class="title-rule"><i></i><b></b><i></i></div>
+    <p class="subtitle">
+      系统学习外交谈判的核心技巧，每关包含<span class="highlight">知识卡片</span> + <span class="highlight">情景小练</span> + <span class="highlight">过关解锁</span>。
+      <br>完成全部三关后，即可进入实战模式与 AI 对手过招。
+    </p>
+  </header>
+
+  <!-- 进度概览 -->
+  <div class="progress-overview">
+    <div class="progress-info">
+      <div class="progress-stage" id="progressStage">STAGE 1 OF 3 · 学习进度</div>
+      <div class="progress-text" id="progressText"></div>
+    </div>
+    <div class="progress-value">
+      <div class="progress-value-num" id="progressNum">0%</div>
+      <div class="progress-value-label">PROGRESS</div>
+    </div>
+  </div>
+
+  <!-- 关卡列表（由脚本按真实学习进度渲染） -->
+  <div class="level-list" id="levelList"></div>
+
+  <!-- 开启谈判 -->
+  <div class="launch-strip" id="launchStrip" style="display:none;">
+    <div class="launch-info">
+      <div class="launch-kicker">ALL LEVELS COMPLETED · 实战已开启</div>
+      <div class="launch-text">三关全部完成——是时候带着学到的一切，走进真正的谈判了</div>
+    </div>
+    <button class="btn-gold launch-btn" onclick="location.href='../index.html'">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      开启谈判
+    </button>
+  </div>
+
+  <!-- 底部 -->
+  <div class="page-foot">
+    <div class="foot-rule"><i></i><b></b><i></i></div>
+    <div class="foot-text">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+  </div>
+
+</main>
+
+<script src="progress.js"></script>
+<script src="../assets/theme.js"></script>
+<script>
+  function goBack(){
+    location.href = '../index.html';
+  }
+
+  const LEVELS = [
+    {
+      n: 1, title: '第一关：开局布局', desc: '议程设置 · 立场陈述 · 先开条件怎么开 · 锚定效应',
+      time: '约10分钟', course: 'lesson1.html', notes: 'notes.html',
+      kps: ['议程设置的三种策略', '立场陈述的黄金结构', '谁先开价的博弈逻辑', '锚定效应的实战运用']
+    },
+    {
+      n: 2, title: '第二关：中场博弈', desc: '条件让步 · 利益交换 · BATNA运用 · 对手施压应对',
+      time: '约12分钟', course: 'learning-level2.html', notes: 'notes-level2.html',
+      kps: ['让步的节奏与对价', '利益交换的三种结构', 'BATNA的构建与亮牌', '四种施压的应对']
+    },
+    {
+      n: 3, title: '第三关：终局收束', desc: '僵局破解 · 第三方调停 · 结果确认 · 履约固化',
+      time: '约10分钟', course: 'learning-level3.html', notes: 'notes-level3.html',
+      kps: ['僵局的分型与破解', '第三方调停的借力之道', '结果确认的收束四查', '履约固化的四件套']
+    }
+  ];
+
+  function cardHTML(L, i, done, unlocked){
+    const pct = LearningProgress.percent(L.n);
+    const meta = `
+      <div class="level-meta">
+        <div class="level-meta-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+          ${L.time}
+        </div>
+        <div class="level-meta-divider"></div>
+        <div class="level-meta-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          4个知识点${unlocked ? ' · 本关 ' + pct + '%' : ''}
+        </div>
+      </div>`;
+
+    if(!unlocked) return `
+    <div class="level-card locked" data-level="${L.n}">
+      <div class="level-card-header">
+        <div class="level-badge locked"><span class="level-badge-num">🔒</span></div>
+        <div class="level-info">
+          <div class="level-title-row">
+            <div class="level-title">${L.title}</div><span class="level-status locked">未解锁</span>
+          </div>
+          <div class="level-desc">${L.desc}</div>${meta}
+        </div>
+        <div class="level-action">
+          <button class="btn-gold ghost" disabled>完成${LEVELS[i-1].title.split('：')[1]}后解锁</button>
+        </div>
+      </div>
+    </div>`;
+
+    const action = done ? '再学一遍' : (pct ? '继续学习' : '开始学习');
+    return `
+    <div class="level-card" data-level="${L.n}" onclick="toggleLevel(this)">
+      <div class="level-card-header">
+        <div class="level-badge${done ? ' completed' : ''}"><span class="level-badge-num">${done ? '✓' : L.n}</span></div>
+        <div class="level-info">
+          <div class="level-title-row">
+            <div class="level-title">${L.title}</div>
+            <span class="level-status${done ? ' completed' : ' active'}">${done ? '已完成 100%' : (pct ? '进行中 ' + pct + '%' : '开启学习')}</span>
+          </div>
+          <div class="level-desc">${L.desc}</div>${meta}
+        </div>
+        <div class="level-action">
+          <button class="btn-gold${done ? ' ghost' : ''}" onclick="event.stopPropagation();location.href='${L.course}'">${action}</button>
+        </div>
+      </div>
+      <div class="level-detail">
+        <div class="level-detail-inner">
+          <div class="detail-section-title">知识要点</div>
+          <div class="knowledge-grid">${L.kps.map(k => `<div class="knowledge-item">${k}</div>`).join('')}</div>
+          <div class="detail-actions">
+            <button class="btn-primary" onclick="event.stopPropagation();location.href='${L.course}'">${action}</button>
+            <button class="btn-gold" onclick="event.stopPropagation();location.href='${L.notes}'">查看学习笔记</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderMap(){
+    const done = LEVELS.map(L => LearningProgress.isComplete(L.n));
+    const unlocked = LEVELS.map(L => LearningProgress.isUnlocked(L.n));
+    const n = done.filter(Boolean).length;
+    const total = LearningProgress.totalPercent();
+    const firstIncomplete = done.indexOf(false);
+    const stageIdx = firstIncomplete === -1 ? 3 : firstIncomplete + 1;
+
+    document.getElementById('progressNum').textContent = total + '%';
+    document.getElementById('progressStage').textContent = 'STAGE ' + stageIdx + ' OF 3 · 学习进度';
+    document.getElementById('progressText').innerHTML =
+      n === 3 ? '三关全部完成！实战模式已开启，随时可以开启谈判'
+    : n === 2 ? '前两关已完成，<b>「第三关 · 终局收束」</b>已开启，完成最后一关即可进入实战模式'
+    : n === 1 ? '已完成<b>「第一关 · 开局布局」</b>，<b>「第二关 · 中场博弈」</b>已解锁'
+    : total > 0 ? '<b>「第一关 · 开局布局」</b>正在学习，进度已自动保存'
+    : '学习之旅即将启程，从<b>「第一关 · 开局布局」</b>开始，完成全部三关即可解锁实战模式';
+
+    document.getElementById('levelList').innerHTML =
+      LEVELS.map((L, i) => cardHTML(L, i, done[i], unlocked[i])).join('');
+    document.getElementById('launchStrip').style.display = LearningProgress.allComplete() ? '' : 'none';
+  }
+
+  renderMap();
+  window.addEventListener('pageshow', renderMap);
+  window.addEventListener('storage', renderMap);
+
+  function toggleLevel(card){
+    if(card.classList.contains('locked')) return;
+    card.classList.toggle('active');
+  }
+</script>
+
+</body>
+</html>

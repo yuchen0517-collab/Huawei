@@ -1,0 +1,779 @@
+{
+  "_meta": {
+    "id": "compute-chip",
+    "name": "算力资源分配与芯片出口管制",
+    "parties": [
+      "cn",
+      "us",
+      "eu",
+      "in",
+      "br",
+      "jp"
+    ],
+    "source": "算力与芯片出口管制_事实卡_v2.xlsx"
+  },
+  "common": {
+    "positions": [],
+    "actions": [],
+    "numbers": [],
+    "quotes": [],
+    "thinktank": []
+  },
+  "parties": {
+    "cn": {
+      "positions": [
+        {
+          "id": "CN-01",
+          "date": "2025-04-25",
+          "text": "习近平强调坚持自立自强、突出应用导向，集中力量攻克高端芯片、基础软件等核心技术，构建自主可控AI软硬件系统",
+          "value": "",
+          "source": "中国政府网",
+          "link": "https://www.gov.cn/yaowen/liebiao/202504/content_7021072.htm",
+          "conf": "A",
+          "note": "中共中央政治局第20次集体学习"
+        },
+        {
+          "id": "CN-02",
+          "date": "2024-12-03",
+          "text": "中方坚决反对美方泛化国家安全概念、滥用出口管制，将采取坚决措施维护中国企业正当合法权益",
+          "value": "",
+          "source": "人民日报",
+          "link": "http://paper.people.com.cn/zgnyb/pc/content/202412/09/content_30046238.html",
+          "conf": "A",
+          "note": "外交部发言人林剑"
+        },
+        {
+          "id": "CN-03",
+          "date": "2025-07-26",
+          "text": "中国提出《全球人工智能治理倡议》并发布《人工智能全球治理行动计划》，主张共商共建共享、公平普惠",
+          "value": "",
+          "source": "中国政府网",
+          "link": "http://big5.www.gov.cn/gate/big5/www.gov.cn/govweb/yaowen/liebiao/202507/content_7033929.htm",
+          "conf": "A",
+          "note": "正文见gov.cn"
+        },
+        {
+          "id": "CN-04",
+          "date": "2025-10-09",
+          "text": "商务部：稀土出口管制是完善自身出口管制体系的正当做法，防止稀土流向大规模杀伤性武器等不当用途",
+          "value": "",
+          "source": "中国政府网",
+          "link": "https://www.gov.cn/zhengce/202510/content_7044134.htm",
+          "conf": "A",
+          "note": "商务部新闻发言人答记者问"
+        }
+      ],
+      "actions": [
+        {
+          "id": "CN-05",
+          "date": "2025-10-09",
+          "text": "商务部公告2025第61号：对境外相关稀土物项实施出口管制，用于14nm及以下逻辑芯片的申请逐案审批",
+          "value": "",
+          "source": "商务部",
+          "link": "https://www.mofcom.gov.cn/zfxxgk/gkml/art/2025/art_439da9350b8d439cba2b9f0ed57a1de6.html",
+          "conf": "A",
+          "note": "对美反制典型工具"
+        },
+        {
+          "id": "CN-06",
+          "date": "2025-09-13",
+          "text": "商务部就美国对华集成电路措施发起反歧视立案调查（公告2025年第50号）",
+          "value": "",
+          "source": "商务部",
+          "link": "https://www.mofcom.gov.cn/zcfb/blgg/gg/2025/art/2025/art_135b05aa9ee34123a210e392797e1e54.html",
+          "conf": "A",
+          "note": "依据对外贸易法第7条"
+        },
+        {
+          "id": "CN-07",
+          "date": "2023-05-21",
+          "text": "网络安全审查办公室认定美光产品存在严重安全隐患，不予通过审查，关键信息基础设施运营者停止采购",
+          "value": "",
+          "source": "国家网信办",
+          "link": "https://www.cac.gov.cn/2023-05/21/c_1686348043518073.htm",
+          "conf": "A",
+          "note": "存储芯片领域反制"
+        },
+        {
+          "id": "CN-08",
+          "date": "2026-07-31",
+          "text": "2026-07中国首个全国产10万卡AI超集群“曙光8000”在郑州投用，服务26个领域",
+          "value": "",
+          "source": "郑州市政府",
+          "link": "https://www.zhengzhou.gov.cn/news7/10172668.jhtml",
+          "conf": "B",
+          "note": "7月内投用，具体日未公布；报道日2026-08-03"
+        },
+        {
+          "id": "CN-09",
+          "date": "2025-09-01",
+          "text": "发布《人工智能生成合成内容标识办法》(2025-09-01施行)，2025-10修改后网络安全法新增AI安全条款",
+          "value": "",
+          "source": "中国政府网",
+          "link": "https://www.gov.cn/zhengce/zhengceku/202503/content_7014286.htm",
+          "conf": "A",
+          "note": "发布2025-03-14，2025-09-01施行"
+        },
+        {
+          "id": "CN-10",
+          "date": "2025-05-21",
+          "text": "商务部就美国企图全球禁用中国先进计算芯片（含华为昇腾）发表谈话，指其为单边霸凌和保护主义",
+          "value": "",
+          "source": "商务部",
+          "link": "http://www.mofcom.gov.cn/syxwfb/art/2025/art_8232e23dd3cb49bcb70634eb0c65ecea.html",
+          "conf": "A",
+          "note": "对美方指南的回应"
+        },
+        {
+          "id": "CN-18",
+          "date": "2024-12-03",
+          "text": "商务部公告2024年第46号：禁止镓、锗、锑、超硬材料相关两用物项对美出口",
+          "value": "",
+          "source": "商务部",
+          "link": "https://exportcontrol.mofcom.gov.cn/article/zcfg/gnzcfg/zcfggzqd/202412/1072.html",
+          "conf": "A",
+          "note": "自公布之日起实施；石墨对美实施更严格最终用户审查"
+        },
+        {
+          "id": "CN-19",
+          "date": "2025-04-04",
+          "text": "商务部、海关总署公告2025年第18号：对钐、钆、铽、镝、镥、钪、钇7类中重稀土实施出口管制",
+          "value": "",
+          "source": "商务部",
+          "link": "https://www.mofcom.gov.cn/zfxxgk/fdzdgknr/ztfl/dwmygl/art/2025/art_d6601aa067314c069adff821ef54b482.html",
+          "conf": "A",
+          "note": "自发布之日起实施；涵盖金属、合金、靶材、永磁材料"
+        },
+        {
+          "id": "CN-20",
+          "date": "2025-09-13",
+          "text": "商务部对原产于美国的进口模拟芯片发起反倾销立案调查",
+          "value": "",
+          "source": "新华社",
+          "link": "https://www2.xinhuanet.com/fortune/20250913/8c25dded711340999e7c4d69e99e1856/c.html",
+          "conf": "A",
+          "note": "调查通常应在2026-09-13前结束"
+        }
+      ],
+      "numbers": [
+        {
+          "id": "CN-11",
+          "date": "2026-06-30",
+          "text": "截至2026年6月底，中国智能算力规模达2185 EFLOPS（FP16），同比增长177%",
+          "value": "2185 EFLOPS / +177%",
+          "source": "工信部/国新办",
+          "link": "https://www.gov.cn/lianbo/202607/content_7076114.htm",
+          "conf": "A",
+          "note": "数据截至2026-06-30"
+        },
+        {
+          "id": "CN-12",
+          "date": "2026-03-05",
+          "text": "2025年中国人工智能核心产业规模突破1.2万亿元，企业超6600家",
+          "value": "1.2万亿元",
+          "source": "工信部",
+          "link": "https://www.news.cn/politics/20260305/e8d78b5a77c844da984d5ec442dbfa9f/c.html",
+          "conf": "A",
+          "note": "部长李乐成两会数据"
+        },
+        {
+          "id": "CN-14",
+          "date": "2026-05-28",
+          "text": "2025年中国建成42个万卡级智算集群，全国算力中心总用电量1700亿千瓦时",
+          "value": "42个万卡集群",
+          "source": "人民网",
+          "link": "http://cpc.people.com.cn/n1/2026/0528/c64387-40729123.html",
+          "conf": "B",
+          "note": "二次来源"
+        },
+        {
+          "id": "CN-22",
+          "date": "2026-07-20",
+          "text": "2026年上半年集成电路出口1772.8亿美元，同比增长96.1%，创半年度新高",
+          "value": "1772.8亿美元 / +96.1%",
+          "source": "海关总署",
+          "link": "https://www.cccme.org.cn/model5-1/news/details.aspx?id=9C5C672B1A4D2062D5735AB9DF9B5CEC&classid=7685F2FA1E54A7F5&xgid=F868932F64EB7AAF",
+          "conf": "A",
+          "note": "出口数量1794.4亿块、同比+7%；单价同比+83.3%"
+        },
+        {
+          "id": "CN-23",
+          "date": "2026-10-16",
+          "text": "IDC：2026上半年中国AI芯片出货约200万颗，英伟达份额33.8%、华为昇腾28.5%",
+          "value": "200万颗；33.8% / 28.5%",
+          "source": "IDC",
+          "link": "https://ee.ofweek.com/2026-10/ART-12004-2801-30707399.html",
+          "conf": "B",
+          "note": ""
+        }
+      ],
+      "quotes": [
+        {
+          "id": "CN-15",
+          "date": "2025-05-21",
+          "text": "商务部发言人：美方措施是“典型的单边霸凌和保护主义做法”，严重损害全球半导体产业链供应链稳定",
+          "value": "",
+          "source": "商务部",
+          "link": "http://www.mofcom.gov.cn/syxwfb/art/2025/art_8232e23dd3cb49bcb70634eb0c65ecea.html",
+          "conf": "A",
+          "note": "原话引用"
+        },
+        {
+          "id": "CN-16",
+          "date": "2024-12-03",
+          "text": "外交部发言人林剑：中方坚决反对美方泛化国家安全概念、滥用出口管制对中国进行恶意封锁打压",
+          "value": "",
+          "source": "人民日报",
+          "link": "http://paper.people.com.cn/zgnyb/pc/content/202412/09/content_30046238.html",
+          "conf": "A",
+          "note": "原话引用"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "CN-17",
+          "date": "2026-09-22",
+          "text": "IDC预计2026年中国智能算力规模达2576.5 EFLOPS，2030年达10524.3 EFLOPS",
+          "value": "2576.5→10524.3 EFLOPS",
+          "source": "IDC《中国人工智能计算力发展评估报告》",
+          "link": "http://bgimg.ce.cn/xwzx/gnsz/gdxw/202609/t20260922_3229897.shtml",
+          "conf": "B",
+          "note": "预测值，仅作背景；同比+87.9%                         国际数据公司（IDC）全球知名的科技市场研究、咨询机构，隶属于 IDG（国际数据集团）"
+        }
+      ]
+    },
+    "us": {
+      "positions": [
+        {
+          "id": "US-01",
+          "date": "2023-10-17",
+          "text": "BIS以保护国家安全为由管制先进计算半导体，聚焦“军事用途”及中国“军民融合”威胁",
+          "value": "",
+          "source": "美国商务部工业和安全局BIS",
+          "link": "https://www.bis.gov/press-release/commerce-strengthens-restrictions-advanced-computing-semiconductors-semiconductor-manufacturing-equipment",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "US-02",
+          "date": "2025-02-21",
+          "text": "白宫《美国优先投资政策》：限制外国对手获取美国关键技术，按与PRC的关联程度收紧准入",
+          "value": "",
+          "source": "白宫",
+          "link": "https://www.whitehouse.gov/presidential-actions/2025/02/america-first-investment-policy/",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "US-03",
+          "date": "2024-11-15",
+          "text": "商务部长Raimondo主张“最先进半导体技术将在美国制造”，以管制与本土补贴巩固技术领导地位",
+          "value": "",
+          "source": "美国商务部",
+          "link": "https://www.commerce.gov/news/press-releases/2024/11/biden-harris-administration-announces-chips-incentives-award-tsmc",
+          "conf": "A",
+          "note": ""
+        }
+      ],
+      "actions": [
+        {
+          "id": "US-04",
+          "date": "2025-05-13",
+          "text": "BIS启动撤销拜登《AI扩散规则》，改为逐案许可并加强全球芯片出口管制",
+          "value": "",
+          "source": "美国商务部工业和安全局BIS",
+          "link": "https://www.bis.gov/press-release/department-commerce-announces-recission-biden-era-artificial-intelligence-diffusion-rule-strengthens-chip",
+          "conf": "A",
+          "note": "关键政策转向节点"
+        },
+        {
+          "id": "US-05",
+          "date": "2026-01-15",
+          "text": "BIS修订对华芯片许可政策，将英伟达H200等从“推定拒绝”改为满足安全条件的逐案审查",
+          "value": "",
+          "source": "美国商务部工业和安全局BIS",
+          "link": "https://www.bis.gov/press-release/department-commerce-revises-license-review-policy-semiconductors-exported-china",
+          "conf": "A",
+          "note": "2026-01-15生效。英伟达H200芯片（NVIDIA HGX H200 ），是英伟达于2023年11月13日发布的新一代人工智能芯片，其为H100的升级产品，仍然采用 NVIDIA Hopper 超级芯片架构，主要面向超大规模的大模型训练和推理工作场景。"
+        },
+        {
+          "id": "US-06",
+          "date": "2025-01-02",
+          "text": "财政部发布对华对外投资最终规则，限制美方在半导体、量子、AI领域与中国交易",
+          "value": "",
+          "source": "美国财政部",
+          "link": "https://home.treasury.gov/policy-issues/international/outbound-investment-program/program-regulations",
+          "conf": "A",
+          "note": "2024-10-28发布，2025-01-02生效"
+        },
+        {
+          "id": "US-07",
+          "date": "2025-05-13",
+          "text": "BIS发布对华先进芯片政策声明，声称在全球任何地方使用华为昇腾芯片均违反美出口管制",
+          "value": "",
+          "source": "财新",
+          "link": "https://www.caixin.com/2025-05-14/102319440.html",
+          "conf": "B",
+          "note": "BIS三份指导意见之一"
+        },
+        {
+          "id": "US-08",
+          "date": "2025-09-02",
+          "text": "BIS撤销三星中国、SK海力士中国、英特尔大连的VEU授权，对华出口须逐案许可",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.federalregister.gov/documents/2025/09/02/2025-16735/revocation-of-validated-end-user-authorizations-in-the-peoples-republic-of-china",
+          "conf": "A",
+          "note": "2025-12-31生效"
+        },
+        {
+          "id": "US-09",
+          "date": "2024-12-02",
+          "text": "BIS发布新规则，进一步削弱中国生产先进半导体用于军事应用的能力",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.bis.gov/press-release/commerce-strengthens-export-controls-restrict-chinas-capability-produce-advanced-semiconductors-military",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "US-19",
+          "date": "2025-04-09",
+          "text": "BIS通知英伟达：H20对华出口须申请许可证，英伟达计提55亿美元损失",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000082/nvda-20250409.htm",
+          "conf": "A",
+          "note": "2025-04-14告知许可要求无限期有效。 H20 是英伟达专为中国市场设计的 AI 加速芯片，‌2026 年 10 月已获美国政府批准恢复向中国市场销售，但目前主要以消化现有库存为主，售完无补"
+        },
+        {
+          "id": "US-20",
+          "date": "2025-09-29",
+          "text": "BIS“关联企业规则”生效：实体清单企业持股≥50%的子公司自动受限",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.federalregister.gov/documents/2025/09/30/2025-19001/expansion-of-end-user-controls-to-cover-affiliates-of-certain-listed-entities",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "US-21",
+          "date": "2025-11-10",
+          "text": "美国暂停“关联企业规则”一年至2026-11-09，作为釜山会晤后缓和措施",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.federalregister.gov/documents/2025/11/12/2025-19846/one-year-suspension-of-expansion-of-end-user-controls-for-affiliates-of-certain-listed-entities",
+          "conf": "A",
+          "note": ""
+        }
+      ],
+      "numbers": [
+        {
+          "id": "US-10",
+          "date": "2026-01-30",
+          "text": "美国控制全球约75%前沿AI算力，中国约15%（Epoch AI估算）",
+          "value": "75%",
+          "source": "Epoch AI",
+          "link": "https://www.mufgamericas.com/sites/default/files/document/mufgamericas_com/2026-02/The_AI_Weekly_1_30_Relative_AI_Computational_Power1.pdf",
+          "conf": "C",
+          "note": "Epoch AI是一家 2022 年 4 月成立的美国非营利人工智能研究机构‌，致力于调查 AI 历史趋势并预测未来发展，官网为 epoch.ai"
+        },
+        {
+          "id": "US-11",
+          "date": "2026-06-30",
+          "text": "英伟达占全球数据中心AI加速器市场约80-85%（收入口径）",
+          "value": "~80-85%",
+          "source": "IDC（互联网数据中心）等机构",
+          "link": "https://thetechtrends.tech/nvidia-vs-amd-vs-custom-silicon/",
+          "conf": "C",
+          "note": "2026年中收入口径估算，各机构不一"
+        },
+        {
+          "id": "US-12",
+          "date": "2026-09-17",
+          "text": "2025年美国私人领域AI投资达2859亿美元",
+          "value": "2859亿美元",
+          "source": "上海国际问题研究院世界经济研究所（引美数据）",
+          "link": "https://desk.sh.gov.cn/zxfw/yjbg/gb/mzdyz/mg/20260917/dfd0f0781487466194b9d055be14b86d/3569c0c697f94f36a04371f56e1c679b.pdf",
+          "conf": "B",
+          "note": "引述第三方数据。上海国际问题研究院世界经济研究所主要聚焦国际贸易、投资、货币、金融及可持续发展等方向，研究全球经济治理格局演变和中国与主要经济体的互动关系。https://www.siis.org.cn/ 。‌‌"
+        },
+        {
+          "id": "US-13",
+          "date": "2026-04-14",
+          "text": "美国拥有5427个数据中心，居全球首位（Stanford HAI统计，中国449个）",
+          "value": "5427个",
+          "source": "Stanford HAI",
+          "link": "https://finance.sina.com.cn/roll/2026-04-14/doc-inhunavz9090841.shtml",
+          "conf": "B",
+          "note": "引述HAI报告Stanford HAI 是‌斯坦福大学以人为本人工智能研究院‌，2019 年成立，目标是让人工智能研究、教育和政策始终围绕人类福祉展开。官网可访问：https://hai.stanford.edu/"
+        },
+        {
+          "id": "US-14",
+          "date": "2026-07-16",
+          "text": "台积电对美投资总额达2650亿美元（2026-07宣布新增1000亿，共12座厂）",
+          "value": "2650亿美元",
+          "source": "美国商务部",
+          "link": "https://www.commerce.gov/news/press-releases/2026/07/trump-administration-secures-additional-100-billion-us-semiconductor",
+          "conf": "A",
+          "note": "截至2026年10月23日，台积电是全球规模最大、技术最领先的半导体芯片代工厂，生产了全球超过90%的最尖端先进制程芯片，当日美股报价为412.35美元，总市值达2.14万亿美元。‌‌‌"
+        },
+        {
+          "id": "US-22",
+          "date": "2026-07-28",
+          "text": "SIA：2025年美国芯片企业占全球市场53.4%，创1984年以来新高",
+          "value": "53.4%（4250亿美元）",
+          "source": "美国半导体行业协会（SIA）",
+          "link": "https://eu.36kr.com/en/p/3915125234537606",
+          "conf": "B",
+          "note": "全球销售额7956亿美元；SIA 2026产业报告"
+        },
+        {
+          "id": "US-23",
+          "date": "2026-07-28",
+          "text": "2025年美国芯片企业研发投入768亿美元，同比增长10.3%，居全球首位",
+          "value": "768亿美元 / +10.3%",
+          "source": "美国半导体行业协会（SIA）",
+          "link": "https://eu.36kr.com/en/p/3915125234537606",
+          "conf": "B",
+          "note": "2024年为696亿美元；SIA 2026产业报告"
+        }
+      ],
+      "quotes": [
+        {
+          "id": "US-15",
+          "date": "2026-01-15",
+          "text": "BIS副部长Kessler：“出口管制应随技术演变而变化，同时保护国家安全”(H200政策)",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.bis.gov/press-release/department-commerce-revises-license-review-policy-semiconductors-exported-china",
+          "conf": "A",
+          "note": "原话引用"
+        },
+        {
+          "id": "US-16",
+          "date": "2025-01-15",
+          "text": "商务部长Raimondo：“我们将通过限制获取先进半导体、严格执行规则，持续捍卫国家安全”",
+          "value": "",
+          "source": "美国商务部BIS",
+          "link": "https://www.bis.gov/press-release/commerce-strengthens-restrictions-advanced-computing-semiconductors-enhance-foundry-due-diligence-prevent",
+          "conf": "A",
+          "note": "原话引用"
+        }
+      ],
+      "thinktank": [
+        {
+          "id": "US-17",
+          "date": "2026-04-07",
+          "text": "CSIS专家：美盟出口管制在限制中国AI/高端芯片发展上“进展有限”，主要影响是加速中国国产替代",
+          "value": "",
+          "source": "CSIS美国战略与国际问题研究中心",
+          "link": "http://www.stdaily.com/web/gdxw/2026-04/07/content_498646.html",
+          "conf": "B",
+          "note": "科技日报2026-04-07引CSIS观点               美国战略与国际问题研究中心（CSIS）是‌1962 年成立‌于华盛顿特区的‌非党派、非政府国际问题研究机构‌，作为美国规模最大的智库之一，其官网为 www.csis.org"
+        },
+        {
+          "id": "US-18",
+          "date": "2026-04-16",
+          "text": "Stanford HAI：中国AI模型与美前沿模型差距缩小至约2.7个百分点",
+          "value": "~2.7%",
+          "source": "Stanford HAI",
+          "link": "https://thebriefscript.com/us-china-tech-war/",
+          "conf": "C",
+          "note": "HAI《2026 AI Index》Stanford HAI 是‌斯坦福大学以人为本人工智能研究院‌，2019 年成立，目标是让人工智能研究、教育和政策始终围绕人类福祉展开。官网可访问：https://hai.stanford.edu/。‌‌"
+        }
+      ]
+    },
+    "eu": {
+      "positions": [
+        {
+          "id": "EU-01",
+          "date": "2024-08-01",
+          "text": "欧盟《人工智能法案》生效，按不可接受风险／高风险／有限风险／最小风险四档分级监管，通用模型另设义务",
+          "value": "",
+          "source": "欧盟委员会",
+          "link": "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "EU-02",
+          "date": "2018-05-25",
+          "text": "《通用数据保护条例》(GDPR) 生效，跨境数据流动须经充分性认定或提供适当保障",
+          "value": "",
+          "source": "欧盟官方公报",
+          "link": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "EU-03",
+          "date": "2025-02-02",
+          "text": "AI 法案分阶段适用：禁止性条款与 AI 素养义务先行生效，高风险义务延后执行",
+          "value": "",
+          "source": "欧盟委员会",
+          "link": "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai",
+          "conf": "B",
+          "note": "分阶段适用"
+        }
+      ],
+      "actions": [
+        {
+          "id": "EU-04",
+          "date": "2024-02-02",
+          "text": "欧盟成员国一致通过 AI 法案文本，确立全球首部综合性 AI 监管法规",
+          "value": "",
+          "source": "欧盟理事会",
+          "link": "https://www.consilium.europa.eu/en/press/press-releases/2023/12/09/artificial-intelligence-act-council-calls-for-harmonised-and-risk-based-rules/",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "EU-05",
+          "date": "2024-01-24",
+          "text": "欧盟委员会设立欧洲人工智能办公室（AI Office），负责通用模型监管与执法协调",
+          "value": "",
+          "source": "欧盟委员会",
+          "link": "https://digital-strategy.ec.europa.eu/en/policies/ai-office",
+          "conf": "A",
+          "note": ""
+        }
+      ],
+      "numbers": [
+        {
+          "id": "EU-10",
+          "date": "2024-08-01",
+          "text": "AI 法案对禁止性行为设最高 3500 万欧元或全球年营业额 7% 的罚款，取较高者",
+          "value": "3500 万欧元 / 7%",
+          "source": "欧盟《AI 法案》第 99 条",
+          "link": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "EU-11",
+          "date": "2024-08-01",
+          "text": "法案把 AI 系统分为四档风险等级，高风险系统须履行合规评估与文档义务",
+          "value": "4 档",
+          "source": "欧盟《AI 法案》",
+          "link": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+          "conf": "A",
+          "note": ""
+        }
+      ],
+      "quotes": [
+        {
+          "id": "EU-20",
+          "date": "2024-08-01",
+          "text": "「我们要让欧洲成为可信 AI 的全球标杆，而不是规则的追随者。」",
+          "value": "",
+          "source": "欧盟委员会主席",
+          "link": "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai",
+          "conf": "B",
+          "note": "意译"
+        }
+      ],
+      "thinktank": []
+    },
+    "in": {
+      "positions": [
+        {
+          "id": "IN-01",
+          "date": "2024-03-07",
+          "text": "印度内阁批准 IndiaAI 使命，投入算力基础设施、基础模型与人才培养",
+          "value": "",
+          "source": "印度新闻信息局 PIB",
+          "link": "https://www.pib.gov.in/",
+          "conf": "B",
+          "note": ""
+        },
+        {
+          "id": "IN-02",
+          "date": "2023-08-11",
+          "text": "印度《数字个人数据保护法》(DPDP Act) 通过，本地化要求限于特定类别数据",
+          "value": "",
+          "source": "印度电子与信息技术部",
+          "link": "https://www.meity.gov.in/data-protection-framework",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "IN-03",
+          "date": "2025-11-05",
+          "text": "印度发布 AI 治理指南，主张以技术中立与创新友好为原则，不设单一监管法",
+          "value": "",
+          "source": "印度电子与信息技术部",
+          "link": "https://www.meity.gov.in/",
+          "conf": "B",
+          "note": "以指南代立法"
+        }
+      ],
+      "actions": [
+        {
+          "id": "IN-04",
+          "date": "2024-07-01",
+          "text": "IndiaAI 使命开始公开征集本土基础模型项目，配套公共算力池",
+          "value": "",
+          "source": "印度电子与信息技术部",
+          "link": "https://www.indiaai.gov.in/",
+          "conf": "B",
+          "note": ""
+        },
+        {
+          "id": "IN-05",
+          "date": "2023-11-01",
+          "text": "印度在 AI 安全峰会上拒绝签署具约束力的声明，主张发展中国家的发展权优先",
+          "value": "",
+          "source": "公开报道",
+          "link": "https://www.meity.gov.in/",
+          "conf": "B",
+          "note": ""
+        }
+      ],
+      "numbers": [
+        {
+          "id": "IN-10",
+          "date": "2024-03-07",
+          "text": "IndiaAI 使命预算约 1037 亿卢比（约 12.5 亿美元），为期五年",
+          "value": "1037 亿卢比",
+          "source": "印度新闻信息局 PIB",
+          "link": "https://www.pib.gov.in/",
+          "conf": "B",
+          "note": ""
+        },
+        {
+          "id": "IN-11",
+          "date": "2024-12-01",
+          "text": "印度互联网用户规模约 9 亿，为全球第二大在线市场",
+          "value": "约 9 亿",
+          "source": "印度电信管理局 TRAI",
+          "link": "https://www.trai.gov.in/",
+          "conf": "C",
+          "note": "口径为注册用户"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    },
+    "br": {
+      "positions": [
+        {
+          "id": "BR-01",
+          "date": "2020-09-18",
+          "text": "巴西《通用数据保护法》(LGPD) 生效，设立国家数据保护局 ANPD 作为监管机构",
+          "value": "",
+          "source": "巴西联邦公报",
+          "link": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "BR-02",
+          "date": "2024-12-10",
+          "text": "巴西参议院通过人工智能法案（PL 2338/2023），采用风险分级与权利保障框架",
+          "value": "",
+          "source": "巴西参议院",
+          "link": "https://www25.senado.leg.br/",
+          "conf": "B",
+          "note": "待众议院审议"
+        },
+        {
+          "id": "BR-03",
+          "date": "2024-11-18",
+          "text": "巴西作为 G20 主席国推动数字治理议程，强调发展中国家的数据主权",
+          "value": "",
+          "source": "巴西政府",
+          "link": "https://www.gov.br/",
+          "conf": "B",
+          "note": ""
+        }
+      ],
+      "actions": [
+        {
+          "id": "BR-04",
+          "date": "2024-07-01",
+          "text": "巴西向联合国提交 AI 治理立场文件，支持设立更具代表性的国际机构",
+          "value": "",
+          "source": "巴西外交部",
+          "link": "https://www.gov.br/mre/",
+          "conf": "C",
+          "note": ""
+        }
+      ],
+      "numbers": [
+        {
+          "id": "BR-10",
+          "date": "2020-09-18",
+          "text": "LGPD 罚款上限为巴西境内营收的 2%，单次不超过 5000 万雷亚尔",
+          "value": "2% / 5000 万雷亚尔",
+          "source": "巴西《LGPD》第 52 条",
+          "link": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm",
+          "conf": "A",
+          "note": ""
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    },
+    "jp": {
+      "positions": [
+        {
+          "id": "JP-01",
+          "date": "2023-07-23",
+          "text": "日本对 23 类半导体制造设备实施出口管制，覆盖先进制程关键环节",
+          "value": "",
+          "source": "日本经济产业省 METI",
+          "link": "https://www.meti.go.jp/english/",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "JP-02",
+          "date": "2023-05-20",
+          "text": "G7 广岛峰会启动「广岛 AI 进程」，日本主导建立生成式 AI 国际行为准则",
+          "value": "",
+          "source": "日本外务省",
+          "link": "https://www.mofa.go.jp/",
+          "conf": "A",
+          "note": ""
+        },
+        {
+          "id": "JP-03",
+          "date": "2025-05-28",
+          "text": "日本通过《AI 推进法》，以促进应用为主、监管为辅，未设统一罚则",
+          "value": "",
+          "source": "日本内阁府",
+          "link": "https://www.cao.go.jp/",
+          "conf": "B",
+          "note": "软法框架"
+        }
+      ],
+      "actions": [
+        {
+          "id": "JP-04",
+          "date": "2024-04-19",
+          "text": "日本发布 AI 企业指南，要求企业自查风险并公开治理架构",
+          "value": "",
+          "source": "日本经济产业省 METI",
+          "link": "https://www.meti.go.jp/english/",
+          "conf": "B",
+          "note": ""
+        }
+      ],
+      "numbers": [
+        {
+          "id": "JP-10",
+          "date": "2024-06-01",
+          "text": "日本半导体制造设备出口占全球约三成，是设备供应链的关键节点",
+          "value": "约 30%",
+          "source": "日本半导体制造装置协会 SEAJ",
+          "link": "https://www.seaj.or.jp/",
+          "conf": "C",
+          "note": "行业协会口径"
+        }
+      ],
+      "quotes": [],
+      "thinktank": []
+    }
+  }
+}

@@ -1,0 +1,655 @@
+﻿/* 统一字号：三个页面所有正文 = 12px，标题 16px，卡面 15/12/10.5（自动生成） */
+:root[data-theme="dark"]{ --muted:#a8957c; --text-soft:#d6c3a2; }
+body { font-size: 12px !important; }
+.concept-badge { font-size: 12px !important; }
+.mode-switch a { font-size: 12px !important; }
+.mode-switch a span { font-size: 12px !important; }
+.round-status span { font-size: 12px !important; }
+.round-status small { font-size: 12px !important; }
+.view-button { font-size: 12px !important; }
+.view-menu strong { font-size: 12px !important; }
+.view-menu span { font-size: 12px !important; }
+.end-button { font-size: 12px !important; }
+.topic-title>div span { font-size: 12px !important; }
+.topic-title strong { font-size: 12px !important; }
+.current-agenda { font-size: 12px !important; }
+.phase-track span { font-size: 12px !important; }
+.phase-track i { font-size: 12px !important; }
+.text-button { font-size: 12px !important; }
+.panel-heading>div>span,.drawer-header>div>span { font-size: 12px !important; }
+.fold-section summary { font-size: 12px !important; }
+.fold-section summary>span { font-size: 12px !important; }
+.fold-placeholder { font-size: 12px !important; }
+.narrator-status { font-size: 12px !important; }
+.narrator-status button { font-size: 12px !important; }
+.narrator-card p { font-size: 12px !important; }
+.signal-item strong { font-size: 12px !important; }
+.signal-item small { font-size: 12px !important; }
+.signal-item time { font-size: 12px !important; }
+.mini-timeline strong { font-size: 12px !important; }
+.mini-timeline small { font-size: 12px !important; }
+.left-bottom-note { font-size: 12px !important; }
+.left-bottom-note small { font-size: 12px !important; }
+.left-action { font-size: 12px !important; }
+.document-strip>div:nth-child(2) span { font-size: 12px !important; }
+.document-strip strong { font-size: 12px !important; }
+.document-tags span { font-size: 12px !important; }
+.speech-meta strong { font-size: 12px !important; }
+.speech-meta span { font-size: 12px !important; }
+.speech-meta em { font-size: 12px !important; }
+.speech-body>p { font-size: 12px !important; }
+.advisor-reading { font-size: 12px !important; }
+.risk-banner strong { font-size: 12px !important; }
+.risk-banner small { font-size: 12px !important; }
+.risk-banner em { font-size: 12px !important; }
+.strategy-heading>span { font-size: 12px !important; }
+.strategy-heading small { font-size: 12px !important; }
+.action-points { font-size: 12px !important; }
+.action-points strong { font-size: 12px !important; }
+.card-cost { font-size: 12px !important; }
+.strategy-card small { font-size: 12px !important; }
+.strategy-card strong { font-size: 12px !important; }
+.strategy-card p { font-size: 12px !important; }
+.strategy-card>em { font-size: 12px !important; }
+.composer-tools button { font-size: 12px !important; }
+.composer-tools>span { font-size: 12px !important; }
+.composer-input textarea { font-size: 12px !important; }
+.send-button { font-size: 12px !important; }
+.metric span { font-size: 12px !important; }
+.metric strong small { font-size: 12px !important; }
+.relation-bars>span { font-size: 12px !important; }
+.relation-bars b { font-size: 12px !important; }
+.relation-preview>small { font-size: 12px !important; }
+.quiet-badge { font-size: 12px !important; }
+.secret-preview strong { font-size: 12px !important; }
+.secret-preview small { font-size: 12px !important; }
+.analysis-entry { font-size: 12px !important; }
+.council-hud>div:first-child span { font-size: 12px !important; }
+.council-hud>div:first-child strong { font-size: 12px !important; }
+.camp-summary>span { font-size: 12px !important; }
+.table-center span { font-size: 12px !important; }
+.table-center strong { font-size: 12px !important; }
+.table-center small { font-size: 12px !important; }
+.seat>strong { font-size: 12px !important; }
+.seat>small { font-size: 12px !important; }
+.council-speech-body>p { font-size: 12px !important; }
+.position-change { font-size: 12px !important; }
+.position-change button { font-size: 12px !important; }
+.delegation strong { font-size: 12px !important; }
+.delegation small { font-size: 12px !important; }
+.stance { font-size: 12px !important; }
+.compact-notices strong { font-size: 12px !important; }
+.compact-notices small { font-size: 12px !important; }
+.camp-numbers span { font-size: 12px !important; }
+.camp-preview p { font-size: 12px !important; }
+.matrix-mini-head b { font-size: 12px !important; }
+.matrix-mini strong { font-size: 12px !important; }
+.matrix-mini small { font-size: 12px !important; }
+.compact-metrics>span { font-size: 12px !important; }
+.compact-metrics small { font-size: 12px !important; }
+.deal-card em { font-size: 12px !important; }
+.deal-card>strong { font-size: 12px !important; }
+.deal-card>small { font-size: 12px !important; }
+.observe-controls button { font-size: 12px !important; }
+.observe-speech .council-speech-body>p { font-size: 12px !important; }
+.inner-os { font-size: 12px !important; }
+.inner-os button { font-size: 12px !important; }
+.fact-source { font-size: 12px !important; }
+.observe-bottom { font-size: 12px !important; }
+.observe-bottom button { font-size: 12px !important; }
+.omniscient-badge strong { font-size: 12px !important; }
+.omniscient-badge small { font-size: 12px !important; }
+.secret-event strong { font-size: 12px !important; }
+.secret-event p { font-size: 12px !important; }
+.secret-event small { font-size: 12px !important; }
+.party-monitor>div>span { font-size: 12px !important; }
+.party-monitor b { font-size: 12px !important; }
+.party-head b,.party-head span { font-size: 12px !important; }
+/* 侧栏与视图 */ .reopen-rail { font-size: 12px !important; }
+.statusbar { font-size: 12px !important; }
+.statusbar strong { font-size: 12px !important; }
+.drawer-tabs button { font-size: 12px !important; }
+.drawer-section-kicker { font-size: 12px !important; }
+.drawer-section-desc { font-size: 12px !important; }
+.intel-warning strong { font-size: 12px !important; }
+.intel-warning p { font-size: 12px !important; }
+.zone-label { font-size: 12px !important; }
+.zone-item strong { font-size: 12px !important; }
+.zone-item small { font-size: 12px !important; }
+.confidence { font-size: 12px !important; }
+.content-subtitle { font-size: 12px !important; }
+.content-subtitle span { font-size: 12px !important; }
+.evidence-row>span { font-size: 12px !important; }
+.evidence-row>div strong { font-size: 12px !important; }
+.evidence-row>div p { font-size: 12px !important; }
+.limit-note { font-size: 12px !important; }
+.camp-overview span { font-size: 12px !important; }
+.alignment-row strong { font-size: 12px !important; }
+.alignment-row small { font-size: 12px !important; }
+.matrix-controls button { font-size: 12px !important; }
+.relation-matrix th { font-size: 12px !important; }
+.relation-matrix td { font-size: 12px !important; }
+.matrix-legend { font-size: 12px !important; }
+.relation-detail strong { font-size: 12px !important; }
+.relation-detail p { font-size: 12px !important; }
+.relation-detail small { font-size: 12px !important; }
+.drawer-deal-head em { font-size: 12px !important; }
+.drawer-deal p { font-size: 12px !important; }
+.drawer-deal button { font-size: 12px !important; }
+.deal-flow span { font-size: 12px !important; }
+.tree-controls>span { font-size: 12px !important; }
+.toggle-button { font-size: 12px !important; }
+.tree-card strong { font-size: 12px !important; }
+.tree-card em { font-size: 12px !important; }
+.tree-card p { font-size: 12px !important; }
+.tree-card small { font-size: 12px !important; }
+.private-room-head span { font-size: 12px !important; }
+.private-room-head p { font-size: 12px !important; }
+.private-message strong { font-size: 12px !important; }
+.private-message p { font-size: 12px !important; }
+.privacy-note { font-size: 12px !important; }
+.agreement-title>span { font-size: 12px !important; }
+.agreement-title>strong { font-size: 12px !important; }
+.agreement-title>em { font-size: 12px !important; }
+.deal-terms>div>span { font-size: 12px !important; }
+.deal-terms strong { font-size: 12px !important; }
+.deal-terms small { font-size: 12px !important; }
+.deal-rule p { font-size: 12px !important; }
+.deal-secrecy { font-size: 12px !important; }
+.primary-button,.secondary-button { font-size: 12px !important; }
+.toast { font-size: 12px !important; }
+.phase-track span i { font-size: 12px !important; }
+.panel-heading h2 { font-size: 12px !important; }
+.camp-summary>span:after { font-size: 12px !important; }
+.channel-inline { font-size: 12px !important; }
+.card-hand-footer>span { font-size: 12px !important; }
+.end-turn { font-size: 12px !important; }
+.multi-strategy .strategy-card p { font-size: 12px !important; }
+.channel-ladder>div>span { font-size: 12px !important; }
+.channel-ladder strong { font-size: 12px !important; }
+.channel-ladder small { font-size: 12px !important; }
+.channel-ladder em { font-size: 12px !important; }
+.party-policies strong { font-size: 12px !important; }
+.party-policies small { font-size: 12px !important; }
+.party-policies em { font-size: 12px !important; }
+.history-boundary strong { font-size: 12px !important; }
+.history-boundary p { font-size: 12px !important; }
+.event-demo span { font-size: 12px !important; }
+.side-panel .fold-section summary { font-size: 12px !important; }
+.event-demo { font-size: 12px !important; }
+.card-effects li { font-size: 12px !important; }
+/* 2.4 · 参与模式分层透明 */ .visibility-note { font-size: 12px !important; }
+.situation-head strong { font-size: 12px !important; }
+.situation-head em { font-size: 12px !important; }
+.situation-grid span { font-size: 12px !important; }
+.situation-grid strong { font-size: 12px !important; }
+.situation-grid small { font-size: 12px !important; }
+.situation-grid strong em { font-size: 12px !important; }
+.evidence-link { font-size: 12px !important; }
+.relation-matrix td.estimate { font-size: 12px !important; }
+.perspective-head strong { font-size: 12px !important; }
+.perspective-head span { font-size: 12px !important; }
+.perspective-switch button { font-size: 12px !important; }
+.party-picker label { font-size: 12px !important; }
+.party-picker select { font-size: 12px !important; }
+.perspective-card>small { font-size: 12px !important; }
+.limited-secret-note { font-size: 12px !important; }
+.panel-heading>div>span { font-size: 12px !important; }
+.narrator-status,.narrator-status button { font-size: 12px !important; }
+.side-panel .fold-section summary>span { font-size: 12px !important; }
+.signal-item small,.mini-timeline small { font-size: 12px !important; }
+.left-action,.analysis-entry { font-size: 12px !important; }
+.visibility-note { font-size: 12px !important; }
+.relationship-tag { font-size: 12px !important; }
+.secret-preview strong,.deal-card>strong,.secret-event strong { font-size: 12px !important; }
+.secret-preview small,.deal-card>small,.secret-event small { font-size: 12px !important; }
+.party-monitor>div>span,.party-monitor b { font-size: 12px !important; }
+.camp-preview p span { font-size: 12px !important; }
+.speech-meta span,.speech-meta em { font-size: 12px !important; }
+.risk-banner small,.risk-banner em { font-size: 12px !important; }
+.observe-bottom,.observe-bottom button { font-size: 12px !important; }
+.game-model-readout { font-size: 12px !important; }
+.game-model-readout strong { font-size: 12px !important; }
+.game-model-readout small { font-size: 12px !important; }
+/* 2.9 · 非正式邀请卡与多边未读提醒 */ .ec-decline { font-size: 12px !important; }
+.secret-talk-card .cell-title { font-size: 12px !important; }
+.secret-talk-card .lock-tag { font-size: 12px !important; }
+.secret-talk-card .close-tag { font-size: 12px !important; }
+.secret-talk-card .round-text { font-size: 12px !important; }
+.opening-notice { font-size: 12px !important; }
+.response-pending { font-size: 12px !important; }
+.council-own-speech { font-size: 12px !important; }
+.broadcast-system { font-size: 12px !important; }
+.live-loading { font-size: 12px !important; }
+.live-task { font-size: 12px !important; }
+.live-task small { font-size: 12px !important; }
+.live-refresh-tasks { font-size: 12px !important; }
+.live-tree-count { font-size: 12px !important; }
+.live-secret { font-size: 12px !important; }
+.live-invite-list button { font-size: 12px !important; }
+.restart-button { font-size: 12px !important; }
+.live-summary-card header span { font-size: 12px !important; }
+.live-summary-sub { font-size: 12px !important; }
+.live-summary-table { font-size: 12px !important; }
+.live-summary-table th { font-size: 12px !important; }
+.live-summary-grid strong { font-size: 12px !important; }
+.live-summary-grid span { font-size: 12px !important; }
+.live-summary-intel { font-size: 12px !important; }
+.live-summary-card footer button { font-size: 12px !important; }
+/* ---------------- 定向发言：目标选择 ---------------- */ .target-chip { font-size: 12px !important; }
+.target-chip small { font-size: 12px !important; }
+.target-chip i { font-size: 12px !important; }
+.gc-name { font-size: 12px !important; }
+.gc-type { font-size: 12px !important; }
+.gc-desc { font-size: 12px !important; }
+.gc-effects li { font-size: 12px !important; }
+.gc-effect-more { font-size: 12px !important; }
+.gc-em { font-size: 12px !important; }
+.intel-entry strong { font-size: 12px !important; }
+.intel-entry em { font-size: 12px !important; }
+.intel-entry p { font-size: 12px !important; }
+.intel-actions button { font-size: 12px !important; }
+/* 首屏占位与「直接打开文件」提示 */ .hand-placeholder { font-size: 12px !important; }
+.live-file-tip { font-size: 12px !important; }
+.live-file-tip code { font-size: 12px !important; }
+.live-file-tip button { font-size: 12px !important; }
+/* 静态预览提示条：底部一行，不挡会场 */ .live-file-tip { font-size: 12px !important; }
+.live-file-tip strong { font-size: 12px !important; }
+.card-hand-footer span { font-size: 12px !important; }
+
+/* 字号阶梯：标题 / 卡名 / 描述 / 标签 */
+.panel-heading h2, h2, h3 { font-size: 16px !important; }
+.gc-name { font-size: 15px !important; }
+.gc-type { font-size: 11px !important; }
+.gc-desc { font-size: 12px !important; line-height: 1.55 !important; -webkit-line-clamp: 2 !important; }
+.gc-effects li, .gc-effect-more, .gc-em { font-size: 10.5px !important; }
+.strategy-cards .strategy-card.game-card { width: clamp(150px, 10.6vw, 190px) !important; height: clamp(132px, 21vh, 206px) !important; }
+.strategy-cards { min-height: clamp(132px, 21vh, 206px) !important; }
+.gc-frame { overflow: hidden !important; }
+.gc-desc { flex: 1 1 auto !important; min-height: 0 !important; overflow: hidden !important; }
+.gc-effects { flex: none !important; margin-top: auto !important; }
+
+/* 统一字体（保留 LOGO 字标） */
+html, body, div, span, p, li, ul, ol, dl, dt, dd, strong, b, em, i, small, label,
+button, input, select, textarea, h1, h2, h3, h4, h5, h6, table, thead, tbody, tr, td, th {
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif !important;
+}
+.brand-copy strong { font-family: Georgia, "Times New Roman", serif !important; }
+
+/* 桌面/手牌配平 */
+#app.mode-multi .council-stage {
+  grid-template-rows: 46px clamp(104px, 21vh, 190px) minmax(96px, 1fr) auto !important;
+}
+@media (max-height: 760px) {
+  .strategy-area, .multi-strategy { padding: 4px 18px 4px !important; }
+  .strategy-heading { margin: 0 !important; }
+  .card-hand-footer { margin-top: 0 !important; padding-top: 2px !important; }
+  .strategy-cards { padding: 4px 0 2px !important; }
+}
+
+/* 卡面高度配合统一后的字号 */
+.strategy-cards .strategy-card.game-card { height: clamp(142px, 23vh, 206px) !important; }
+.strategy-cards { min-height: clamp(142px, 23vh, 206px) !important; }
+
+/* 卡面紧凑：描述行距收紧、标签 10px，高度回到 21vh */
+.strategy-cards .strategy-card.game-card { height: clamp(136px, 21vh, 206px) !important; }
+.strategy-cards { min-height: clamp(136px, 21vh, 206px) !important; }
+.gc-desc { line-height: 1.45 !important; }
+.gc-effects li, .gc-effect-more { font-size: 10px !important; }
+
+/* 统一正文观感：同一个颜色、同一行高，三个页面视觉一致 */
+.speech-body p, .council-speech-body p, .narrator-card p,
+.delegation small, .delegation strong, .delegation,
+.council-speech-body, .speech-meta strong, .speech-meta span,
+.side-panel p, .side-panel li, .side-panel span, .side-panel em {
+  color: var(--text) !important;
+}
+.speech-body p, .council-speech-body p, .narrator-card p, .delegation small {
+  line-height: 1.7 !important;
+}
+.delegation em { color: var(--gold-bright) !important; }
+
+/* ===== 仅多边页：整体放大到 13px ===== */
+#app.mode-multi body { font-size: 13px !important; }
+#app.mode-multi .concept-badge { font-size: 13px !important; }
+#app.mode-multi .mode-switch a { font-size: 13px !important; }
+#app.mode-multi .mode-switch a span { font-size: 13px !important; }
+#app.mode-multi .round-status span { font-size: 13px !important; }
+#app.mode-multi .round-status small { font-size: 13px !important; }
+#app.mode-multi .view-button { font-size: 13px !important; }
+#app.mode-multi .view-menu strong { font-size: 13px !important; }
+#app.mode-multi .view-menu span { font-size: 13px !important; }
+#app.mode-multi .end-button { font-size: 13px !important; }
+#app.mode-multi .topic-title>div span { font-size: 13px !important; }
+#app.mode-multi .topic-title strong { font-size: 13px !important; }
+#app.mode-multi .current-agenda { font-size: 13px !important; }
+#app.mode-multi .phase-track span { font-size: 13px !important; }
+#app.mode-multi .phase-track i { font-size: 13px !important; }
+#app.mode-multi .text-button { font-size: 13px !important; }
+#app.mode-multi .panel-heading>div>span,.drawer-header>div>span { font-size: 13px !important; }
+#app.mode-multi .fold-section summary { font-size: 13px !important; }
+#app.mode-multi .fold-section summary>span { font-size: 13px !important; }
+#app.mode-multi .fold-placeholder { font-size: 13px !important; }
+#app.mode-multi .narrator-status { font-size: 13px !important; }
+#app.mode-multi .narrator-status button { font-size: 13px !important; }
+#app.mode-multi .narrator-card p { font-size: 13px !important; }
+#app.mode-multi .signal-item strong { font-size: 13px !important; }
+#app.mode-multi .signal-item small { font-size: 13px !important; }
+#app.mode-multi .signal-item time { font-size: 13px !important; }
+#app.mode-multi .mini-timeline strong { font-size: 13px !important; }
+#app.mode-multi .mini-timeline small { font-size: 13px !important; }
+#app.mode-multi .left-bottom-note { font-size: 13px !important; }
+#app.mode-multi .left-bottom-note small { font-size: 13px !important; }
+#app.mode-multi .left-action { font-size: 13px !important; }
+#app.mode-multi .document-strip>div:nth-child(2) span { font-size: 13px !important; }
+#app.mode-multi .document-strip strong { font-size: 13px !important; }
+#app.mode-multi .document-tags span { font-size: 13px !important; }
+#app.mode-multi .speech-meta strong { font-size: 13px !important; }
+#app.mode-multi .speech-meta span { font-size: 13px !important; }
+#app.mode-multi .speech-meta em { font-size: 13px !important; }
+#app.mode-multi .speech-body>p { font-size: 13px !important; }
+#app.mode-multi .advisor-reading { font-size: 13px !important; }
+#app.mode-multi .risk-banner strong { font-size: 13px !important; }
+#app.mode-multi .risk-banner small { font-size: 13px !important; }
+#app.mode-multi .risk-banner em { font-size: 13px !important; }
+#app.mode-multi .strategy-heading>span { font-size: 13px !important; }
+#app.mode-multi .strategy-heading small { font-size: 13px !important; }
+#app.mode-multi .action-points { font-size: 13px !important; }
+#app.mode-multi .action-points strong { font-size: 13px !important; }
+#app.mode-multi .card-cost { font-size: 13px !important; }
+#app.mode-multi .strategy-card small { font-size: 13px !important; }
+#app.mode-multi .strategy-card strong { font-size: 13px !important; }
+#app.mode-multi .strategy-card p { font-size: 13px !important; }
+#app.mode-multi .strategy-card>em { font-size: 13px !important; }
+#app.mode-multi .composer-tools button { font-size: 13px !important; }
+#app.mode-multi .composer-tools>span { font-size: 13px !important; }
+#app.mode-multi .composer-input textarea { font-size: 13px !important; }
+#app.mode-multi .send-button { font-size: 13px !important; }
+#app.mode-multi .metric span { font-size: 13px !important; }
+#app.mode-multi .metric strong small { font-size: 13px !important; }
+#app.mode-multi .relation-bars>span { font-size: 13px !important; }
+#app.mode-multi .relation-bars b { font-size: 13px !important; }
+#app.mode-multi .relation-preview>small { font-size: 13px !important; }
+#app.mode-multi .quiet-badge { font-size: 13px !important; }
+#app.mode-multi .secret-preview strong { font-size: 13px !important; }
+#app.mode-multi .secret-preview small { font-size: 13px !important; }
+#app.mode-multi .analysis-entry { font-size: 13px !important; }
+#app.mode-multi .council-hud>div:first-child span { font-size: 13px !important; }
+#app.mode-multi .council-hud>div:first-child strong { font-size: 13px !important; }
+#app.mode-multi .camp-summary>span { font-size: 13px !important; }
+#app.mode-multi .table-center span { font-size: 13px !important; }
+#app.mode-multi .table-center strong { font-size: 13px !important; }
+#app.mode-multi .table-center small { font-size: 13px !important; }
+#app.mode-multi .seat>strong { font-size: 13px !important; }
+#app.mode-multi .seat>small { font-size: 13px !important; }
+#app.mode-multi .council-speech-body>p { font-size: 13px !important; }
+#app.mode-multi .position-change { font-size: 13px !important; }
+#app.mode-multi .position-change button { font-size: 13px !important; }
+#app.mode-multi .delegation strong { font-size: 13px !important; }
+#app.mode-multi .delegation small { font-size: 13px !important; }
+#app.mode-multi .stance { font-size: 13px !important; }
+#app.mode-multi .compact-notices strong { font-size: 13px !important; }
+#app.mode-multi .compact-notices small { font-size: 13px !important; }
+#app.mode-multi .camp-numbers span { font-size: 13px !important; }
+#app.mode-multi .camp-preview p { font-size: 13px !important; }
+#app.mode-multi .matrix-mini-head b { font-size: 13px !important; }
+#app.mode-multi .matrix-mini strong { font-size: 13px !important; }
+#app.mode-multi .matrix-mini small { font-size: 13px !important; }
+#app.mode-multi .compact-metrics>span { font-size: 13px !important; }
+#app.mode-multi .compact-metrics small { font-size: 13px !important; }
+#app.mode-multi .deal-card em { font-size: 13px !important; }
+#app.mode-multi .deal-card>strong { font-size: 13px !important; }
+#app.mode-multi .deal-card>small { font-size: 13px !important; }
+#app.mode-multi .observe-controls button { font-size: 13px !important; }
+#app.mode-multi .observe-speech .council-speech-body>p { font-size: 13px !important; }
+#app.mode-multi .inner-os { font-size: 13px !important; }
+#app.mode-multi .inner-os button { font-size: 13px !important; }
+#app.mode-multi .fact-source { font-size: 13px !important; }
+#app.mode-multi .observe-bottom { font-size: 13px !important; }
+#app.mode-multi .observe-bottom button { font-size: 13px !important; }
+#app.mode-multi .omniscient-badge strong { font-size: 13px !important; }
+#app.mode-multi .omniscient-badge small { font-size: 13px !important; }
+#app.mode-multi .secret-event strong { font-size: 13px !important; }
+#app.mode-multi .secret-event p { font-size: 13px !important; }
+#app.mode-multi .secret-event small { font-size: 13px !important; }
+#app.mode-multi .party-monitor>div>span { font-size: 13px !important; }
+#app.mode-multi .party-monitor b { font-size: 13px !important; }
+#app.mode-multi .party-head b,.party-head span { font-size: 13px !important; }
+#app.mode-multi /* 侧栏与视图 */ .reopen-rail { font-size: 13px !important; }
+#app.mode-multi .statusbar { font-size: 13px !important; }
+#app.mode-multi .statusbar strong { font-size: 13px !important; }
+#app.mode-multi .drawer-tabs button { font-size: 13px !important; }
+#app.mode-multi .drawer-section-kicker { font-size: 13px !important; }
+#app.mode-multi .drawer-section-desc { font-size: 13px !important; }
+#app.mode-multi .intel-warning strong { font-size: 13px !important; }
+#app.mode-multi .intel-warning p { font-size: 13px !important; }
+#app.mode-multi .zone-label { font-size: 13px !important; }
+#app.mode-multi .zone-item strong { font-size: 13px !important; }
+#app.mode-multi .zone-item small { font-size: 13px !important; }
+#app.mode-multi .confidence { font-size: 13px !important; }
+#app.mode-multi .content-subtitle { font-size: 13px !important; }
+#app.mode-multi .content-subtitle span { font-size: 13px !important; }
+#app.mode-multi .evidence-row>span { font-size: 13px !important; }
+#app.mode-multi .evidence-row>div strong { font-size: 13px !important; }
+#app.mode-multi .evidence-row>div p { font-size: 13px !important; }
+#app.mode-multi .limit-note { font-size: 13px !important; }
+#app.mode-multi .camp-overview span { font-size: 13px !important; }
+#app.mode-multi .alignment-row strong { font-size: 13px !important; }
+#app.mode-multi .alignment-row small { font-size: 13px !important; }
+#app.mode-multi .matrix-controls button { font-size: 13px !important; }
+#app.mode-multi .relation-matrix th { font-size: 13px !important; }
+#app.mode-multi .relation-matrix td { font-size: 13px !important; }
+#app.mode-multi .matrix-legend { font-size: 13px !important; }
+#app.mode-multi .relation-detail strong { font-size: 13px !important; }
+#app.mode-multi .relation-detail p { font-size: 13px !important; }
+#app.mode-multi .relation-detail small { font-size: 13px !important; }
+#app.mode-multi .drawer-deal-head em { font-size: 13px !important; }
+#app.mode-multi .drawer-deal p { font-size: 13px !important; }
+#app.mode-multi .drawer-deal button { font-size: 13px !important; }
+#app.mode-multi .deal-flow span { font-size: 13px !important; }
+#app.mode-multi .tree-controls>span { font-size: 13px !important; }
+#app.mode-multi .toggle-button { font-size: 13px !important; }
+#app.mode-multi .tree-card strong { font-size: 13px !important; }
+#app.mode-multi .tree-card em { font-size: 13px !important; }
+#app.mode-multi .tree-card p { font-size: 13px !important; }
+#app.mode-multi .tree-card small { font-size: 13px !important; }
+#app.mode-multi .private-room-head span { font-size: 13px !important; }
+#app.mode-multi .private-room-head p { font-size: 13px !important; }
+#app.mode-multi .private-message strong { font-size: 13px !important; }
+#app.mode-multi .private-message p { font-size: 13px !important; }
+#app.mode-multi .privacy-note { font-size: 13px !important; }
+#app.mode-multi .agreement-title>span { font-size: 13px !important; }
+#app.mode-multi .agreement-title>strong { font-size: 13px !important; }
+#app.mode-multi .agreement-title>em { font-size: 13px !important; }
+#app.mode-multi .deal-terms>div>span { font-size: 13px !important; }
+#app.mode-multi .deal-terms strong { font-size: 13px !important; }
+#app.mode-multi .deal-terms small { font-size: 13px !important; }
+#app.mode-multi .deal-rule p { font-size: 13px !important; }
+#app.mode-multi .deal-secrecy { font-size: 13px !important; }
+#app.mode-multi .primary-button,.secondary-button { font-size: 13px !important; }
+#app.mode-multi .toast { font-size: 13px !important; }
+#app.mode-multi .phase-track span i { font-size: 13px !important; }
+#app.mode-multi .panel-heading h2 { font-size: 13px !important; }
+#app.mode-multi .camp-summary>span:after { font-size: 13px !important; }
+#app.mode-multi .channel-inline { font-size: 13px !important; }
+#app.mode-multi .card-hand-footer>span { font-size: 13px !important; }
+#app.mode-multi .end-turn { font-size: 13px !important; }
+#app.mode-multi .multi-strategy .strategy-card p { font-size: 13px !important; }
+#app.mode-multi .channel-ladder>div>span { font-size: 13px !important; }
+#app.mode-multi .channel-ladder strong { font-size: 13px !important; }
+#app.mode-multi .channel-ladder small { font-size: 13px !important; }
+#app.mode-multi .channel-ladder em { font-size: 13px !important; }
+#app.mode-multi .party-policies strong { font-size: 13px !important; }
+#app.mode-multi .party-policies small { font-size: 13px !important; }
+#app.mode-multi .party-policies em { font-size: 13px !important; }
+#app.mode-multi .history-boundary strong { font-size: 13px !important; }
+#app.mode-multi .history-boundary p { font-size: 13px !important; }
+#app.mode-multi .event-demo span { font-size: 13px !important; }
+#app.mode-multi .side-panel .fold-section summary { font-size: 13px !important; }
+#app.mode-multi .event-demo { font-size: 13px !important; }
+#app.mode-multi .card-effects li { font-size: 13px !important; }
+#app.mode-multi /* 2.4 · 参与模式分层透明 */ .visibility-note { font-size: 13px !important; }
+#app.mode-multi .situation-head strong { font-size: 13px !important; }
+#app.mode-multi .situation-head em { font-size: 13px !important; }
+#app.mode-multi .situation-grid span { font-size: 13px !important; }
+#app.mode-multi .situation-grid strong { font-size: 13px !important; }
+#app.mode-multi .situation-grid small { font-size: 13px !important; }
+#app.mode-multi .situation-grid strong em { font-size: 13px !important; }
+#app.mode-multi .evidence-link { font-size: 13px !important; }
+#app.mode-multi .relation-matrix td.estimate { font-size: 13px !important; }
+#app.mode-multi .perspective-head strong { font-size: 13px !important; }
+#app.mode-multi .perspective-head span { font-size: 13px !important; }
+#app.mode-multi .perspective-switch button { font-size: 13px !important; }
+#app.mode-multi .party-picker label { font-size: 13px !important; }
+#app.mode-multi .party-picker select { font-size: 13px !important; }
+#app.mode-multi .perspective-card>small { font-size: 13px !important; }
+#app.mode-multi .limited-secret-note { font-size: 13px !important; }
+#app.mode-multi .panel-heading>div>span { font-size: 13px !important; }
+#app.mode-multi .narrator-status,.narrator-status button { font-size: 13px !important; }
+#app.mode-multi .side-panel .fold-section summary>span { font-size: 13px !important; }
+#app.mode-multi .signal-item small,.mini-timeline small { font-size: 13px !important; }
+#app.mode-multi .left-action,.analysis-entry { font-size: 13px !important; }
+#app.mode-multi .visibility-note { font-size: 13px !important; }
+#app.mode-multi .relationship-tag { font-size: 13px !important; }
+#app.mode-multi .secret-preview strong,.deal-card>strong,.secret-event strong { font-size: 13px !important; }
+#app.mode-multi .secret-preview small,.deal-card>small,.secret-event small { font-size: 13px !important; }
+#app.mode-multi .party-monitor>div>span,.party-monitor b { font-size: 13px !important; }
+#app.mode-multi .camp-preview p span { font-size: 13px !important; }
+#app.mode-multi .speech-meta span,.speech-meta em { font-size: 13px !important; }
+#app.mode-multi .risk-banner small,.risk-banner em { font-size: 13px !important; }
+#app.mode-multi .observe-bottom,.observe-bottom button { font-size: 13px !important; }
+#app.mode-multi .game-model-readout { font-size: 13px !important; }
+#app.mode-multi .game-model-readout strong { font-size: 13px !important; }
+#app.mode-multi .game-model-readout small { font-size: 13px !important; }
+#app.mode-multi /* 2.9 · 非正式邀请卡与多边未读提醒 */ .ec-decline { font-size: 13px !important; }
+#app.mode-multi .secret-talk-card .cell-title { font-size: 13px !important; }
+#app.mode-multi .secret-talk-card .lock-tag { font-size: 13px !important; }
+#app.mode-multi .secret-talk-card .close-tag { font-size: 13px !important; }
+#app.mode-multi .secret-talk-card .round-text { font-size: 13px !important; }
+#app.mode-multi .opening-notice { font-size: 13px !important; }
+#app.mode-multi .response-pending { font-size: 13px !important; }
+#app.mode-multi .council-own-speech { font-size: 13px !important; }
+#app.mode-multi .broadcast-system { font-size: 13px !important; }
+#app.mode-multi .live-loading { font-size: 13px !important; }
+#app.mode-multi .live-task { font-size: 13px !important; }
+#app.mode-multi .live-task small { font-size: 13px !important; }
+#app.mode-multi .live-refresh-tasks { font-size: 13px !important; }
+#app.mode-multi .live-tree-count { font-size: 13px !important; }
+#app.mode-multi .live-secret { font-size: 13px !important; }
+#app.mode-multi .live-invite-list button { font-size: 13px !important; }
+#app.mode-multi .restart-button { font-size: 13px !important; }
+#app.mode-multi .live-summary-card header span { font-size: 13px !important; }
+#app.mode-multi .live-summary-sub { font-size: 13px !important; }
+#app.mode-multi .live-summary-table { font-size: 13px !important; }
+#app.mode-multi .live-summary-table th { font-size: 13px !important; }
+#app.mode-multi .live-summary-grid strong { font-size: 13px !important; }
+#app.mode-multi .live-summary-grid span { font-size: 13px !important; }
+#app.mode-multi .live-summary-intel { font-size: 13px !important; }
+#app.mode-multi .live-summary-card footer button { font-size: 13px !important; }
+#app.mode-multi /* ---------------- 定向发言：目标选择 ---------------- */ .target-chip { font-size: 13px !important; }
+#app.mode-multi .target-chip small { font-size: 13px !important; }
+#app.mode-multi .target-chip i { font-size: 13px !important; }
+#app.mode-multi .gc-name { font-size: 13px !important; }
+#app.mode-multi .gc-type { font-size: 13px !important; }
+#app.mode-multi .gc-desc { font-size: 13px !important; }
+#app.mode-multi .gc-effects li { font-size: 13px !important; }
+#app.mode-multi .gc-effect-more { font-size: 13px !important; }
+#app.mode-multi .gc-em { font-size: 13px !important; }
+#app.mode-multi .intel-entry strong { font-size: 13px !important; }
+#app.mode-multi .intel-entry em { font-size: 13px !important; }
+#app.mode-multi .intel-entry p { font-size: 13px !important; }
+#app.mode-multi .intel-actions button { font-size: 13px !important; }
+#app.mode-multi /* 首屏占位与「直接打开文件」提示 */ .hand-placeholder { font-size: 13px !important; }
+#app.mode-multi .live-file-tip { font-size: 13px !important; }
+#app.mode-multi .live-file-tip code { font-size: 13px !important; }
+#app.mode-multi .live-file-tip button { font-size: 13px !important; }
+#app.mode-multi /* 静态预览提示条：底部一行，不挡会场 */ .live-file-tip { font-size: 13px !important; }
+#app.mode-multi .live-file-tip strong { font-size: 13px !important; }
+#app.mode-multi .card-hand-footer span { font-size: 13px !important; }
+#app.mode-multi .gc-name { font-size: 16px !important; }
+#app.mode-multi .gc-type { font-size: 12px !important; }
+#app.mode-multi .gc-desc { font-size: 13px !important; }
+#app.mode-multi .gc-effects li, #app.mode-multi .gc-effect-more { font-size: 11px !important; }
+#app.mode-multi .panel-heading h2, #app.mode-multi h2 { font-size: 17px !important; }
+
+/* 多边 13px 配套排版 */
+#app.mode-multi .workspace { grid-template-columns: 336px minmax(0, 1fr) !important; }
+#app.mode-multi .delegation small { white-space: normal; }
+#app.mode-multi .speech-meta span, #app.mode-multi .speech-meta em { white-space: nowrap; }
+#app.mode-multi .strategy-cards .strategy-card.game-card {
+  width: clamp(158px, 11vw, 200px) !important;
+  height: clamp(150px, 24vh, 214px) !important;
+}
+#app.mode-multi .strategy-cards { min-height: clamp(150px, 24vh, 214px) !important; }
+#app.mode-multi .gc-desc { -webkit-line-clamp: 2 !important; line-height: 1.5 !important; }
+@media (max-width: 1400px) {
+  #app.mode-multi .workspace { grid-template-columns: 300px minmax(0, 1fr) !important; }
+}
+
+/* 卡面硬约束：描述最多两行高度、标签单行不换行，杜绝重叠 */
+.gc-frame { overflow: hidden !important; }
+.gc-desc {
+  display: block !important;
+  max-height: 3em !important;
+  overflow: hidden !important;
+  -webkit-line-clamp: none !important;
+}
+.gc-effects { flex-wrap: nowrap !important; overflow: hidden !important; }
+#app.mode-multi .gc-desc { max-height: 3.1em !important; }
+
+/* 多边 13px 版的空间配平 */
+#app.mode-multi .council-stage {
+  grid-template-rows: 46px clamp(100px, 20vh, 180px) minmax(80px, 1fr) auto !important;
+}
+#app.mode-multi .strategy-cards .strategy-card.game-card { height: clamp(140px, 22vh, 200px) !important; }
+#app.mode-multi .strategy-cards { min-height: clamp(140px, 22vh, 200px) !important; }
+
+/* nowrap 只作用于多边，双边保持两列换行 */
+.gc-effects { flex-wrap: wrap !important; overflow: visible !important; }
+#app.mode-multi .gc-effects { flex-wrap: nowrap !important; overflow: hidden !important; }
+
+/* 多边卡面：效果标签紧跟描述（不再被推到最底部），可换行显示全部 */
+#app.mode-multi .gc-desc { flex: 0 0 auto !important; }
+#app.mode-multi .gc-effects {
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+  margin-top: 5px !important;
+  gap: 3px !important;
+}
+#app.mode-multi .strategy-cards .strategy-card.game-card { height: clamp(150px, 24vh, 208px) !important; }
+#app.mode-multi .strategy-cards { min-height: clamp(150px, 24vh, 208px) !important; }
+
+/* 多边卡面再高一点，三行效果标签完整显示 */
+#app.mode-multi .strategy-cards .strategy-card.game-card { height: clamp(158px, 26vh, 210px) !important; }
+#app.mode-multi .strategy-cards { min-height: clamp(158px, 26vh, 210px) !important; }
+#app.mode-multi .council-stage {
+  grid-template-rows: 46px clamp(96px, 18vh, 176px) minmax(76px, 1fr) auto !important;
+}
+
+/* 多边卡面加宽 + 标签 10.5px，让效果标签两个一行 */
+#app.mode-multi .strategy-cards .strategy-card.game-card {
+  width: clamp(178px, 12vw, 222px) !important;
+  height: clamp(150px, 24vh, 208px) !important;
+}
+#app.mode-multi .strategy-cards { min-height: clamp(150px, 24vh, 208px) !important; }
+#app.mode-multi .gc-effects { gap: 4px 5px !important; }
+#app.mode-multi .gc-effects li { font-size: 10.5px !important; padding: 2px 5px !important; }
+
+/* 修复：多边/双边左栏收起失效（被 mode-* 的 !important 列宽覆盖） */
+#app.mode-multi.left-collapsed .workspace,
+#app.mode-bilateral.left-collapsed .workspace,
+#app.mode-observe.left-collapsed .workspace,
+#app.mode-multi.left-collapsed .workspace {
+  grid-template-columns: 0 minmax(0, 1fr) !important;
+}
+#app.mode-multi.left-collapsed .left-panel,
+#app.mode-bilateral.left-collapsed .left-panel,
+#app.mode-observe.left-collapsed .left-panel { display: none !important; }
+#app.mode-multi.left-collapsed ~ .reopen-left,
+#app.mode-bilateral.left-collapsed ~ .reopen-left,
+#app.mode-observe.left-collapsed ~ .reopen-left { display: flex !important; }
+
+/* 双边模式：不提供非正式沟通 */
+#app.mode-bilateral .channel-inline,
+#app.mode-bilateral .deal-entry,
+#app.mode-bilateral .secret-event { display: none !important; }

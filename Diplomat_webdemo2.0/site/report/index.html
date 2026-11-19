@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070402">
+<title>外交谈判模拟器 · 复盘报告</title>
+<script>
+  /* 主题引导：首屏绘制前先定主题，避免闪白/闪黑。与全站共用 neg-theme-mode / neg-theme。 */
+  window.THEME_CFG = window.THEME_CFG || { dayStart: 7, dayEnd: 19 };
+  (function(){
+    try{
+      var cfg = window.THEME_CFG, manual = false, saved = null;
+      try{
+        manual = localStorage.getItem('neg-theme-mode') === 'manual';
+        if(manual) saved = localStorage.getItem('neg-theme');
+      }catch(e){}
+      var theme;
+      if(manual){
+        theme = saved === 'light' ? 'light' : 'dark';
+      }else{
+        var now = new Date();
+        var mins = now.getHours() * 60 + now.getMinutes();
+        theme = (mins >= cfg.dayStart * 60 && mins < cfg.dayEnd * 60) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+      var mt = document.querySelector('meta[name="theme-color"]');
+      if(mt) mt.setAttribute('content', theme === 'light' ? '#f9f2e3' : '#070402');
+    }catch(e){}
+  })();
+</script>
+<link href="../assets/fonts.css" rel="stylesheet">
+<style>
+  /* ========== 设计令牌 ========== */
+  :root[data-theme="dark"]{
+    --bg:#070402;
+    --bg-soft:#0c0703;
+    --bg-card:rgba(18,11,5,.72);
+    --bg-card-hover:rgba(26,15,7,.85);
+    --gold:#c9a061;
+    --gold-bright:#efd7a8;
+    --gold-dim:#8b7149;
+    --gold-soft:rgba(201,160,97,.12);
+    --gold-line:rgba(201,160,97,.28);
+    --gold-line-strong:rgba(201,160,97,.55);
+    --text-primary:#f0dcb5;
+    --text-secondary:#b59b74;
+    --text-muted:#8a7352;
+    --text-on-gold:#2a1d0c;
+    --shadow-card:0 8px 32px rgba(0,0,0,.5),0 0 40px rgba(201,151,85,.06);
+    --divider:rgba(201,160,97,.12);
+    --success:#b8d4a3;
+    --warning:#e9c67a;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  :root[data-theme="light"]{
+    --bg:#f9f2e3;
+    --bg-soft:#f4e9d4;
+    --bg-card:rgba(255,255,255,.82);
+    --bg-card-hover:rgba(255,252,246,.95);
+    --gold:#a07c3f;
+    --gold-bright:#c9a061;
+    --gold-dim:#7d6338;
+    --gold-soft:rgba(160,124,63,.08);
+    --gold-line:rgba(160,124,63,.25);
+    --gold-line-strong:rgba(160,124,63,.5);
+    --text-primary:#2a1d0c;
+    --text-secondary:#5c4a2e;
+    --text-muted:#8c7754;
+    --text-on-gold:#fff8ea;
+    --shadow-card:0 4px 20px rgba(120,90,40,.12),0 0 24px rgba(201,151,85,.04);
+    --divider:rgba(160,124,63,.1);
+    --success:#5a8c3e;
+    --warning:#b8842a;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  html{background:var(--bg);transition:background .5s var(--ease);}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:"Noto Serif SC","Songti SC",STSong,"SimSun","Source Han Serif SC",serif;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    transition:background .5s var(--ease),color .5s var(--ease);
+    overflow-x:hidden;
+  }
+  button{font:inherit;cursor:pointer;background:none;border:none;color:inherit;}
+
+  /* 背景 */
+  .page-bg{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(201,160,97,.08),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(201,160,97,.05),transparent 70%);
+  }
+  :root[data-theme="light"] .page-bg{
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(201,160,97,.14),transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%,rgba(160,124,63,.06),transparent 70%);
+  }
+  .grain{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    opacity:.035;mix-blend-mode:soft-light;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:160px 160px;
+  }
+
+  /* 四角 */
+  .corner{
+    position:fixed;z-index:10;
+    width:44px;height:44px;pointer-events:none;opacity:.5;
+  }
+  .corner::before,.corner::after{
+    content:"";position:absolute;
+    background:linear-gradient(90deg,var(--gold-line),transparent);
+  }
+  .corner::before{width:100%;height:1px;}
+  .corner::after{width:1px;height:100%;background:linear-gradient(180deg,var(--gold-line),transparent);}
+  .corner-tl{top:18px;left:18px;}
+  .corner-tr{top:18px;right:18px;transform:scaleX(-1);}
+  .corner-bl{bottom:18px;left:18px;transform:scaleY(-1);}
+  .corner-br{bottom:18px;right:18px;transform:scale(-1);}
+
+  /* 顶栏 */
+  .topbar{
+    position:relative;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;
+    padding:24px 40px;
+  }
+  .brand{display:flex;align-items:center;gap:14px;margin-right:auto;}
+  .brand-mark{
+    width:38px;height:38px;
+    border:1px solid var(--gold-line-strong);
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:var(--gold-soft);
+  }
+  .brand-mark svg{width:20px;height:20px;fill:var(--gold);}
+  .brand-text{display:flex;flex-direction:column;gap:3px;}
+  .brand-name{
+    font-size:15px;font-weight:600;letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .brand-sub{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.32em;text-indent:.32em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+  .theme-toggle{
+    position:relative;
+    width:44px;height:44px;
+    border:1px solid var(--gold-line);
+    border-radius:50%;
+    display:grid;place-items:center;
+    transition:all .4s var(--ease);
+    background:var(--gold-soft);
+  }
+  .theme-toggle:hover{
+    border-color:var(--gold);
+    box-shadow:0 0 20px rgba(201,151,85,.2);
+  }
+  .theme-toggle svg{width:18px;height:18px;transition:all .5s var(--ease);}
+  /* 自动模式角标：亮起表示跟随系统时间，熄灭表示手动 */
+  .theme-toggle::after{
+    content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;
+    background:var(--gold-bright);box-shadow:0 0 8px rgba(201,151,85,.6);
+    opacity:0;transform:scale(.3);transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+  }
+  .theme-toggle.is-auto::after{opacity:1;transform:scale(1);}
+  .theme-toggle .icon-sun{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:rotate(-90deg) scale(.5);position:absolute;}
+  .theme-toggle .icon-moon{fill:var(--gold);opacity:1;}
+  :root[data-theme="light"] .theme-toggle .icon-sun{opacity:1;transform:rotate(0) scale(1);}
+  :root[data-theme="light"] .theme-toggle .icon-moon{opacity:0;transform:rotate(90deg) scale(.5);}
+
+  /* 主内容 */
+  .main{
+    position:relative;z-index:5;
+    max-width:1240px;
+    margin:0 auto;
+    padding:20px 40px 80px;
+  }
+
+  /* ========== 头部评分区（竖向紧凑） ========== */
+  .score-section{
+    text-align:center;
+    padding:18px 0 34px;
+    position:relative;
+    max-width:600px;
+    margin:0 auto;
+  }
+  .eyebrow{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:10px;letter-spacing:.42em;text-indent:.42em;
+    color:var(--text-muted);text-transform:uppercase;
+    margin-bottom:14px;
+  }
+
+  /* 徽章 */
+  .score-badge{
+    position:relative;
+    width:180px;height:180px;
+    margin:0 auto 18px;
+    display:grid;place-items:center;
+  }
+  .score-badge-halo{
+    position:absolute;inset:-30px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(221,172,100,.18) 0%,rgba(202,151,84,.08) 35%,rgba(170,120,62,.02) 55%,transparent 72%);
+    filter:blur(10px);
+    animation:halo-pulse 4s ease-in-out infinite;
+  }
+  .score-badge-ring{
+    position:absolute;inset:0;
+    border-radius:50%;
+    border:2px solid var(--gold-line-strong);
+  }
+  .score-badge-ring::before{
+    content:"";position:absolute;inset:8px;
+    border-radius:50%;
+    border:1px dashed var(--gold-line);
+  }
+  .score-badge-inner{
+    position:relative;
+    text-align:center;
+    z-index:2;
+  }
+  .score-grade-letter{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:56px;font-weight:700;line-height:1;
+    background:linear-gradient(180deg,#fff5df 0%,#f0d8ad 40%,#d4ac73 70%,#b78a51 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.4));
+  }
+  .score-grade-letter.is-wide{font-size:42px;letter-spacing:.02em;}
+  :root[data-theme="light"] .score-grade-letter{
+    background:linear-gradient(180deg,#b8893c 0%,#a07c3f 40%,#7d6338 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:none;
+  }
+  .score-grade-label{
+    font-size:10px;letter-spacing:.24em;text-indent:.24em;
+    color:var(--text-muted);
+    margin-top:8px;
+    font-family:Georgia,"Times New Roman",serif;
+    text-transform:uppercase;
+  }
+
+  .score-number-row{
+    display:flex;align-items:baseline;justify-content:center;
+    gap:6px;margin-bottom:12px;
+  }
+  .score-number{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:clamp(32px,4vw,44px);
+    font-weight:700;
+    line-height:1;
+    background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .score-total{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:18px;color:var(--text-muted);
+  }
+
+  .score-title{
+    font-size:clamp(24px,2.8vw,32px);
+    font-weight:600;
+    letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,var(--gold-bright) 0%,var(--gold) 45%,var(--gold-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin-bottom:6px;
+  }
+  .score-subtitle{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:12px;letter-spacing:.3em;text-indent:.3em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+  .title-rule{
+    display:flex;align-items:center;justify-content:center;
+    gap:10px;margin:20px auto;
+    width:min(320px,60vw);
+  }
+  .title-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .title-rule i:last-child{transform:scaleX(-1);}
+  .title-rule b{width:5px;height:5px;border:1px solid var(--gold);transform:rotate(45deg);}
+
+  /* 等级阶梯 */
+  .grade-ladder{
+    display:flex;justify-content:center;flex-wrap:wrap;
+    gap:8px;margin-top:6px;
+  }
+  .grade-chip{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    min-width:66px;
+    padding:9px 10px;
+    border:1px solid var(--gold-line);
+    background:var(--gold-soft);
+    transition:all .35s var(--ease);
+    opacity:.62;
+  }
+  .grade-chip b{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:15px;font-weight:700;line-height:1;
+    color:var(--text-secondary);
+  }
+  .grade-chip span{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:8.5px;letter-spacing:.06em;
+    color:var(--text-muted);
+  }
+  .grade-chip.active{
+    opacity:1;
+    border-color:var(--gold-line-strong);
+    background:linear-gradient(180deg,rgba(201,160,97,.22),rgba(201,160,97,.08));
+    box-shadow:0 0 18px rgba(201,151,85,.18);
+  }
+  .grade-chip.active b{
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .grade-chip.active span{color:var(--text-secondary);}
+
+  @keyframes halo-pulse{
+    0%,100%{opacity:.7;transform:scale(.98);}
+    50%{opacity:1;transform:scale(1.05);}
+  }
+
+  /* ========== 卡片通用 ========== */
+  .section{
+    margin-bottom:36px;
+  }
+  .section-title{
+    display:flex;align-items:center;gap:12px;
+    margin-bottom:18px;
+  }
+  .section-title-icon{
+    width:30px;height:30px;
+    border:1px solid var(--gold-line-strong);
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:var(--gold-soft);
+    flex-shrink:0;
+  }
+  .section-title-icon svg{width:14px;height:14px;fill:var(--gold);}
+  .section-title-text{
+    font-size:16px;font-weight:600;letter-spacing:.12em;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    white-space:nowrap;
+  }
+  .section-title-line{
+    flex:1;height:1px;
+    background:linear-gradient(90deg,var(--gold-line),transparent);
+  }
+  .section-hint{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--text-muted);white-space:nowrap;
+  }
+
+  .card{
+    position:relative;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    backdrop-filter:blur(8px);
+    box-shadow:var(--shadow-card);
+    padding:24px 28px;
+  }
+  .card::before,.card::after{
+    content:"";position:absolute;width:8px;height:8px;
+    border:1px solid var(--gold-line-strong);
+  }
+  .card::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
+  .card::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
+  .card-narrow{max-width:720px;margin:0 auto;}
+
+  /* ========== 雷达图（横向铺开） ========== */
+  .radar-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+    gap:32px;
+    align-items:center;
+  }
+  .radar-wrap{
+    display:flex;align-items:center;justify-content:center;
+  }
+  .radar-chart{
+    width:100%;
+    max-width:400px;
+    height:auto;
+    display:block;
+    overflow:visible;
+  }
+  .radar-legend{display:flex;flex-direction:column;gap:0;}
+  .radar-legend-title{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--text-muted);
+    margin-bottom:14px;
+  }
+  .radar-legend-item{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 0;
+    border-bottom:1px solid var(--divider);
+  }
+  .radar-legend-item:last-child{border-bottom:none;padding-bottom:0;}
+  .radar-legend-item i{
+    width:6px;height:6px;flex-shrink:0;
+    border:1px solid var(--gold);
+    transform:rotate(45deg);
+  }
+  .radar-legend-item span{
+    flex:1;font-size:13px;letter-spacing:.06em;
+    color:var(--text-secondary);
+  }
+  .radar-legend-item b{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:19px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  /* ========== 谈判任务完成情况（横向铺开） ========== */
+  .task-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:22px 40px;
+  }
+  .task-item{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-rows:auto auto;
+    gap:9px;
+    align-items:center;
+  }
+  .task-name{
+    font-size:13.5px;font-weight:500;color:var(--text-primary);
+    letter-spacing:.02em;
+  }
+  .task-score{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:18px;font-weight:700;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .task-bar{
+    grid-column:1 / -1;
+    height:6px;
+    background:var(--gold-soft);
+    border:1px solid var(--gold-line);
+    position:relative;
+    overflow:hidden;
+  }
+  .task-fill{
+    position:absolute;top:0;bottom:0;left:0;right:auto;
+    background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-bright));
+    box-shadow:0 0 10px rgba(220,175,107,.25);
+    transition:width 1s var(--ease);
+  }
+  .task-fill::after{
+    content:"";position:absolute;top:-2px;bottom:-2px;right:0;
+    width:60px;
+    background:linear-gradient(90deg,transparent,rgba(255,238,202,.3),transparent);
+    transform:translateX(20%) skewX(-18deg);
+    animation:glint 4s ease-in-out infinite;
+  }
+  @keyframes glint{
+    0%,100%{transform:translateX(20%) skewX(-18deg);opacity:.4;}
+    50%{transform:translateX(-30%) skewX(-18deg);opacity:.8;}
+  }
+
+  /* ========== 综合得分构成（竖向紧凑 · 5221） ========== */
+  .weight-list{
+    display:flex;flex-direction:column;gap:16px;
+  }
+  .weight-item{
+    border:1px solid var(--gold-line);
+    background:var(--gold-soft);
+    padding:13px 16px;
+    transition:all .35s var(--ease);
+  }
+  .weight-item.major{
+    border-color:var(--gold-line-strong);
+    background:linear-gradient(100deg,rgba(201,160,97,.20),rgba(201,160,97,.05));
+    box-shadow:0 0 24px rgba(201,151,85,.14);
+    padding:17px 18px;
+  }
+  .weight-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;margin-bottom:10px;
+  }
+  .weight-name{
+    font-size:13.5px;font-weight:500;
+    color:var(--text-primary);
+    letter-spacing:.06em;
+  }
+  .weight-item.major .weight-name{
+    font-size:15px;font-weight:600;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .weight-figures{
+    display:flex;align-items:baseline;gap:10px;
+    font-family:Georgia,"Times New Roman",serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .weight-figures b{
+    font-size:17px;font-weight:700;
+    color:var(--text-primary);
+  }
+  .weight-item.major .weight-figures b{font-size:21px;}
+  .weight-figures i{
+    font-style:normal;font-size:11.5px;
+    color:var(--gold);
+    letter-spacing:.06em;
+  }
+  .weight-figures em{
+    font-style:normal;font-size:10.5px;
+    color:var(--text-muted);
+    letter-spacing:.06em;
+  }
+  .weight-track{
+    height:7px;
+    background:var(--gold-soft);
+    border:1px solid var(--gold-line);
+    position:relative;overflow:hidden;
+  }
+  .weight-item.major .weight-track{height:11px;}
+  .weight-fill{
+    position:absolute;top:0;bottom:0;left:0;right:auto;
+    background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold-bright));
+    box-shadow:0 0 12px rgba(220,175,107,.3);
+    transition:width 1s var(--ease);
+  }
+  .weight-total{
+    margin-top:16px;padding-top:13px;
+    border-top:1px solid var(--divider);
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    font-family:Georgia,"Times New Roman",serif;
+  }
+  .weight-total span{
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .weight-total b{
+    font-size:15px;font-weight:700;
+    color:var(--gold-bright);
+    font-variant-numeric:tabular-nums;
+  }
+  .weight-note{
+    margin-top:8px;
+    font-size:10.5px;line-height:1.7;
+    color:var(--text-muted);
+  }
+
+  /* ========== 关键节点回顾（手风琴） ========== */
+  .timeline{
+    position:relative;
+    padding-left:30px;
+  }
+  .timeline::before{
+    content:"";position:absolute;
+    left:11px;top:14px;bottom:14px;
+    width:1px;
+    background:linear-gradient(180deg,var(--gold-line-strong),var(--gold-line),transparent);
+  }
+  .acc-item{
+    position:relative;
+    padding-bottom:14px;
+  }
+  .acc-item:last-child{padding-bottom:0;}
+  .timeline-dot{
+    position:absolute;
+    left:-24px;top:18px;
+    width:12px;height:12px;
+    border:1px solid var(--gold);
+    background:var(--bg-card);
+    transform:rotate(45deg);
+    z-index:2;
+    transition:all .35s var(--ease);
+  }
+  .acc-item.breakthrough .timeline-dot{
+    background:var(--gold);
+    box-shadow:0 0 10px rgba(201,151,85,.5);
+  }
+  .acc-item.crisis .timeline-dot{
+    border-color:#c47c5a;background:transparent;
+  }
+  .acc-item.turning .timeline-dot{
+    border-color:#9bb8d4;background:transparent;
+  }
+  .acc-item.open .timeline-dot{
+    box-shadow:0 0 14px rgba(201,151,85,.6);
+  }
+
+  .acc-head{
+    display:flex;align-items:center;gap:12px;
+    width:100%;text-align:left;
+    padding:13px 16px;
+    border:1px solid var(--gold-line);
+    background:var(--gold-soft);
+    transition:all .35s var(--ease);
+  }
+  .acc-head:hover{
+    border-color:var(--gold-line-strong);
+    background:var(--bg-card-hover);
+  }
+  .acc-item.open .acc-head{
+    border-color:var(--gold-line-strong);
+    background:var(--bg-card-hover);
+  }
+  .timeline-round{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:11px;font-weight:600;
+    color:var(--gold);
+    letter-spacing:.1em;
+    flex-shrink:0;
+  }
+  .timeline-tag{
+    font-size:9.5px;letter-spacing:.1em;
+    padding:3px 8px;
+    border:1px solid var(--gold-line);
+    color:var(--text-secondary);
+    font-family:Georgia,"Times New Roman",serif;
+    text-transform:uppercase;
+    flex-shrink:0;
+  }
+  .timeline-tag.breakthrough{
+    border-color:rgba(184,212,163,.4);color:var(--success);
+  }
+  .timeline-tag.crisis{
+    border-color:rgba(196,124,90,.4);color:#d4a07a;
+  }
+  .timeline-tag.turning{
+    border-color:rgba(155,184,212,.4);color:#9bb8d4;
+  }
+  .timeline-tag.final{
+    border-color:var(--gold-line-strong);color:var(--gold-bright);
+  }
+  .acc-title{
+    flex:1;
+    font-size:13.5px;font-weight:500;
+    color:var(--text-primary);
+    line-height:1.6;
+  }
+  .acc-arrow{
+    flex-shrink:0;
+    width:22px;height:22px;
+    border:1px solid var(--gold-line);
+    border-radius:50%;
+    display:grid;place-items:center;
+    transition:transform .4s var(--ease),border-color .35s var(--ease);
+  }
+  .acc-arrow svg{width:10px;height:10px;fill:var(--gold);}
+  .acc-item.open .acc-arrow{
+    transform:rotate(180deg);
+    border-color:var(--gold);
+  }
+
+  .acc-body{
+    max-height:0;
+    overflow:hidden;
+    opacity:0;
+    transition:max-height .55s var(--ease),opacity .4s var(--ease);
+  }
+  .acc-item.open .acc-body{
+    max-height:520px;
+    opacity:1;
+  }
+  .acc-body-inner{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:18px;
+    margin-top:12px;
+    padding:18px 20px;
+    border:1px solid var(--gold-line);
+    border-left:2px solid var(--gold);
+    background:var(--bg-card);
+  }
+  .acc-detail-label{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:7px;
+  }
+  .acc-detail-text{
+    font-size:12.5px;line-height:1.8;
+    color:var(--text-secondary);
+  }
+
+  /* ========== 策略建议 ========== */
+  .suggestion-list{
+    display:flex;flex-direction:column;gap:16px;
+  }
+  .suggestion-item{
+    display:flex;gap:14px;
+    padding:16px 18px;
+    border:1px solid var(--gold-line);
+    background:var(--bg-card);
+    transition:all .3s var(--ease);
+  }
+  .suggestion-item:hover{
+    border-color:var(--gold-line-strong);
+    transform:translateX(4px);
+  }
+  .suggestion-num{
+    flex-shrink:0;
+    width:32px;height:32px;
+    border-radius:50%;
+    border:1px solid var(--gold-line-strong);
+    display:grid;place-items:center;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:14px;font-weight:700;
+    background:var(--gold-soft);
+    color:var(--gold-bright);
+  }
+  .suggestion-content{
+    flex:1;
+    font-size:13px;line-height:1.75;
+    color:var(--text-secondary);
+  }
+  .suggestion-content b{
+    color:var(--gold-bright);font-weight:600;
+  }
+
+  /* ========== 底部操作 ========== */
+  .action-bar{
+    display:flex;gap:16px;justify-content:center;
+    flex-wrap:wrap;
+    margin-top:40px;
+    padding-top:36px;
+    border-top:1px solid var(--divider);
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:13px 26px;
+    border:1px solid var(--gold-line-strong);
+    font-size:12.5px;letter-spacing:.14em;
+    transition:all .4s var(--ease);
+    position:relative;
+    overflow:hidden;
+  }
+  .btn svg{width:15px;height:15px;fill:currentColor;}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--gold-bright) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    color:var(--text-on-gold);
+    font-weight:600;
+    box-shadow:0 4px 16px rgba(201,151,85,.2);
+  }
+  .btn-primary:hover{
+    transform:translateY(-2px);
+    box-shadow:0 6px 24px rgba(201,151,85,.35);
+  }
+  .btn-outline{
+    background:transparent;
+    color:var(--text-secondary);
+  }
+  .btn-outline:hover{
+    border-color:var(--gold);
+    color:var(--text-primary);
+    background:var(--gold-soft);
+  }
+
+  /* 底部 */
+  .page-foot{
+    margin-top:50px;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .foot-rule{
+    display:flex;align-items:center;gap:8px;
+    width:min(260px,50vw);
+  }
+  .foot-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold-line));}
+  .foot-rule i:last-child{transform:scaleX(-1);}
+  .foot-rule b{width:3px;height:3px;border:1px solid var(--gold-line-strong);transform:rotate(45deg);}
+  .foot-text{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:9px;letter-spacing:.3em;text-indent:.3em;
+    color:var(--text-muted);text-transform:uppercase;
+  }
+
+  /* ========== 响应式 ========== */
+  @media (max-width:860px){
+    .radar-layout{grid-template-columns:1fr;gap:22px;}
+    .radar-chart{max-width:340px;}
+    .acc-body-inner{grid-template-columns:1fr;gap:14px;}
+  }
+  @media (max-width:768px){
+    .topbar{padding:18px 20px;}
+    .main{padding:20px 20px 60px;}
+    .corner{width:32px;height:32px;}
+    .corner-tl,.corner-tr{top:12px;}
+    .corner-tl,.corner-bl{left:12px;}
+    .corner-tr,.corner-br{right:12px;}
+    .corner-bl,.corner-br{bottom:12px;}
+    .score-badge{width:160px;height:160px;}
+    .score-grade-letter{font-size:44px;}
+    .score-grade-letter.is-wide{font-size:34px;}
+    .card{padding:18px 20px;}
+    .task-grid{grid-template-columns:1fr;gap:20px;}
+    .acc-head{flex-wrap:wrap;gap:8px;}
+    .acc-title{flex:1 1 100%;order:3;}
+    .acc-arrow{order:2;margin-left:auto;}
+    .timeline-dot{top:16px;}
+    .action-bar{flex-direction:column;}
+    .btn{justify-content:center;width:100%;}
+  }
+  @media (max-width:480px){
+    .score-badge{width:140px;height:140px;}
+    .score-grade-letter{font-size:36px;}
+    .score-grade-letter.is-wide{font-size:28px;}
+    .grade-chip{min-width:56px;padding:8px 6px;}
+    .grade-chip b{font-size:13px;}
+    .grade-chip span{font-size:8px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+  }
+  /* ========== 返回按钮 ========== */
+  .back-btn{
+    display:inline-flex;align-items:center;gap:7px;
+    height:44px;padding:0 18px;
+    border:1px solid var(--gold-line);
+    border-radius:22px;
+    background:var(--gold-soft);
+    color:var(--gold);
+    font-family:inherit;
+    font-size:12px;letter-spacing:.16em;text-indent:.16em;
+    cursor:pointer;
+    transition:all .4s var(--ease);
+    white-space:nowrap;flex-shrink:0;
+  }
+  .back-btn:hover{
+    border-color:var(--gold);
+    box-shadow:0 0 20px rgba(201,151,85,.2);
+    transform:translateY(-1px);
+  }
+  .back-btn:active{transform:translateY(0);}
+  .back-btn svg{
+    width:15px;height:15px;
+    fill:none;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;
+    transition:transform .35s var(--ease);
+  }
+  .back-btn:hover svg{transform:translateX(-3px);}
+  @media (max-width:600px){
+    .back-btn{padding:0 13px;letter-spacing:.06em;text-indent:.06em;}
+    .back-btn span{display:none;}
+  }
+
+  /* ========== 三模块并排（雷达图 / 谈判任务 / 得分构成） ========== */
+  .triple-row{
+    display:flex;
+    gap:22px;
+    align-items:stretch;
+    margin-bottom:36px;
+  }
+  .triple-row > .section{
+    flex:1 1 0;
+    margin-bottom:0;min-width:0;
+    display:flex;flex-direction:column;
+  }
+  .triple-row > .section > .card{
+    flex:1;
+    padding:16px 18px 18px;
+    display:flex;flex-direction:column;
+  }
+  /* 雷达图列：图例已删，数值上角，图下补一条五维概览 */
+  .triple-row .radar-layout{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    flex:1;
+    min-width:0;
+  }
+  .triple-row .radar-wrap{width:100%;display:flex;align-items:center;justify-content:center;}
+  .triple-row .radar-chart{max-width:350px;margin:0 auto;}
+  .triple-row .radar-stats{
+    width:100%;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:6px 12px;flex-wrap:wrap;
+    padding-top:12px;
+    border-top:1px solid var(--divider);
+  }
+  .triple-row .radar-stats span{
+    display:inline-flex;align-items:baseline;gap:5px;
+    font-size:10.5px;letter-spacing:.04em;color:var(--text-muted);
+  }
+  .triple-row .radar-stats span b{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:12px;font-weight:700;
+    color:var(--gold);font-variant-numeric:tabular-nums;
+  }
+  .triple-row .card-narrow{max-width:none;margin:0;}
+  .triple-row .weight-list{flex:1;gap:12px;}
+  /* 紧凑化：三列卡片整体变矮 */
+  .triple-row .weight-item{padding:11px 14px;}
+  .triple-row .weight-item.major{padding:13px 15px;}
+  .triple-row .weight-total{margin-top:13px;padding-top:11px;}
+  .triple-row .weight-note{margin-top:7px;font-size:10px;line-height:1.6;}
+  /* 谈判任务：横向进度条 · 四项四色 */
+  .triple-row .task-grid{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:0;
+    flex:1;
+  }
+  .triple-row .task-item{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px 12px;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px dashed var(--gold-line);
+  }
+  .triple-row .task-item:last-child{border-bottom:0;}
+  .triple-row .task-name{
+    grid-column:1;
+    display:flex;align-items:center;gap:8px;
+    white-space:normal;
+    writing-mode:horizontal-tb;
+    text-orientation:mixed;
+    font-size:12.5px;line-height:1.35;
+    letter-spacing:.02em;
+    text-align:left;
+  }
+  .triple-row .task-name::before{
+    content:"";flex:none;
+    width:8px;height:8px;border-radius:2px;
+    background:var(--gold);
+    box-shadow:0 0 8px rgba(226,180,105,.55);
+  }
+  .triple-row .task-item.t1 .task-name::before{background:#e8bd76;box-shadow:0 0 8px rgba(232,189,118,.7);}
+  .triple-row .task-item.t2 .task-name::before{background:#6fd0dd;box-shadow:0 0 8px rgba(111,208,221,.7);}
+  .triple-row .task-item.t3 .task-name::before{background:#b7a6ee;box-shadow:0 0 8px rgba(183,166,238,.7);}
+  .triple-row .task-item.t4 .task-name::before{background:#8ed49c;box-shadow:0 0 8px rgba(142,212,156,.7);}
+  .triple-row .task-score{
+    grid-column:2;
+    text-align:right;
+    font-size:17px;
+    white-space:nowrap;
+  }
+  .triple-row .task-bar{
+    grid-column:1 / -1;
+    width:100%;height:9px;min-height:0;
+    flex:none;
+    border-radius:5px;
+    overflow:hidden;
+  }
+  .triple-row .task-fill{
+    top:0;bottom:0;left:0;right:auto;
+    height:auto;
+    border-radius:4px;
+    transition:width 1s var(--ease);
+  }
+  /* 四色：琥珀金 / 湖青 / 紫罗兰 / 苔绿 */
+  .triple-row .task-item.t1{color:#e8bd76;}
+  .triple-row .task-item.t2{color:#6fd0dd;}
+  .triple-row .task-item.t3{color:#b7a6ee;}
+  .triple-row .task-item.t4{color:#8ed49c;}
+  .triple-row .task-item.t1 .task-score{
+    background:linear-gradient(180deg,#f7e2b4,#d9a44e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .triple-row .task-item.t2 .task-score{
+    background:linear-gradient(180deg,#a5e8f2,#3f9fb0);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .triple-row .task-item.t3 .task-score{
+    background:linear-gradient(180deg,#d5cbf7,#8b7ccb);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .triple-row .task-item.t4 .task-score{
+    background:linear-gradient(180deg,#b8ecc3,#5aa06b);
+    -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .triple-row .task-item.t1 .task-bar{border-color:rgba(226,180,105,.45);}
+  .triple-row .task-item.t2 .task-bar{border-color:rgba(90,190,210,.45);}
+  .triple-row .task-item.t3 .task-bar{border-color:rgba(150,130,220,.45);}
+  .triple-row .task-item.t4 .task-bar{border-color:rgba(105,180,125,.45);}
+  .triple-row .task-item.t1 .task-fill{
+    background:linear-gradient(90deg,#c9954a,#f2d79c);
+    box-shadow:0 0 12px rgba(226,180,105,.35);}
+  .triple-row .task-item.t2 .task-fill{
+    background:linear-gradient(90deg,#3f9fb0,#8adbe8);
+    box-shadow:0 0 12px rgba(90,190,210,.32);}
+  .triple-row .task-item.t3 .task-fill{
+    background:linear-gradient(90deg,#8b7ccb,#c8bdf2);
+    box-shadow:0 0 12px rgba(150,130,220,.32);}
+  .triple-row .task-item.t4 .task-fill{
+    background:linear-gradient(90deg,#5aa06b,#a5e0b2);
+    box-shadow:0 0 12px rgba(105,180,125,.30);}
+  @media (max-width:1080px){
+    .triple-row{flex-direction:column;gap:0;margin-bottom:36px;}
+    .triple-row > .section{margin-bottom:36px;}
+    .triple-row .radar-chart{max-width:400px;}
+    .triple-row .card-narrow{max-width:720px;margin:0 auto;}
+  }
+
+  /* ========== 本局信息 / 提示 ========== */
+  .report-meta{
+    margin-top:14px;
+    font-size:11.5px;letter-spacing:.08em;color:var(--text-secondary);
+    text-align:center;line-height:1.8;
+  }
+  .report-meta b{color:var(--gold);font-weight:600;}
+  .report-meta .dot{display:inline-block;width:4px;height:4px;margin:0 8px;
+    background:var(--gold-dim);transform:rotate(45deg);vertical-align:2px;}
+  .report-toast{
+    position:fixed;left:50%;bottom:32px;transform:translate(-50%,14px);
+    z-index:300;padding:11px 22px;
+    border:1px solid var(--gold-line-strong);background:var(--bg-card-hover);
+    color:var(--text-primary);font-size:12px;letter-spacing:.06em;
+    opacity:0;pointer-events:none;transition:opacity .3s var(--ease),transform .3s var(--ease);
+    box-shadow:var(--shadow-card);max-width:88vw;text-align:center;
+  }
+  .report-toast.show{opacity:1;transform:translate(-50%,0);}
+  .flash-target{animation:flash-target 1.6s var(--ease);}
+  @keyframes flash-target{
+    0%,100%{box-shadow:none;}
+    30%,70%{box-shadow:0 0 0 2px var(--gold-line-strong),0 0 34px rgba(201,151,85,.28);}
+  }
+
+  /* ========== 谈判过程树（观战 / 多边复盘） ========== */
+  .talk-tree{
+    padding:12px 14px 14px;font-size:12px;
+    max-height:520px;min-height:180px;
+    overflow-y:auto;overflow-x:hidden;
+    border:1px solid var(--divider);
+    background:var(--bg-soft);
+    scrollbar-width:thin;
+    scrollbar-color:var(--gold-line) transparent;
+  }
+  .talk-tree::-webkit-scrollbar{width:8px;}
+  .talk-tree::-webkit-scrollbar-track{background:transparent;}
+  .talk-tree::-webkit-scrollbar-thumb{background:var(--gold-line);border-radius:4px;}
+  .talk-tree::-webkit-scrollbar-thumb:hover{background:var(--gold-line-strong);}
+  .talk-tree::after{content:"";display:block;height:2px;}
+  .tt-root{position:relative;padding:10px 14px 11px;border:1px solid var(--gold-line-strong);
+    background:linear-gradient(180deg,var(--gold-soft),transparent);}
+  .tt-root b{display:block;font-family:Georgia,serif;font-size:9.5px;letter-spacing:.18em;color:var(--gold);
+    font-weight:400;margin-bottom:4px;}
+  .tt-root span{font-size:13px;line-height:1.55;color:var(--text-primary);}
+  .tt-children{margin-left:10px;padding-left:14px;border-left:1px solid var(--divider);}
+  .tt-root + .tt-children{margin-top:9px;}
+  .tt-node{position:relative;margin:7px 0;}
+  .tt-node::before{content:"";position:absolute;left:-15px;top:17px;width:13px;height:1px;background:var(--divider);}
+  .tt-node:last-child::after{content:"";position:absolute;left:-15px;top:18px;bottom:0;width:2px;background:var(--bg);}
+  .tt-row{display:flex;align-items:center;gap:8px;padding:7px 10px;
+    border:1px solid var(--divider);border-left:2px solid var(--pc,var(--gold));background:var(--bg-card);}
+  .tt-who{font-size:12px;color:var(--pc,var(--gold));}
+  .tt-move{font-size:8.5px;letter-spacing:.1em;color:var(--text-muted);border:1px solid var(--divider);padding:0 4px;}
+  .tt-cs{font-size:9px;letter-spacing:.08em;color:var(--gold-dim);}
+  .tt-hm{margin-left:auto;font-family:Georgia,serif;font-size:9px;color:var(--text-muted);}
+  .tt-tag{flex:none;font-size:8.5px;letter-spacing:.06em;color:var(--gold);
+    border:1px dashed var(--gold-line);padding:1px 5px;white-space:nowrap;}
+  .tt-claim{font-size:12px;line-height:1.65;color:var(--text-secondary);padding:5px 10px 0 3px;}
+  .tt-src{margin-top:4px;font-size:10px;line-height:1.5;color:var(--text-muted);}
+  .tt-stage{margin-top:2px;font-size:9px;letter-spacing:.05em;color:var(--text-muted);opacity:.85;}
+  @media (max-width:760px){
+    .tt-children{margin-left:6px;padding-left:10px;}
+  }
+
+</style>
+</head>
+<body>
+
+<div class="page-bg"></div>
+<div class="grain"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回上一页">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <span>返回</span>
+  </button>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">外交谈判模拟器</div>
+      <div class="brand-sub">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+    </div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme(event)" aria-label="切换主题"
+          title="单击切换亮暗，长按恢复跟随系统时间">
+    <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4V4.8M12 21.6V19.2M2.4 12H4.8M21.6 12H19.2M5.2 5.2L6.9 6.9M18.8 18.8L17.1 17.1M5.2 18.8L6.9 17.1M18.8 5.2L17.1 6.9"/></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</div>
+
+<main class="main">
+
+  <!-- 评分头部：徽章 / 等级 / 称号（竖向紧凑） -->
+  <section class="score-section">
+    <div class="eyebrow">NEGOTIATION REPORT</div>
+
+    <div class="score-badge">
+      <div class="score-badge-halo"></div>
+      <div class="score-badge-ring"></div>
+      <div class="score-badge-inner">
+        <div class="score-grade-letter" id="gradeLetter">S</div>
+        <div class="score-grade-label" id="gradeLabel">MASTER DIPLOMAT</div>
+      </div>
+    </div>
+
+    <div class="score-number-row">
+      <span class="score-number" id="scoreNumber">92</span>
+      <span class="score-total">/ 100</span>
+    </div>
+
+    <h1 class="score-title" id="gradeTitle">外交大师</h1>
+    <div class="score-subtitle" id="gradeSubtitle">Master Diplomat</div>
+
+    <!-- 本局信息（由 neg-report 填充） -->
+    <div class="report-meta" id="reportMeta" hidden></div>
+
+    <div class="title-rule"><i></i><b></b><i></i></div>
+
+    <!-- 等级区间阶梯 -->
+    <div class="grade-ladder" id="gradeLadder">
+      <div class="grade-chip" data-grade="S+"><b>S+</b><span>95-100</span></div>
+      <div class="grade-chip" data-grade="S"><b>S</b><span>88-94</span></div>
+      <div class="grade-chip" data-grade="A"><b>A</b><span>80-87</span></div>
+      <div class="grade-chip" data-grade="B"><b>B</b><span>70-79</span></div>
+      <div class="grade-chip" data-grade="C"><b>C</b><span>60-69</span></div>
+      <div class="grade-chip" data-grade="D"><b>D</b><span>0-59</span></div>
+    </div>
+  </section>
+
+  <!-- 三模块并排 -->
+  <div class="triple-row">
+
+  <!-- 能力雷达图（横向铺开） -->
+  <section class="section">
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <span class="section-title-text">能力雷达图</span>
+      <span class="section-title-line"></span>
+    </div>
+    <div class="card">
+      <div class="radar-layout">
+        <div class="radar-wrap">
+          <svg class="radar-chart" viewBox="-20 -32 380 340" role="img" aria-label="五维能力雷达图">
+            <!-- 网格：4 层同心正五边形 -->
+            <g class="radar-grid" stroke="var(--gold-line)" fill="none" stroke-width="1">
+              <polygon points="170,48 265.11,117.10 228.78,228.90 111.22,228.90 74.89,117.10" opacity=".38"/>
+              <polygon points="170,73 241.33,124.82 214.08,208.68 125.92,208.68 98.67,124.82" opacity=".48"/>
+              <polygon points="170,98 217.55,132.55 199.39,188.45 140.61,188.45 122.45,132.55" opacity=".6"/>
+              <polygon points="170,123 193.78,140.27 184.69,168.23 155.31,168.23 146.22,140.27" opacity=".78"/>
+            </g>
+            <!-- 轴线：中心 -> 各顶点 -->
+            <g stroke="var(--gold-line)" stroke-width="1">
+              <line x1="170" y1="148" x2="170" y2="48"/>
+              <line x1="170" y1="148" x2="265.11" y2="117.10"/>
+              <line x1="170" y1="148" x2="228.78" y2="228.90"/>
+              <line x1="170" y1="148" x2="111.22" y2="228.90"/>
+              <line x1="170" y1="148" x2="74.89" y2="117.10"/>
+            </g>
+            <!-- 数据多边形（5 点依次连线并闭合） -->
+            <polygon
+              points="170,54 253.69,120.81 219.96,216.77 117.10,220.81 82.50,119.57"
+              fill="rgba(201,160,97,.28)"
+              stroke="var(--gold)"
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+            />
+            <!-- 数据点 -->
+            <g fill="var(--gold-bright)" stroke="var(--gold)" stroke-width="1.5">
+              <circle cx="170" cy="54" r="4"/>
+              <circle cx="253.69" cy="120.81" r="4"/>
+              <circle cx="219.96" cy="216.77" r="4"/>
+              <circle cx="117.10" cy="220.81" r="4"/>
+              <circle cx="82.50" cy="119.57" r="4"/>
+            </g>
+            <!-- 维度标签 + 数值（数值直接标注在五边形各顶点上） -->
+            <g fill="var(--text-secondary)" font-size="12.5" font-family="Noto Serif SC, serif">
+              <text x="170" y="30" text-anchor="middle">利益博弈 <tspan font-family="Georgia,&quot;Times New Roman&quot;,serif" font-size="15" font-weight="700" fill="var(--gold-bright)">94</tspan></text>
+              <text x="282" y="110" text-anchor="start">话术表达 <tspan font-family="Georgia,&quot;Times New Roman&quot;,serif" font-size="15" font-weight="700" fill="var(--gold-bright)">88</tspan></text>
+              <text x="246" y="252" text-anchor="start">立场一致 <tspan font-family="Georgia,&quot;Times New Roman&quot;,serif" font-size="15" font-weight="700" fill="var(--gold-bright)">85</tspan></text>
+              <text x="94" y="252" text-anchor="end">策略洞察 <tspan font-family="Georgia,&quot;Times New Roman&quot;,serif" font-size="15" font-weight="700" fill="var(--gold-bright)">90</tspan></text>
+              <text x="58" y="110" text-anchor="end">盟友经营 <tspan font-family="Georgia,&quot;Times New Roman&quot;,serif" font-size="15" font-weight="700" fill="var(--gold-bright)">92</tspan></text>
+            </g>
+          </svg>
+        </div>
+        <div class="radar-stats">
+          <span>均值 <b>89.8</b></span>
+          <span>最强 <b>利益博弈 94</b></span>
+          <span>最弱 <b>立场一致 85</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 谈判任务完成情况（横向铺开） -->
+  <section class="section">
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+      </div>
+      <span class="section-title-text">谈判任务完成情况</span>
+      <span class="section-title-line"></span>
+    </div>
+    <div class="card">
+      <div class="task-grid task-progress-list">
+        <div class="task-item t1">
+          <div class="task-name">明确数据主权底线</div>
+          <div class="task-score">90%</div>
+          <div class="task-bar"><div class="task-fill" data-w="90%" style="width:90%"></div></div>
+        </div>
+        <div class="task-item t2">
+          <div class="task-name">争取发展中国家支持</div>
+          <div class="task-score">75%</div>
+          <div class="task-bar"><div class="task-fill" data-w="75%" style="width:75%"></div></div>
+        </div>
+        <div class="task-item t3">
+          <div class="task-name">达成监管框架共识</div>
+          <div class="task-score">88%</div>
+          <div class="task-bar"><div class="task-fill" data-w="88%" style="width:88%"></div></div>
+        </div>
+        <div class="task-item t4">
+          <div class="task-name">落实技术援助条款</div>
+          <div class="task-score">70%</div>
+          <div class="task-bar"><div class="task-fill" data-w="70%" style="width:70%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 综合得分构成（竖向紧凑 · 5221 权重） -->
+  <section class="section">
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+      </div>
+      <span class="section-title-text">综合得分构成</span>
+      <span class="section-title-line"></span>
+    </div>
+    <div class="card card-narrow">
+      <div class="weight-list" id="weightList">
+        <div class="weight-item major" data-value="94" data-weight="50">
+          <div class="weight-head">
+            <span class="weight-name">主体利益值</span>
+            <span class="weight-figures"><b>94</b><i>× 50%</i><em data-contrib>贡献 47.0</em></span>
+          </div>
+          <div class="weight-track"><span class="weight-fill" style="width:50%"></span></div>
+        </div>
+        <div class="weight-item" data-value="90" data-weight="20">
+          <div class="weight-head">
+            <span class="weight-name">国际形象</span>
+            <span class="weight-figures"><b>90</b><i>× 20%</i><em data-contrib>贡献 18.0</em></span>
+          </div>
+          <div class="weight-track"><span class="weight-fill" style="width:20%"></span></div>
+        </div>
+        <div class="weight-item" data-value="88" data-weight="20">
+          <div class="weight-head">
+            <span class="weight-name">盟友信任</span>
+            <span class="weight-figures"><b>88</b><i>× 20%</i><em data-contrib>贡献 17.6</em></span>
+          </div>
+          <div class="weight-track"><span class="weight-fill" style="width:20%"></span></div>
+        </div>
+        <div class="weight-item" data-value="95" data-weight="10">
+          <div class="weight-head">
+            <span class="weight-name">隐藏任务</span>
+            <span class="weight-figures"><b>95</b><i>× 10%</i><em data-contrib>贡献 9.5</em></span>
+          </div>
+          <div class="weight-track"><span class="weight-fill" style="width:10%"></span></div>
+        </div>
+      </div>
+      <div class="weight-total">
+        <span>加权合计 / WEIGHTED TOTAL</span>
+        <b id="weightedTotal">92.1</b>
+      </div>
+      <div class="weight-note">权重结构：50% / 20% / 20% / 10%（5221）。加权合计四舍五入后计入总分。</div>
+    </div>
+  </section>
+
+  </div>
+
+  <!-- 谈判过程树（观战 / 多边复盘时由 neg-report.tree 渲染） -->
+  <section class="section" id="talkTreeSection" hidden>
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 3h8v4H3zm0 7h8v4H3zm0 7h8v4H3zM15 3h6v18h-6z"/></svg>
+      </div>
+      <span class="section-title-text">谈判过程树</span>
+      <span class="section-title-line"></span>
+      <span class="section-hint">每条发言都在树上 · 框内上下滚动查看</span>
+    </div>
+    <div class="card">
+      <div class="talk-tree" id="talkTree"></div>
+    </div>
+  </section>
+
+  <!-- 关键节点回顾（可展开手风琴） -->
+  <section class="section">
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </div>
+      <span class="section-title-text">关键节点回顾</span>
+      <span class="section-title-line"></span>
+      <span class="section-hint">点击展开</span>
+    </div>
+    <div class="card">
+      <div class="timeline">
+
+        <div class="acc-item breakthrough">
+          <div class="timeline-dot"></div>
+          <button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">
+            <span class="timeline-round">第 2 轮</span>
+            <span class="timeline-tag breakthrough">关键突破</span>
+            <span class="acc-title">提出“全球AI治理基金”中国方案</span>
+            <span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+          </button>
+          <div class="acc-body">
+            <div class="acc-body-inner">
+              <div class="acc-detail">
+                <div class="acc-detail-label">关键事件</div>
+                <div class="acc-detail-text">提出“全球AI治理基金”中国方案，首次将治理议题与资金机制绑定。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">你的决策</div>
+                <div class="acc-detail-text">主动抛出建设性方案，抢占议程定义权，争取话语权。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">结果影响</div>
+                <div class="acc-detail-text">获得印度、巴西等国积极响应，盟友信任度 +8。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item crisis">
+          <div class="timeline-dot"></div>
+          <button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">
+            <span class="timeline-round">第 3 轮</span>
+            <span class="timeline-tag crisis">危机应对</span>
+            <span class="acc-title">棱镜门2.0事件爆发，紧急调整策略</span>
+            <span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+          </button>
+          <div class="acc-body">
+            <div class="acc-body-inner">
+              <div class="acc-detail">
+                <div class="acc-detail-label">关键事件</div>
+                <div class="acc-detail-text">“棱镜门2.0”事件爆发，西方媒体指控跨境数据监控，会场气氛骤紧。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">你的决策</div>
+                <div class="acc-detail-text">暂停强硬表态，转为强调多边共治框架，把话题拉回制度设计。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">结果影响</div>
+                <div class="acc-detail-text">舆论压力缓解，国际形象分稳住，但议程推进延后一轮。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item turning">
+          <div class="timeline-dot"></div>
+          <button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">
+            <span class="timeline-round">第 5 轮</span>
+            <span class="timeline-tag turning">重要转折</span>
+            <span class="acc-title">与欧盟达成数据主权议题妥协</span>
+            <span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+          </button>
+          <div class="acc-body">
+            <div class="acc-body-inner">
+              <div class="acc-detail">
+                <div class="acc-detail-label">关键事件</div>
+                <div class="acc-detail-text">欧盟提出数据本地化硬性条款，与中方底线正面冲突。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">你的决策</div>
+                <div class="acc-detail-text">以技术援助与技术标准互认，换取数据分级流动空间。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">结果影响</div>
+                <div class="acc-detail-text">达成妥协方案，欧盟由对手转为支持方，立场一致度提升。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item">
+          <div class="timeline-dot"></div>
+          <button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">
+            <span class="timeline-round">第 6 轮</span>
+            <span class="timeline-tag">策略配合</span>
+            <span class="acc-title">印度+巴西联合声明，南南合作形成合力</span>
+            <span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+          </button>
+          <div class="acc-body">
+            <div class="acc-body-inner">
+              <div class="acc-detail">
+                <div class="acc-detail-label">关键事件</div>
+                <div class="acc-detail-text">印度、巴西寻求发展中国家话语权，希望中方给出实质性让利。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">你的决策</div>
+                <div class="acc-detail-text">主动让渡部分算力配额，并联合起草共同声明。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">结果影响</div>
+                <div class="acc-detail-text">南南合作形成合力，谈判票数结构逆转，盟友信任度 +6。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item final">
+          <div class="timeline-dot"></div>
+          <button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">
+            <span class="timeline-round">第 8 轮</span>
+            <span class="timeline-tag final">圆满收官</span>
+            <span class="acc-title">最终协议达成，五方签署联合宣言</span>
+            <span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+          </button>
+          <div class="acc-body">
+            <div class="acc-body-inner">
+              <div class="acc-detail">
+                <div class="acc-detail-label">关键事件</div>
+                <div class="acc-detail-text">五方就监管框架最终文本僵持，落地路径存在分歧。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">你的决策</div>
+                <div class="acc-detail-text">提出分阶段落地时间表作为折中方案，保留核心底线条款。</div>
+              </div>
+              <div class="acc-detail">
+                <div class="acc-detail-label">结果影响</div>
+                <div class="acc-detail-text">五方签署联合宣言，监管框架共识达成度 88%，总分 92。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 策略改进建议 -->
+  <section class="section">
+    <div class="section-title">
+      <div class="section-title-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+      </div>
+      <span class="section-title-text">策略改进建议</span>
+      <span class="section-title-line"></span>
+    </div>
+    <div class="card">
+      <div class="suggestion-list">
+        <div class="suggestion-item">
+          <div class="suggestion-num">1</div>
+          <div class="suggestion-content">
+            在<b>数据跨境流动</b>议题上可以更加强硬——你的让步幅度明显高于底线，让出了约15分的谈判空间。建议下次在该议题上坚守更高的初始要价。
+          </div>
+        </div>
+        <div class="suggestion-item">
+          <div class="suggestion-num">2</div>
+          <div class="suggestion-content">
+            第5轮对欧盟的示好时机精准，促成了后续的数据主权妥协。可以尝试<b>更早建立同盟关系</b>，比如在第2-3轮就与欧方进行私下沟通，收益可能更大。
+          </div>
+        </div>
+        <div class="suggestion-item">
+          <div class="suggestion-num">3</div>
+          <div class="suggestion-content">
+            开场陈述的气势偏弱，在全场首次亮相时<b>先声夺人</b>能显著提升国际形象分。建议准备更有冲击力的开场辞，引用权威数据或历史案例。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部操作 -->
+  <div class="action-bar">
+    <button class="btn btn-outline" id="revealBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      揭秘底牌
+    </button>
+    <button class="btn btn-primary" id="againBtn">
+      <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+      再战一局
+    </button>
+    <button class="btn btn-outline" id="shareBtn">
+      <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+      分享战报
+    </button>
+  </div>
+
+  <div class="report-toast" id="reportToast" role="status" aria-live="polite"></div>
+
+  <!-- 底部 -->
+  <div class="page-foot">
+    <div class="foot-rule"><i></i><b></b><i></i></div>
+    <div class="foot-text">DIPLOMATIC NEGOTIATION SIMULATOR</div>
+  </div>
+
+</main>
+
+<script>
+  /* ========== 报告数据 ========== */
+  const REPORT = {
+    // 综合得分构成（权重：50/20/20/10 = 5221）
+    weights: [
+      { name: '主体利益值', value: 94, weight: 0.50 },
+      { name: '国际形象',   value: 90, weight: 0.20 },
+      { name: '盟友信任',   value: 88, weight: 0.20 },
+      { name: '隐藏任务',   value: 95, weight: 0.10 }
+    ]
+  };
+
+  /* ========== 等级区间映射表 ========== */
+  const GRADE_TIERS = [
+    { min: 95, max: 100, grade: 'S+', cn: '外交宗师',   en: 'GRAND MASTER',       enTitle: 'Grand Master'       },
+    { min: 88, max: 94,  grade: 'S',  cn: '外交大师',   en: 'MASTER DIPLOMAT',    enTitle: 'Master Diplomat'    },
+    { min: 80, max: 87,  grade: 'A',  cn: '谈判专家',   en: 'CHIEF NEGOTIATOR',   enTitle: 'Chief Negotiator'   },
+    { min: 70, max: 79,  grade: 'B',  cn: '熟练谈判者', en: 'SKILLED NEGOTIATOR', enTitle: 'Skilled Negotiator' },
+    { min: 60, max: 69,  grade: 'C',  cn: '谈判学徒',   en: 'APPRENTICE',         enTitle: 'Apprentice'         },
+    { min: 0,  max: 59,  grade: 'D',  cn: '亟待提升',   en: 'NEEDS PRACTICE',     enTitle: 'Needs Practice'     }
+  ];
+
+  // 根据总分返回对应等级对象
+  function gradeOf(score){
+    const s = Math.max(0, Math.min(100, Math.round(score)));
+    for (let i = 0; i < GRADE_TIERS.length; i++){
+      if (s >= GRADE_TIERS[i].min && s <= GRADE_TIERS[i].max) return GRADE_TIERS[i];
+    }
+    return GRADE_TIERS[GRADE_TIERS.length - 1];
+  }
+
+  // 计算加权总分与各项贡献值
+  function computeWeighted(){
+    let sum = 0;
+    const rows = [];
+    REPORT.weights.forEach(function(w){
+      const contrib = Math.round(w.value * w.weight * 10) / 10;
+      sum += contrib;
+      rows.push({ name: w.name, value: w.value, weight: w.weight, contrib: contrib });
+    });
+    return { total: Math.round(sum * 10) / 10, rows: rows };
+  }
+
+  const WEIGHTED = computeWeighted();
+  const FINAL_SCORE = Math.round(WEIGHTED.total);
+
+  /* ========== 渲染：等级 / 称号 / 徽章 ========== */
+  function renderGrade(score){
+    const tier = gradeOf(score);
+    const letter = document.getElementById('gradeLetter');
+    const label  = document.getElementById('gradeLabel');
+    const title  = document.getElementById('gradeTitle');
+    const sub    = document.getElementById('gradeSubtitle');
+    const num    = document.getElementById('scoreNumber');
+
+    if (letter){
+      letter.textContent = tier.grade;
+      letter.classList.toggle('is-wide', tier.grade.length > 1);
+    }
+    if (label) label.textContent = tier.en;
+    if (title) title.textContent = tier.cn;
+    if (sub)   sub.textContent = tier.enTitle;
+    if (num)   num.textContent = String(Math.round(score));
+
+    const chips = document.querySelectorAll('#gradeLadder .grade-chip');
+    chips.forEach(function(chip){
+      chip.classList.toggle('active', chip.getAttribute('data-grade') === tier.grade);
+    });
+  }
+
+  /* ========== 渲染：综合得分构成（贡献值 + 合计） ========== */
+  function renderWeights(weighted){
+    weighted = weighted || WEIGHTED;
+    const items = document.querySelectorAll('#weightList .weight-item');
+    items.forEach(function(item, i){
+      const row = weighted.rows[i];
+      if (!row) return;
+      const el = item.querySelector('[data-contrib]');
+      if (el) el.textContent = '贡献 ' + row.contrib.toFixed(1);
+    });
+    const totalEl = document.getElementById('weightedTotal');
+    if (totalEl) totalEl.textContent = weighted.total.toFixed(1);
+  }
+
+  /* ========== 主题切换 ========== */
+  function goBack(){
+    // 复盘页的“返回”固定回首页，避免退回复盘等待页 / 已结束的对局
+    location.href = '../index.html';
+  }
+
+  /* ========== 关键节点手风琴 ========== */
+  function toggleAcc(btn){
+    const item = btn.closest('.acc-item');
+    if (!item) return;
+    const willOpen = !item.classList.contains('open');
+    item.classList.toggle('open', willOpen);
+    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  }
+
+  /* ================= 读取本局结算数据（谈判页写入的 neg-report） ================= */
+  function loadReport(){
+    try{
+      var d = JSON.parse(localStorage.getItem('neg-report') || 'null');
+      if(d && d.scores) return d;
+    }catch(e){}
+    return null;
+  }
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+    });
+  }
+  var toastTimer = null;
+  function reportToast(msg){
+    var el = document.getElementById('reportToast');
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2800);
+  }
+
+  function applyWeights(data){
+    var s = data.scores || {};
+    var values = [s.interest, s.image, s.trust, s.hidden];
+    REPORT.weights.forEach(function(w, i){
+      var v = Number(values[i]);
+      w.value = isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : 0;
+    });
+    // 同步「数值 × 权重」里的数值，避免只改贡献值不改原始分
+    var items = document.querySelectorAll('#weightList .weight-item');
+    items.forEach(function(item, i){
+      var v = REPORT.weights[i] ? REPORT.weights[i].value : 0;
+      var b = item.querySelector('.weight-figures b');
+      if(b) b.textContent = String(v);
+      item.setAttribute('data-value', String(v));
+    });
+    return computeWeighted();
+  }
+
+  function applyMeta(data){
+    var meta = data.meta || {};
+    var el = document.getElementById('reportMeta');
+    if(!el) return;
+    var parts = [];
+    if(meta.topic) parts.push('「' + esc(meta.topic) + '」');
+    if(meta.modeLabel) parts.push(esc(meta.modeLabel));
+    if(meta.youName && meta.rivalNames) parts.push(esc(meta.youName) + ' vs ' + esc(meta.rivalNames));
+    if(meta.rounds) parts.push('第 ' + meta.rounds + ' / ' + (meta.total || 8) + ' 回合');
+    if(meta.resultLabel) parts.push('<b>' + esc(meta.resultLabel) + '</b>');
+    if(meta.elapsed) parts.push('用时 ' + esc(meta.elapsed));
+    el.innerHTML = parts.join('<span class="dot"></span>');
+    el.hidden = false;
+  }
+
+  function applyTasks(data){
+    var list = document.querySelector('.task-progress-list');
+    if(!list || !Array.isArray(data.tasks) || !data.tasks.length) return;
+    list.innerHTML = data.tasks.map(function(t, i){
+      var pct = t.done ? 100 : Math.max(12, Math.min(85, Math.round(Number(t.score) || 0)));
+      return '<div class="task-item t' + ((i % 4) + 1) + '">' +
+        '<div class="task-name">' + esc(t.name) + '</div>' +
+        '<div class="task-score">' + pct + '%</div>' +
+        '<div class="task-bar"><div class="task-fill" data-w="' + pct + '%" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function applyTimeline(data){
+    var timeline = document.querySelector('.timeline');
+    if(!timeline || !Array.isArray(data.timeline) || !data.timeline.length) return;
+    timeline.innerHTML = data.timeline.map(function(n){
+      return '<div class="acc-item ' + esc(n.type || '') + '">' +
+        '<div class="timeline-dot"></div>' +
+        '<button class="acc-head" type="button" aria-expanded="false" onclick="toggleAcc(this)">' +
+          '<span class="timeline-round">第 ' + n.round + ' 轮</span>' +
+          '<span class="timeline-tag ' + esc(n.type || '') + '">' + esc(n.tag || '') + '</span>' +
+          '<span class="acc-title">' + esc(n.title) + '</span>' +
+          '<span class="acc-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>' +
+        '</button>' +
+        '<div class="acc-body"><div class="acc-body-inner">' +
+          '<div class="acc-detail"><div class="acc-detail-label">关键事件</div><div class="acc-detail-text">' + esc(n.event) + '</div></div>' +
+          '<div class="acc-detail"><div class="acc-detail-label">你的决策</div><div class="acc-detail-text">' + esc(n.decision) + '</div></div>' +
+          '<div class="acc-detail"><div class="acc-detail-label">结果影响</div><div class="acc-detail-text">' + esc(n.impact) + '</div></div>' +
+        '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function ttNodes(list){
+    var h = '<div class="tt-children">';
+    list.forEach(function(n){
+      var kids = (n.children && n.children.length) ? n.children : null;
+      var pc = n.color || '#c9a061';
+      h += '<div class="tt-node" style="--pc:' + esc(pc) + '">' +
+        '<div class="tt-row">' +
+          '<span class="tt-who">' + esc((n.flag || '') + ' ' + (n.name || n.key || '')) + '</span>' +
+          (n.moveLabel ? '<span class="tt-move">' + esc(n.moveLabel) + '</span>' : '') +
+          (n.concept ? '<span class="tt-cs">' + esc(n.concept) + '</span>' : '') +
+          (n.hm ? '<span class="tt-hm">' + esc(n.hm) + '</span>' : '') +
+          (n.tag ? '<span class="tt-tag">' + esc(n.tag) + '</span>' : '') +
+        '</div>' +
+        '<div class="tt-claim">' + esc(n.phrase || '') + '</div>' +
+        (n.src ? '<div class="tt-src">册载 · ' + esc(n.src) + '</div>' : '') +
+        (n.stage ? '<div class="tt-stage">' + esc(n.stage) + '</div>' : '') +
+        (kids ? ttNodes(kids) : '') +
+      '</div>';
+    });
+    return h + '</div>';
+  }
+
+  function applyTree(data){
+    var sec = document.getElementById('talkTreeSection');
+    var box = document.getElementById('talkTree');
+    var tree = data && data.tree;
+    if(!sec || !box || !tree || !Array.isArray(tree.roots) || !tree.roots.length) return;
+    var h = '<div class="tt-root"><b>本局议题</b><span>' +
+      esc(tree.topic || (data.meta && data.meta.topic) || '') + '</span></div>';
+    h += ttNodes(tree.roots);
+    box.innerHTML = h;
+    sec.hidden = false;
+  }
+
+  function applySuggestions(data){
+    var sug = document.querySelector('.suggestion-list');
+    if(!sug || !Array.isArray(data.suggestions) || !data.suggestions.length) return;
+    sug.innerHTML = data.suggestions.map(function(text, i){
+      return '<div class="suggestion-item">' +
+        '<div class="suggestion-num">' + (i + 1) + '</div>' +
+        '<div class="suggestion-content">' + esc(text) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function applyRadar(scores){
+    var dims = [
+      scores.interest,
+      scores.image,
+      scores.trust,
+      Math.round((Number(scores.interest) + Number(scores.image) + Number(scores.trust)) / 3),
+      Math.round((Number(scores.trust) + Number(scores.hidden)) / 2)
+    ].map(function(v){ return Math.max(0, Math.min(100, Math.round(Number(v) || 0))); });
+    var names = ['利益博弈', '话术表达', '立场一致', '策略洞察', '盟友经营'];
+    var CX = 170, CY = 148, R = 100;
+    var angles = [-90, -18, 54, 126, 198].map(function(a){ return a * Math.PI / 180; });
+    var pts = dims.map(function(v, i){
+      return [CX + R * v / 100 * Math.cos(angles[i]), CY + R * v / 100 * Math.sin(angles[i])];
+    });
+    var polys = document.querySelectorAll('.radar-chart polygon');
+    var dataPoly = polys[polys.length - 1];
+    if(dataPoly){
+      dataPoly.setAttribute('points', pts.map(function(p){
+        return p[0].toFixed(2) + ',' + p[1].toFixed(2);
+      }).join(' '));
+    }
+    var dots = document.querySelectorAll('.radar-chart circle');
+    dots.forEach(function(c, i){
+      if(!pts[i]) return;
+      c.setAttribute('cx', pts[i][0].toFixed(2));
+      c.setAttribute('cy', pts[i][1].toFixed(2));
+    });
+    var tspans = document.querySelectorAll('.radar-chart text tspan');
+    tspans.forEach(function(t, i){ if(dims[i] !== undefined) t.textContent = String(dims[i]); });
+
+    var stats = document.querySelectorAll('.radar-stats span');
+    if(stats.length === 3){
+      var mean = dims.reduce(function(a, b){ return a + b; }, 0) / dims.length;
+      var maxI = dims.indexOf(Math.max.apply(null, dims));
+      var minI = dims.indexOf(Math.min.apply(null, dims));
+      stats[0].innerHTML = '均值 <b>' + mean.toFixed(1) + '</b>';
+      stats[1].innerHTML = '最强 <b>' + names[maxI] + ' ' + dims[maxI] + '</b>';
+      stats[2].innerHTML = '最弱 <b>' + names[minI] + ' ' + dims[minI] + '</b>';
+    }
+  }
+
+  /* ================= 底部操作：再战 / 揭秘 / 分享 ================= */
+  function routeAgain(meta){
+    meta = meta || {};
+    if(meta.mode === 'multi') return '../select/start-1vn.html';
+    if(meta.mode === 'observe') return '../select/start-watch.html';
+    return '../select/start.html';
+  }
+
+  function buildShareText(data){
+    if(!data) return '我在「外交谈判模拟器」完成了样张复盘，综合得分 ' + FINAL_SCORE + ' 分。';
+    var meta = data.meta || {}, scores = data.scores || {};
+    var tasks = data.tasks || [];
+    var done = tasks.filter(function(t){ return t.done; }).length;
+    return '我在「外交谈判模拟器」完成了一场谈判：' +
+      '议题「' + (meta.topic || '') + '」，' + (meta.modeLabel || '') +
+      '，第 ' + (meta.rounds || 0) + ' / ' + (meta.total || 8) + ' 回合，' +
+      (meta.resultLabel || '') + '。' +
+      '综合得分 ' + Math.round(computeWeighted().total) + ' 分，' +
+      '任务完成 ' + done + ' / ' + tasks.length + '。';
+  }
+
+  (function bindActions(){
+    var again = document.getElementById('againBtn');
+    if(again){
+      again.addEventListener('click', function(){
+        var meta = (window.__reportData && window.__reportData.meta) || {};
+        try{
+          localStorage.removeItem('neg-report');
+          localStorage.removeItem('neg-report-at');
+          localStorage.removeItem('neg-scene');
+          localStorage.removeItem('neg-pick');
+        }catch(e){}
+        location.href = routeAgain(meta);
+      });
+    }
+
+    var reveal = document.getElementById('revealBtn');
+    if(reveal){
+      reveal.addEventListener('click', function(){
+        var data = window.__reportData;
+        if(!data){ reportToast('当前是样张：打完一局后才能揭晓本局底牌'); return; }
+        var tasks = data.tasks || [];
+        var done = tasks.filter(function(t){ return t.done; }).length;
+        var hidden = (data.scores && data.scores.hidden) || 0;
+        reportToast('本局隐藏任务完成 ' + done + ' / ' + tasks.length + ' · 隐藏任务得分 ' + hidden);
+        var list = document.querySelector('.task-progress-list');
+        if(list){
+          list.scrollIntoView({ behavior:'smooth', block:'center' });
+          list.classList.remove('flash-target');
+          void list.offsetWidth;
+          list.classList.add('flash-target');
+        }
+      });
+    }
+
+    var share = document.getElementById('shareBtn');
+    if(share){
+      share.addEventListener('click', function(){
+        var text = buildShareText(window.__reportData);
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(function(){
+            reportToast('战报已复制到剪贴板');
+          }).catch(function(){
+            window.prompt('复制战报：', text);
+          });
+        }else{
+          window.prompt('复制战报：', text);
+        }
+      });
+    }
+  })();
+
+  (function init(){
+    var data = loadReport();
+    window.__reportData = data;
+
+    // 等级与权重渲染（有本局数据就用本局数据，否则保留样张并明确标注）
+    var weighted = WEIGHTED;
+    if(data){
+      weighted = applyWeights(data);
+      applyMeta(data);
+      applyTasks(data);
+      applyTimeline(data);
+      applyTree(data);
+      applySuggestions(data);
+      if(data.scores) applyRadar(data.scores);
+    }else{
+      var metaEl = document.getElementById('reportMeta');
+      if(metaEl){
+        metaEl.innerHTML = '示例样张<span class="dot"></span>完成一局谈判后，这里会显示你的本局数据';
+        metaEl.hidden = false;
+      }
+    }
+    renderGrade(Math.round(weighted.total));
+    renderWeights(weighted);
+
+    // 进度条动画 - 进入视口时触发
+    const observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          const fills = entry.target.querySelectorAll('.task-fill');
+          fills.forEach(function(fill, i){
+            const w = fill.getAttribute('data-w') || fill.style.width || '0%';
+            fill.style.width = '0';
+            setTimeout(function(){ fill.style.width = w; }, 120 + i * 110);
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.task-progress-list').forEach(function(el){ observer.observe(el); });
+  })();
+</script>
+<script src="../assets/theme.js"></script>
+
+
+
+<style>
+  .v2-row { display:grid; grid-template-columns: minmax(0,1fr) 360px; gap:26px; align-items:start;
+            max-width:1240px; margin:34px auto 0; padding:0 26px; }
+  .v2-card { border:1px solid rgba(201,160,97,.2); background:rgba(24,17,11,.72); padding:18px 20px; }
+  .v2-card h3 { margin:0 0 12px; font-size:14px; letter-spacing:.2em; color:#c9a061; }
+  .v2-ch { display:flex; gap:10px; align-items:baseline; padding:8px 0; font-size:13px;
+           border-bottom:1px solid rgba(201,160,97,.12); color:#d6c3a2; }
+  .v2-ch b { color:#efd7a8; min-width:26px; }
+  .v2-ch .st { color:#84745d; }
+  .v2-ch .term { margin-left:auto; color:#bca785; font-size:12px; }
+  .v2-mtx { overflow:auto; }
+  .v2-mtx table { border-collapse:collapse; font-size:12.5px; color:#d6c3a2; }
+  .v2-mtx th { padding:7px 11px; color:#c9a061; font-weight:400; white-space:nowrap; }
+  .v2-mtx td { padding:7px 11px; text-align:center; }
+  .v2-mtx td.rowh { color:#c9a061; text-align:left; white-space:nowrap; }
+  .v2-legend { display:flex; gap:16px; margin:10px 0 0; font-size:12px; color:#bca785; }
+  .v2-legend i { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px; }
+</style>
+<script>
+(function(){
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  var d = null;
+  try{ d = JSON.parse(localStorage.getItem('neg-report')||'null'); }catch(e){}
+  var ch = (d && d.channels) || [];
+  var rel = (d && d.relations) || [];
+
+  // 1) 暗线卡片
+  var card = document.createElement('div');
+  card.className = 'v2-card';
+  var inner = '<h3>暗线 · BACKCHANNELS</h3>';
+  if(!ch.length){
+    inner += '<div style="font-size:13px;color:#84745d">本局没有达成非正式沟通。</div>';
+  }else{
+    inner += ch.map(function(c,i){
+      var _st = c.status_label || (c.status === 'closed' ? '未达成' : c.status) || '—';
+      return '<div class="v2-ch"><b>0' + (i+1) + '</b><span>' + esc(c.party_label||c.party||'对方') +
+        '</span><span class="st">· ' + esc(_st) + '</span>' +
+        '<span class="term">' + esc(c.their_term||c.our_term||'') + '</span></div>';
+    }).join('');
+  }
+  card.innerHTML = inner;
+
+  // 2) 关系矩阵卡片
+  var mcard = document.createElement('div');
+  mcard.className = 'v2-card v2-mtx';
+  var mh = '<h3>最终关系矩阵 · RELATION MATRIX</h3>';
+  if(!rel.length){
+    mh += '<div style="font-size:13px;color:#84745d">本局尚未形成多边关系数据。</div>';
+    mcard.innerHTML = mh;
+  }else{
+    var keys = rel.map(function(r){return r.key;});
+    var labels = rel.map(function(r){return r.label||r.key;});
+    var t = '<table><tr><th></th>' + labels.map(function(l){return '<th>'+esc(l)+'</th>';}).join('') + '</tr>';
+    rel.forEach(function(row,i){
+      t += '<tr><td class="rowh">' + esc(labels[i]) + '</td>';
+      keys.forEach(function(k){
+        if(k===row.key){ t += '<td style="color:#3d3225">—</td>'; return; }
+        var v = (row.trust||{})[k];
+        if(v==null){ t += '<td style="color:#3d3225">·</td>'; return; }
+        var col = v>=65 ? '#80bea0' : (v>=45 ? '#d6c3a2' : '#d88673');
+        t += '<td style="color:'+col+'">' + Math.round(v) + '</td>';
+      });
+      t += '</tr>';
+    });
+    t += '</table>' +
+      '<div class="v2-legend"><span><i style="background:#80bea0"></i>信任 ≥ 65</span>' +
+      '<span><i style="background:#d6c3a2"></i>中立 45–64</span>' +
+      '<span><i style="background:#d88673"></i>紧张 &lt; 45</span></div>';
+    mcard.innerHTML = mh + t;
+  }
+
+  // 3) 找到「关键节点回顾」所在容器
+  function headOf(kw){
+    var all = document.querySelectorAll('h2,h3,h4,.section-title,.sec-title');
+    for(var i=0;i<all.length;i++){ if((all[i].textContent||'').indexOf(kw)>=0) return all[i]; }
+    return null;
+  }
+  var h = headOf('关键节点回顾');
+  var sec = h;
+  while(sec && sec.parentElement && sec.parentElement.tagName !== 'BODY' && sec.parentElement.children.length < 3) {
+    sec = sec.parentElement;
+  }
+  if(!sec || !sec.parentElement) return;
+
+  var row = document.createElement('div');
+  row.className = 'v2-row';
+  var left = document.createElement('div');
+  var right = document.createElement('div');
+  right.appendChild(card);
+  right.appendChild(mcard);
+  sec.parentElement.insertBefore(row, sec);
+  left.appendChild(sec);
+  row.appendChild(left);
+  row.appendChild(right);
+})();
+</script>
+</body>
+</html>
