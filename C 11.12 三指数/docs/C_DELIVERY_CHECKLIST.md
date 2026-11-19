@@ -3,6 +3,18 @@
 > 仓库：`Huawei`；分支：`integrate/1120`；合并提交：`1b8a5c6`。
 > 勾选依据均为本次实测或可复核的文件 / 测试。
 
+## 职责项对照（DDL 判定口径：职责项不得有未完成）
+
+| # | 职责项 | 勾选 | 证据 |
+|---|---|---|---|
+| 1 | 工作流搭建 | ✅ | `engine/orchestrator.py` + `run_workflow.py` + `tests/test_orchestrator.py`（9 条）；`docs/SCHEDULER_HANDOFF.md`；commit `96a84c3` |
+| 2 | 对局状态管理 | ✅ | `engine/state.py` + `engine/core.py`；本轮修复后全量 **245 条**测试通过（`Ran 245 tests ... OK`；pytest `245 passed, 173 subtests passed`） |
+| 3 | 隐藏任务卡隔离 | ✅ | `engine/terminal.py` viewer 裁剪 + `engine/state.py::to_public_dict` + `tests/test_isolation_adversarial.py`（24 条）；`evaluate_for` 裁剪修复 commit `b42ed76`，`tests/test_terminal.py` 新增 4 条 |
+| 4 | 多智能体调度 | ✅ | `engine/scheduler.py` + `docs/SCHEDULER_HANDOFF.md` + `tests/test_scheduler.py`（12 条） |
+| 5 | 系统集成 | ✅ | `integrate/1120` 合并提交 `1b8a5c6`；`docs/MERGE_REPORT_1120.md`；合并后 245 条与 demo 四项均通过 |
+
+> 说明：以下 A/B/C/D 四段保留原口径；B 段中的 241 条为修复前数字，本轮新增 4 条后总数以本节 245 为准。
+
 ## A. R1–R7
 
 | 编号 | 勾选 | 证据 |
