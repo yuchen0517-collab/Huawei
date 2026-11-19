@@ -1,0 +1,161 @@
+{
+  "scenario_id": "ai-governance-2026",
+  "session_id": "workflow-demo",
+  "scheduler": {
+    "parties": [
+      "cn",
+      "us"
+    ],
+    "party_count": 2,
+    "max_rounds": 6,
+    "action_points_per_round": 3,
+    "rotation": "round 1 从 parties 声明顺序首位开始，每回合起始位后移一位",
+    "last_round": 6
+  },
+  "actions": [
+    {
+      "round": 1,
+      "action_id": "wf-cn-offer-1",
+      "actor": "cn",
+      "action_type": "offer",
+      "ok": true,
+      "code": null
+    },
+    {
+      "round": 1,
+      "action_id": "wf-us-counter-1",
+      "actor": "us",
+      "action_type": "counter_offer",
+      "ok": true,
+      "code": null
+    },
+    {
+      "round": 1,
+      "action_id": "wf-cn-final-1",
+      "actor": "cn",
+      "action_type": "final_offer",
+      "ok": true,
+      "code": null
+    },
+    {
+      "round": 2,
+      "action_id": "wf-us-counter-2",
+      "actor": "us",
+      "action_type": "counter_offer",
+      "ok": true,
+      "code": null
+    },
+    {
+      "round": 2,
+      "action_id": "wf-cn-accept-1",
+      "actor": "cn",
+      "action_type": "accept",
+      "ok": true,
+      "code": null
+    }
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "order": [
+        "cn",
+        "us"
+      ],
+      "actions": [
+        {
+          "round": 1,
+          "action_id": "wf-cn-offer-1",
+          "actor": "cn",
+          "action_type": "offer",
+          "ok": true,
+          "code": null
+        },
+        {
+          "round": 1,
+          "action_id": "wf-us-counter-1",
+          "actor": "us",
+          "action_type": "counter_offer",
+          "ok": true,
+          "code": null
+        },
+        {
+          "round": 1,
+          "action_id": "wf-cn-final-1",
+          "actor": "cn",
+          "action_type": "final_offer",
+          "ok": true,
+          "code": null
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "order": [
+        "us",
+        "cn"
+      ],
+      "actions": [
+        {
+          "round": 2,
+          "action_id": "wf-us-counter-2",
+          "actor": "us",
+          "action_type": "counter_offer",
+          "ok": true,
+          "code": null
+        },
+        {
+          "round": 2,
+          "action_id": "wf-cn-accept-1",
+          "actor": "cn",
+          "action_type": "accept",
+          "ok": true,
+          "code": null
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "from": "opening",
+      "to": "confirmed",
+      "round": 1,
+      "reason": "场景确认"
+    },
+    {
+      "from": "confirmed",
+      "to": "bargaining",
+      "round": 1,
+      "reason": "进入对战回合"
+    },
+    {
+      "from": "bargaining",
+      "to": "terminal",
+      "round": 2,
+      "reason": "行动触发终局"
+    },
+    {
+      "from": "terminal",
+      "to": "debrief",
+      "round": 2,
+      "reason": "复盘"
+    }
+  ],
+  "terminal": {
+    "type": "FULL_AGREEMENT",
+    "label": "完整协议",
+    "round": 2,
+    "coverage": 1.0
+  },
+  "audit": {
+    "ok": true,
+    "issues": [],
+    "summary": {
+      "blocking": 0,
+      "warning": 0
+    }
+  },
+  "debrief": {
+    "visibility": "debrief",
+    "requester": "workflow-runner"
+  }
+}
