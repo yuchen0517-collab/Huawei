@@ -48,8 +48,8 @@
 |---|---|---|
 | `~$README.md` 备份 | ✅ | `C 11.12 三指数/_backup_1120/office_temp_readme.bak`（162 字节）；根 `_backup/` 被 ACL 拒绝新写入，故改存工作目录 |
 | `Untitled-1.py` 备份 | ✅ | `_backup/hygiene/Untitled-1.py`（0 字节） |
-| `~$README.md` 取消跟踪 | ⏳ 待确认 | 计划 `git rm --cached "~$README.md"`，随后由 `.gitignore` 的 `~$*` 忽略 |
-| `Untitled-1.py` 删除 | ⏳ 待确认 | 计划 `git rm "Diplomat_webdemo2.0/C 11.12 引擎/Untitled-1.py"` |
+| `~$README.md` 取消跟踪 | ✅ | `git rm --cached` 已执行（commit `59758ae`），`.gitignore` 的 `~$*` 生效 |
+| `Untitled-1.py` 删除 | ✅ | `git rm` 已执行（commit `59758ae`），备份在 `_backup/hygiene/` |
 | 两处 `DEPRECATED.md` | ✅ | `Diplomat_webdemo2.0/C 11.11 三指数/DEPRECATED.md`、`Diplomat_webdemo2.0/C 11.12 引擎/DEPRECATED.md` |
 | 根 `.gitignore` | ✅ | 已补 `~$*`、`*.pyc`、`__pycache__/` |
 
@@ -60,5 +60,5 @@
 | 最新 `origin/develop` 复核 | 未完成 | `git fetch` 直连 443 失败，代理 `127.0.0.1:65532` 未监听 | 若远程在 `d48ceb4` 之后有新提交，合并结果需重新预演 |
 | 推送 `integrate/1120` | 未完成 | 同一网络阻塞（待实测 push） | 远程当前已有与本地相同的 `1b8a5c6`；新增文档提交的 push 结果见最终汇报 |
 | R7 编号原文 | 待 D 确认 | 仓库内无显式 `R7` 定义 | 说明书第八章 R7 标题需 D 按原文校正 |
-| 多边利益结算通道 | 未完成（已知缺口） | 引擎无转移支付 / 侧支付通道 | 三方以上只能靠条款效用，无法表达议题间补偿 |
-| `interest_delta` 落地 | 未完成（已知缺口） | 引擎 `interest` 仅由条款效用重算 | B 契约 1.1 的 `interest_delta` 目前只记 `INTEREST_DELTA_UNSUPPORTED` warning |
+| 多边利益结算通道 | 未完成（已知缺口，不影响本次交付，属下一阶段） | 引擎无转移支付 / 侧支付通道 | 三方以上只能靠条款效用，无法表达议题间补偿 |
+| `interest_delta` 落地 | 未完成（已知缺口，不影响本次交付，属下一阶段） | 引擎 `interest` 仅由条款效用重算 | B 契约 1.1 的 `interest_delta` 目前只记 `INTEREST_DELTA_UNSUPPORTED` warning |
