@@ -61,6 +61,11 @@ class NegotiationState:
     seen_action_ids: List[str] = field(default_factory=list)
     rounds_without_offer: int = 0
     final_offer_declared_by: Dict[str, Optional[int]] = field(default_factory=dict)
+    # 预留字段（只占位，不实现）：四维发言评分由复盘侧推导；
+    # 对方态势可信度由 D 侧按 high / mid / low 推导。本轮恒为 None，
+    # 前端按 null 渲染，不得据此展示任何数值。
+    speaker_score: Optional[dict] = None
+    est_confidence: Optional[str] = None
 
     def init_indices(self, values: Dict[str, Dict[str, int]]) -> None:
         """仅在构造时写入初始指数；运行期一律走 apply_index_changes。"""
@@ -146,6 +151,8 @@ class NegotiationState:
             "behavior_log": deepcopy(self.behavior_log),
             "rounds_without_offer": self.rounds_without_offer,
             "final_offer_declared_by": deepcopy(self.final_offer_declared_by),
+            "speaker_score": deepcopy(self.speaker_score),
+            "est_confidence": self.est_confidence,
         }
 
     def to_archive_dict(self) -> dict:

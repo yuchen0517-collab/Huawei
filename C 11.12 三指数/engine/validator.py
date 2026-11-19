@@ -395,8 +395,10 @@ def validate_action(action, state, scenario: dict) -> Tuple[bool, str, str]:
         )
 
     if action_type == "accept":
-        counterpart = _other_party(state, actor)
-        if counterpart is None or latest_offer(state, counterpart) is None:
+        # 两方场景等价于「对方已报价」；三方及以上要求全部其他参与方都已报价，
+        # 否则接受一份把沉默方排除在外的协议会让 coverage 假性达标。
+        others = [party for party in parties if party != actor]
+        if not others or any(latest_offer(state, party) is None for party in others):
             return fail("NO_COUNTERPART_OFFER", "")
         rules = scenario.get("terminal_rules", {}) or {}
         # 场景禁止部分协议时，accept 必须覆盖全部条款（否则终局只能是 DEADLOCK）。
