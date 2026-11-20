@@ -320,13 +320,13 @@ def test_fork_keeps_clause_roles_from_override_layer():
     roles = child_rec.engine.scenario.get("clause_roles")
     assert roles == {
         "condition": "第三国再出口限制",
-        "performance": "许可审批时限",
-        "exit": "关键矿产出口安排",
+        "performance": "关键矿产出口安排",
+        "exit": "协议退出与救济安排",
     }
     cards = {item["id"]: item for item in child["available_cards"]}
     assert cards["effective_condition"]["target_clause"] == "第三国再出口限制"
-    assert cards["performance_node"]["target_clause"] == "许可审批时限"
-    assert cards["exit_clause"]["target_clause"] == "关键矿产出口安排"
+    assert cards["performance_node"]["target_clause"] == "关键矿产出口安排"
+    assert cards["exit_clause"]["target_clause"] == "协议退出与救济安排"
 
 
 def test_session_document_round_trips_snapshots_atomically():

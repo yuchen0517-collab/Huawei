@@ -562,6 +562,8 @@
     "cn": 3,
     "us": null
   },
+  "speaker_score": null,
+  "est_confidence": null,
   "seen_action_ids": [
     "cn-offer-0001",
     "us-counter-0001",

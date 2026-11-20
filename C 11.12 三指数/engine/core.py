@@ -390,17 +390,43 @@ class RulesEngine:
         others = [party for party in party_ids(self.scenario) if party != actor]
         return others[0] if others else None
 
+    def _party_offers_by_version(self) -> List[Tuple[str, Offer]]:
+        """全部参与方的最新报价，按版本升序（后出价覆盖先出价）。
+
+        同版本时按场景 parties 顺序稳定排序，保证结果可复现。
+        """
+        items = []
+        for order, party in enumerate(party_ids(self.scenario)):
+            offer = latest_offer(self.state, party)
+            if offer is not None:
+                items.append((int(offer.version), order, party, offer))
+        items.sort(key=lambda item: (item[0], item[1]))
+        return [(party, offer) for _version, _order, party, offer in items]
+
     def _agreement_plan(self, actor: str) -> dict:
         plan = effective_plan(self.state, self.scenario)
-        mine = latest_offer(self.state, actor)
-        counterpart = self._other_party(actor)
-        theirs = latest_offer(self.state, counterpart) if counterpart else None
+        parties = party_ids(self.scenario)
 
-        if mine:
-            for name, entry in mine.clauses.items():
-                plan[name] = deepcopy(entry)
-        if theirs:
-            for name, entry in theirs.clauses.items():
+        if len(parties) <= 2:
+            # 两方场景保持原有语义（先本方、后对方，对方覆盖本方），
+            # 保证既有回归逐字段不变。
+            mine = latest_offer(self.state, actor)
+            counterpart = self._other_party(actor)
+            theirs = latest_offer(self.state, counterpart) if counterpart else None
+
+            if mine:
+                for name, entry in mine.clauses.items():
+                    plan[name] = deepcopy(entry)
+            if theirs:
+                for name, entry in theirs.clauses.items():
+                    plan[name] = deepcopy(entry)
+            return plan
+
+        # 三方及以上：合并全部已出价参与方，按报价版本先后覆盖。
+        # 原实现只取 _other_party(actor) 一方，第三方的条款被整体丢弃，
+        # 导致 coverage 假性达标（M2 多边退化）。
+        for _party, offer in self._party_offers_by_version():
+            for name, entry in offer.clauses.items():
                 plan[name] = deepcopy(entry)
         return plan
 
@@ -411,8 +437,15 @@ class RulesEngine:
             if text not in merged_conditions:
                 merged_conditions.append(text)
 
-        counterpart = self._other_party(actor)
-        for party in (counterpart, actor):
+        parties = party_ids(self.scenario)
+        if len(parties) <= 2:
+            ordered = [self._other_party(actor), actor]
+        else:
+            # 三方及以上：按报价版本顺序收集全部已出价方，接受方条件后置。
+            ordered = [party for party, _offer in self._party_offers_by_version()]
+            ordered = [party for party in ordered if party != actor] + [actor]
+
+        for party in ordered:
             offer = latest_offer(self.state, party) if party else None
             if not offer:
                 continue

@@ -103,17 +103,28 @@ def batna_comparison(state, scenario: dict, viewer: str = "") -> dict:
     return result
 
 
-def redline_check(state, scenario: dict) -> dict:
+def redline_check(state, scenario: dict, viewer: str = "") -> dict:
+    """红线核对。viewer 为空表示内部全量（复盘 / 审计 / 演示）。
+
+    传入参与方 id 时只返回该方自己的布尔值；其余各方一律置 null。
+    原实现无条件返回全部参与方的布尔表，终局有协议时前端可据此反推
+    对方红线位置（R2 信息隔离），故按 viewer 裁剪，与 batna_comparison
+    保持同一口径：未知 viewer 一律看不到任何他方布尔。
+    """
     clauses = state.agreement.clauses if state.agreement else {}
     scenario_clauses = clause_map(scenario)
-    result: Dict[str, Dict[str, bool]] = {}
+    result: Dict[str, Dict[str, Optional[bool]]] = {}
     for name, entry in clauses.items():
         clause = scenario_clauses.get(name)
         if clause is None:
             continue
         option = option_value(entry)
         result[name] = {
-            party: is_redline_violation(clause, option, party)
+            party: (
+                is_redline_violation(clause, option, party)
+                if not viewer or party == viewer
+                else None
+            )
             for party in party_ids(scenario)
         }
     return result
@@ -162,7 +173,8 @@ def build_terminal(state, scenario: dict, terminal_type: Optional[str] = None) -
 def evaluate(state, scenario: dict, viewer: str = "") -> dict:
     """六字段评价。learning_performance 恒为 None，归成员D。
 
-    viewer 为空是内部全量；传参与方 id 时，batna_comparison 只暴露该方真值。
+    viewer 为空是内部全量；传参与方 id 时，batna_comparison 与
+    redline_check 都只暴露该方真值，他方一律置 null。
     对外给玩家看的评价必须传 viewer，不得无参调用。
     """
     terminal_type = (
@@ -182,7 +194,7 @@ def evaluate(state, scenario: dict, viewer: str = "") -> dict:
         "terminal_type": terminal_type,
         "agreement_quality": agreement_quality(state, scenario),
         "batna_comparison": batna_comparison(state, scenario, viewer),
-        "redline_check": redline_check(state, scenario),
+        "redline_check": redline_check(state, scenario, viewer),
         "learning_performance": None,
         "evidence_links": evidence,
     }

@@ -17,13 +17,14 @@ CHIP_SCENARIO_PATH = (
 )
 
 CLAUSE_COMPUTE = "芯片算力门槛"
-CLAUSE_DAYS = "许可审批时限"
 CLAUSE_REEXPORT = "第三国再出口限制"
 CLAUSE_MINERALS = "关键矿产出口安排"
+CLAUSE_EXIT = "协议退出与救济安排"
 # 适配层以 B 契约的 option_id 为引擎取值（中文文本在 label 字段）
 REEXPORT_O2 = "O2"  # 仅对实体清单对象要求许可
 REEXPORT_O3 = "O3"  # 第三国再出口一律事前许可
 MINERALS_O2 = "O2"  # 对民用终端设 30 天快速通道
+EXIT_O2 = "O2"  # 双方协商延长履约期
 
 
 def make_action(action_id, actor, action_type, patch=None, message=""):
@@ -131,13 +132,13 @@ def test_chip_scenario_full_agreement():
     scenario = load_scenario(CHIP_SCENARIO_PATH)
     assert scenario["scenario_id"] == "scn-chip-controls-0001"
     assert [clause["type"] for clause in scenario["clauses"]] == [
-        "numeric", "numeric", "enum", "enum",
+        "numeric", "enum", "enum", "enum",
     ]
     assert scenario["index_rules"]["initial"]["cn"] == {"image": 60, "trust": 45}
     compute = next(c for c in scenario["clauses"] if c["name"] == CLAUSE_COMPUTE)
     assert compute["range"] == [100, 5000]
     assert compute["unit"] == "TFLOPS(FP16)"
-    assert compute["weights"] == {"cn": 0.35, "us": 0.25}
+    assert compute["weights"] == {"cn": 0.4, "us": 0.25}
     assert {
         key: compute["positions"]["cn"][key] for key in ("ideal", "redline")
     } == {"ideal": 1500, "redline": 800}
@@ -157,8 +158,8 @@ def test_chip_scenario_full_agreement():
     engine = RulesEngine(scenario, "e2e-chip")
     steps = [
         make_action("e2-1", "cn", "offer", {
-            CLAUSE_COMPUTE: 1200, CLAUSE_DAYS: 75,
-        }, "中方报价：门槛 1200 TFLOPS，审批 75 天。"),
+            CLAUSE_COMPUTE: 1200, CLAUSE_EXIT: EXIT_O2,
+        }, "中方报价：门槛 1200 TFLOPS，退出安排取协商延长履约期。"),
         make_action("e2-2", "us", "counter_offer", {
             CLAUSE_COMPUTE: 1000, CLAUSE_REEXPORT: REEXPORT_O3,
         }, "美方反报价：门槛 1000，第三国转口一律事前许可。"),
@@ -167,7 +168,7 @@ def test_chip_scenario_full_agreement():
             CLAUSE_COMPUTE: 1200, CLAUSE_REEXPORT: REEXPORT_O2, CLAUSE_MINERALS: MINERALS_O2,
         }, "中方让步：转口限实体清单对象，矿产设民用快速通道。"),
         make_action("e2-4", "us", "counter_offer", {
-            CLAUSE_COMPUTE: 1200, CLAUSE_DAYS: 75,
+            CLAUSE_COMPUTE: 1200, CLAUSE_EXIT: EXIT_O2,
             CLAUSE_REEXPORT: REEXPORT_O2, CLAUSE_MINERALS: MINERALS_O2,
         }, "美方全面对齐中方方案。"),
         make_action("e2-5", "us", "accept", None, "美方接受协议。"),

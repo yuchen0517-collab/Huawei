@@ -58,11 +58,11 @@ COUNTER = {
 # main_chip_controls：4 个条款 → 预算 5
 NUMERIC_PATCH = {
     "芯片算力门槛": {"option": 1000, "note": "双方红线内的算力门槛。"},
-    "许可审批时限": {"option": 75, "note": "双方红线内的审批时限。"},
 }
 ENUM_PATCH = {
     "第三国再出口限制": {"option": "O2", "note": "仅对清单对象事前许可。"},
     "关键矿产出口安排": {"option": "O2", "note": "设置民用快速通道。"},
+    "协议退出与救济安排": {"option": "O2", "note": "协商延长履约期。"},
 }
 FULL_PATCH = {**NUMERIC_PATCH, **ENUM_PATCH}
 

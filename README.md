@@ -96,9 +96,9 @@ curl -s -X POST http://127.0.0.1:8765/session/$SID/action \
     "card_id": null,
     "offer_patch": {
       "芯片算力门槛": {"option": 1000, "note": "位于中方 800 以上、美方 1500 以下的安全区间。"},
-      "许可审批时限": {"option": 75, "note": "位于美方 60 以上、中方 90 以下的安全区间。"},
       "第三国再出口限制": {"option": "O2", "note": "避开美方对 O1 的硬红线。"},
-      "关键矿产出口安排": {"option": "O2", "note": "避开中方对 O3/O4 的硬红线。"}
+      "关键矿产出口安排": {"option": "O2", "note": "避开中方对 O3/O4 的硬红线。"},
+      "协议退出与救济安排": {"option": "O2", "note": "双方都可接受的协商延长履约期。"}
     },
     "conditions": [],
     "expected_effect": "以可核查的交换条件推动四项条款收敛。",
@@ -155,8 +155,12 @@ cd "scenario agent v2" && py -3 -m pytest -q
 
 三个 B 场景的 `clause_roles` 注入：
 
-- `scn-chip-controls-0001` / `scn-chip-controls-nozopa-0001`：condition=`第三国再出口限制`，performance=`许可审批时限`，exit=`关键矿产出口安排`；
+- `scn-chip-controls-0001` / `scn-chip-controls-nozopa-0001`：condition=`第三国再出口限制`，performance=`关键矿产出口安排`，exit=`协议退出与救济安排`；
 - `scn-dst-cn-us-0001`：condition=`征税门槛`，performance=`追溯适用期`，exit=`加征关税去留`。
+
+B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `clause_roles`，且要求三个角色都指向枚举型条款；
+`adapter/scenario_adapter.py::_adapt_clause_roles` 在 B→C 转换时把 `issue_id` 映射成条款名，因为引擎的 `offer_patch`
+与卡牌校验都以条款名为键。覆盖层随后只做存在性校验，不再改写角色值。
 
 ## 7. 隐私与 debrief
 

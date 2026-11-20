@@ -1054,6 +1054,36 @@ def _apply_weights(
             clause["weights"][party] = normalized.get(clause["name"], 0.0)
 
 
+def _adapt_clause_roles(b_scenario: dict) -> dict:
+    """B 契约的 clause_roles 指向 issue_id；转 C 契约时映射为条款名。
+
+    C 引擎的 offer_patch 以条款名为键，`negotiation_rules.check_card_action`
+    与前端 `target_clause` 都按条款名比对，所以只在适配层做这一次映射，
+    其余各层（引擎、API、UI）统一只认条款名。缺省返回空字典，由
+    `scenario_overrides.apply_overrides` 决定是否回落到内置映射。
+    """
+    raw = b_scenario.get("clause_roles") or {}
+    if not raw:
+        return {}
+    issues = [item for item in b_scenario.get("issues", []) if isinstance(item, dict)]
+    name_by_issue_id = {
+        issue.get("issue_id"): issue.get("name")
+        for issue in issues
+        if issue.get("issue_id")
+    }
+    known_names = {issue.get("name") for issue in issues if issue.get("name")}
+    roles: Dict[str, str] = {}
+    for role, value in raw.items():
+        name = name_by_issue_id.get(value, value)
+        if name not in known_names:
+            raise ValueError(
+                f"clause_roles.{role} 指向不存在的条款：{value!r}。"
+                "应为 issues[].issue_id 或 issues[].name 之一。"
+            )
+        roles[role] = name
+    return roles
+
+
 def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
     errors = validate_b_contract(b_scenario)
     if errors:
@@ -1240,6 +1270,7 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
         "action_points_per_round": action_points_per_round,
         "parties": parties,
         "clauses": clauses,
+        "clause_roles": _adapt_clause_roles(b_scenario),
         "index_rules": index_rules,
         "terminal_rules": terminal_rules,
         "allow_accept_with_open_issues": not terminal_rules[

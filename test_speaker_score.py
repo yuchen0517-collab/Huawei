@@ -24,12 +24,12 @@ REAL_SCENARIO_ID = "scn-chip-controls-0001"
 
 NUMERIC_PATCH = {
     "芯片算力门槛": {"option": 1000, "note": "位于中方 800 以上、美方 1500 以下的安全区间。"},
-    "许可审批时限": {"option": 75, "note": "位于美方 60 以上、中方 90 以下的安全区间。"},
 }
 FULL_PATCH = {
     **NUMERIC_PATCH,
     "第三国再出口限制": {"option": "O2", "note": "避开美方对 O1 的硬红线。"},
     "关键矿产出口安排": {"option": "O2", "note": "避开中方对 O3/O4 的硬红线。"},
+    "协议退出与救济安排": {"option": "O2", "note": "双方都可接受的协商延长履约期。"},
 }
 
 SPEAKER_KEYS = {

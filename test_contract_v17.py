@@ -187,7 +187,7 @@ def test_clause_count_follows_scenario_issues():
     chip_state = get_state(chip_sid)
     chip_names = [clause["name"] for clause in api.SESSIONS[chip_sid].engine.scenario["clauses"]]
     assert len(chip_state["clauses"]) == len(chip_names) == 4
-    assert {item["unit"] for item in chip_state["clauses"]} >= {"TFLOPS(FP16)", "天"}
+    assert {item["unit"] for item in chip_state["clauses"]} >= {"TFLOPS(FP16)", ""}
     numeric = next(item for item in chip_state["clauses"] if item["type"] == "numeric")
     assert numeric["range"] == {"min": 100, "max": 5000, "step": 100}
 

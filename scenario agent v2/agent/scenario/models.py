@@ -13,6 +13,7 @@ from typing import Any, Mapping
 # 编号索引：
 # R0 顶层结构 / R1-R8 业务规则 / R9-R11 条款命名·事实来源·假设 /
 # R12-R15 1.1 契约新增（终局·初始·运行时·指数）/ R16 逐方选项打分
+# R17 条款角色（clause_roles）
 
 SCENARIO_TYPE_VALUES = ("documented", "hypothesis")
 ISSUE_TYPE_VALUES = ("numeric", "enumerated")
@@ -1305,6 +1306,63 @@ def _check_r16_option_scores(data: Mapping[str, Any]) -> list[Problem]:
     return problems
 
 
+def _check_r17_clause_roles(data: Mapping[str, Any]) -> list[Problem]:
+    """条款角色：三个功能位必须指向真实存在的枚举型条款，且互不重复。"""
+    raw_roles = data.get("clause_roles")
+    if raw_roles is None:
+        return []
+    if not isinstance(raw_roles, Mapping):
+        return [Problem("R17_clause_roles", "clause_roles", f"必须是对象，实际为 {type(raw_roles).__name__}")]
+    problems: list[Problem] = []
+    expected = {"condition", "performance", "exit"}
+    for key in sorted(expected - set(raw_roles)):
+        problems.append(Problem("R17_clause_roles", f"clause_roles.{key}", f"缺少角色 {key}"))
+    for key in sorted(set(raw_roles) - expected):
+        problems.append(Problem(
+            "R17_clause_roles",
+            f"clause_roles.{key}",
+            f"未知角色 {key}，只允许 condition/performance/exit",
+        ))
+    issues = _issue_index(data)
+    seen: dict[str, str] = {}
+    for key in ("condition", "performance", "exit"):
+        if key not in raw_roles:
+            continue
+        value = raw_roles.get(key)
+        path = f"clause_roles.{key}"
+        if not isinstance(value, str):
+            problems.append(Problem("R17_clause_roles", path, f"必须是 issue_id 字符串，实际为 {type(value).__name__}"))
+            continue
+        issue = issues.get(value)
+        if issue is None:
+            problems.append(Problem("R17_clause_roles", path, f"指向不存在的条款：{value}"))
+            continue
+        if issue.get("type") != "enumerated":
+            problems.append(Problem(
+                "R17_clause_roles",
+                path,
+                f"条款角色必须指向枚举型条款，便于双方比对；{value} 实际为 {issue.get('type')}",
+            ))
+            continue
+        options = _dict_list(issue.get("options"))
+        if len(options) < 3:
+            problems.append(Problem(
+                "R17_clause_roles",
+                path,
+                f"枚举型条款 {value} 至少需要 3 个选项，实际为 {len(options)} 个",
+            ))
+            continue
+        if value in seen:
+            problems.append(Problem(
+                "R17_clause_roles",
+                path,
+                f"与 {seen[value]} 指向同一个条款 {value}，三个角色必须互不重复",
+            ))
+        else:
+            seen[value] = key
+    return problems
+
+
 _RULES = (
     _check_r0_required_fields,
     _check_r9_clause_naming,
@@ -1315,6 +1373,7 @@ _RULES = (
     _check_r14_runtime,
     _check_r15_index_rules,
     _check_r16_option_scores,
+    _check_r17_clause_roles,
     _check_r8_enum_values,
     _check_r1_weight_sum,
     _check_r2_target_in_range,

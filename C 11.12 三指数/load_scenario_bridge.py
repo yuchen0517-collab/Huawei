@@ -225,14 +225,16 @@ def evaluate_for(engine, viewer: str) -> dict:
     这是**唯一**允许把评价交给玩家的出口；`engine.evaluate()` 无参调用只供
     内部复盘 / 审计 / demo 使用。
 
-    内部先用 `engine.evaluate()` 取全量六字段，再用 `engine.public_state(viewer)`
-    裁剪 `batna_comparison`：非 viewer 方的 `batna` / `net_gain` /
+    内部用 `engine.evaluate(viewer)` 取六字段，`batna_comparison` 与
+    `redline_check` 都已按 viewer 裁好；随后再用 `engine.public_state(viewer)`
+    对 `batna_comparison` 做一次幂等裁剪：非 viewer 方的 `batna` / `net_gain` /
     `better_than_batna` 一律置 None，避免由 `net_gain` 反推对方底牌。
-    `engine.evaluate()` 的签名保持原样，本函数是编排层的对外收口。
+    `redline_check` 同样按 viewer 裁剪，非 viewer 方为 None，防止反推对方红线位置。
+    `engine.evaluate()` 无参调用只供内部复盘 / 审计 / demo 使用。
     """
     if not viewer:
         raise ValueError("viewer 不能为空：对外评价必须指定己方 party_id。")
-    evaluation = deepcopy(engine.evaluate())
+    evaluation = deepcopy(engine.evaluate(viewer))
     public_private = (engine.public_state(viewer) or {}).get(
         "private_state_by_party", {}
     ) or {}

@@ -9,16 +9,18 @@ DEADLOCK_ROUNDS = 3
 
 # 优先选语义贴合且有预置 options 的 enum 条款，便于前端选择和双方比对；
 # numeric 仅在语义更贴切时使用，不为了类型牺牲条款语义。
+# 场景自带 clause_roles 时以场景为准（B 侧用 issue_id 声明，适配层已映射为
+# 条款名）；本表只作为旧场景缺字段时的兜底。
 CLAUSE_ROLES_BY_SCENARIO = {
     "scn-chip-controls-0001": {
         "condition": "第三国再出口限制",
-        "performance": "许可审批时限",
-        "exit": "关键矿产出口安排",
+        "performance": "关键矿产出口安排",
+        "exit": "协议退出与救济安排",
     },
     "scn-chip-controls-nozopa-0001": {
         "condition": "第三国再出口限制",
-        "performance": "许可审批时限",
-        "exit": "关键矿产出口安排",
+        "performance": "关键矿产出口安排",
+        "exit": "协议退出与救济安排",
     },
     "scn-dst-cn-us-0001": {
         "condition": "征税门槛",
@@ -32,10 +34,10 @@ def apply_overrides(scenario: dict) -> dict:
     """返回补齐契约元数据的新场景字典，不修改调用方持有的对象。"""
     result = copy.deepcopy(scenario)
     scenario_id = result.get("scenario_id")
+    clause_names = [clause["name"] for clause in result.get("clauses", [])]
     if not result.get("clause_roles"):
         roles = CLAUSE_ROLES_BY_SCENARIO.get(scenario_id)
         if roles is not None:
-            clause_names = [clause["name"] for clause in result.get("clauses", [])]
             for role, clause_name in roles.items():
                 if clause_name not in clause_names:
                     raise ValueError(
@@ -43,6 +45,17 @@ def apply_overrides(scenario: dict) -> dict:
                         f"指向不存在的条款 {clause_name!r}"
                     )
             result["clause_roles"] = dict(roles)
+    else:
+        # 场景自带角色映射（B 侧或上游覆盖层）：逐个校验指向真实条款，
+        # 避免把不存在或拼错的条款名带进卡牌校验与前端 target_clause。
+        declared = result["clause_roles"]
+        for role, clause_name in declared.items():
+            if clause_name not in clause_names:
+                raise ValueError(
+                    f"场景 {scenario_id!r} 的 clause_roles.{role} "
+                    f"指向不存在的条款 {clause_name!r}"
+                )
+        result["clause_roles"] = dict(declared)
 
     issue_count = len(result.get("clauses", []))
     result["action_points_per_round"] = (

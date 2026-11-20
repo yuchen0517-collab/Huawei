@@ -27,11 +27,11 @@ COUNTER = itertools.count(1)
 
 NUMERIC_PATCH = {
     "芯片算力门槛": {"option": 1000, "note": "双方红线内的算力门槛。"},
-    "许可审批时限": {"option": 75, "note": "双方红线内的审批时限。"},
 }
 ENUM_PATCH = {
     "第三国再出口限制": {"option": "O2", "note": "仅对清单对象事前许可。"},
     "关键矿产出口安排": {"option": "O2", "note": "设置民用快速通道。"},
+    "协议退出与救济安排": {"option": "O2", "note": "协商延长履约期，避开双方硬红线。"},
 }
 FULL_PATCH = {**NUMERIC_PATCH, **ENUM_PATCH}
 DEFAULT_PATCH = {
@@ -43,13 +43,13 @@ DEFAULT_PATCH = {
 EXPECTED_ROLES = {
     "scn-chip-controls-0001": {
         "condition": "第三国再出口限制",
-        "performance": "许可审批时限",
-        "exit": "关键矿产出口安排",
+        "performance": "关键矿产出口安排",
+        "exit": "协议退出与救济安排",
     },
     "scn-chip-controls-nozopa-0001": {
         "condition": "第三国再出口限制",
-        "performance": "许可审批时限",
-        "exit": "关键矿产出口安排",
+        "performance": "关键矿产出口安排",
+        "exit": "协议退出与救济安排",
     },
     "scn-dst-cn-us-0001": {
         "condition": "征税门槛",
@@ -382,7 +382,7 @@ def test_clause_role_is_enforced_and_valid_patch_passes():
 
 def test_apply_overrides_preserves_declared_roles_and_input():
     scenario = load_scenario(CHIP_PATH)
-    declared = {"condition": "许可审批时限"}
+    declared = {"condition": "第三国再出口限制"}
     scenario["clause_roles"] = declared
     original = copy.deepcopy(scenario)
     result = overrides.apply_overrides(scenario)
@@ -393,14 +393,33 @@ def test_apply_overrides_preserves_declared_roles_and_input():
     assert scenario == original
 
 
-def test_apply_overrides_rejects_unknown_role_clause(monkeypatch):
+def test_apply_overrides_rejects_unknown_declared_role_clause():
+    """场景自带的 clause_roles 也要校验：拼错或指向已删条款必须报错。
+
+    B 侧新场景直接声明 clause_roles（issue_id），适配层已映射为条款名，
+    覆盖层负责最后一道存在性校验，避免坏名字流到卡牌校验和前端。
+    """
+    scenario = load_scenario(CHIP_PATH)
+    scenario["clause_roles"] = {"condition": "不存在的条款"}
+    with pytest.raises(ValueError) as caught:
+        overrides.apply_overrides(scenario)
+    assert str(caught.value) == (
+        "场景 'scn-chip-controls-0001' 的 clause_roles.condition "
+        "指向不存在的条款 '不存在的条款'"
+    )
+
+
+def test_apply_overrides_fallback_rejects_unknown_role_clause(monkeypatch):
+    """场景未声明 clause_roles 时走内置兜底表，兜底表同样要校验。"""
     monkeypatch.setitem(
         overrides.CLAUSE_ROLES_BY_SCENARIO,
         "scn-chip-controls-0001",
         {"condition": "不存在的条款"},
     )
+    scenario = load_scenario(CHIP_PATH)
+    scenario.pop("clause_roles", None)
     with pytest.raises(ValueError) as caught:
-        overrides.apply_overrides(load_scenario(CHIP_PATH))
+        overrides.apply_overrides(scenario)
     assert str(caught.value) == (
         "场景 'scn-chip-controls-0001' 的 clause_roles.condition "
         "指向不存在的条款 '不存在的条款'"
@@ -454,8 +473,8 @@ def test_projection_available_cards_contains_target_clause():
     cards = {item["id"]: item for item in state["available_cards"]}
     assert len(cards) == 14
     assert cards["effective_condition"]["target_clause"] == "第三国再出口限制"
-    assert cards["performance_node"]["target_clause"] == "许可审批时限"
-    assert cards["exit_clause"]["target_clause"] == "关键矿产出口安排"
+    assert cards["performance_node"]["target_clause"] == "关键矿产出口安排"
+    assert cards["exit_clause"]["target_clause"] == "协议退出与救济安排"
     assert cards["anchor_offer"]["target_clause"] is None
     assert state["action_points_per_round"] == 5
     assert state["pending_hint"] is None

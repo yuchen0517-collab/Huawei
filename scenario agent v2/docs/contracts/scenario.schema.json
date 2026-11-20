@@ -243,6 +243,10 @@
                 }
               }
             }
+          },
+          "required": {
+            "type": "boolean",
+            "description": "本议题是否为每局必谈的必需条款。注意：这是议题属性，与 JSON Schema 的 required 关键字无关。缺省视为 true。"
           }
         },
         "allOf": [
@@ -422,6 +426,30 @@
           "maximum": 10,
           "default": 2,
           "description": "连续多少轮无状态变化（议题立场签名不变、无新事件、无新暗线）判定僵局并结束，按非协议终局处理。缺省 2，与三指数引擎 terminal.py / core.py 的现网值一致；不得大于 max_rounds。"
+        }
+      }
+    },
+    "clause_roles": {
+      "type": "object",
+      "description": "条款角色：把三个功能位映射到场景里真实存在的枚举型条款（issue_id）。缺省时上游三张条款控制卡置灰。",
+      "additionalProperties": false,
+      "required": [
+        "condition",
+        "performance",
+        "exit"
+      ],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "生效条件对应的 issue_id，必须指向 enumerated 型条款"
+        },
+        "performance": {
+          "type": "string",
+          "description": "履约核查节点对应的 issue_id，必须指向 enumerated 型条款"
+        },
+        "exit": {
+          "type": "string",
+          "description": "退出条款对应的 issue_id，必须指向 enumerated 型条款"
         }
       }
     },
