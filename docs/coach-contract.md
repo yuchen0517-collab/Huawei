@@ -44,6 +44,8 @@
 
 ### 1.2 `items[]` 单条结构
 
+> **A 2026-11-17 回签后，`kind` 以三值 `risk / opportunity / next_move` 为准；下表 `stage / alternative` 为旧口径，待随 §1.6 一起重构。**
+
 | 字段 | 类型 | 必填 | 含义 |
 |---|---|---|---|
 | `id` | `string` | 是 | 稳定标识，前端用它做展开态记忆，**不用数组下标** |
@@ -76,12 +78,12 @@
 - `clause` 非 `null` 时，必须与 `state.clauses[].name` 有同名项。
 - `round` 必须落在 `1..maxRound` 内，且 `round <= basis_round`。
 
-### 1.4 触发与取回时序（**待 A 选定：方案 A / 方案 B**）
+### 1.4 触发与取回时序（**已定：方案 A，A 于 2026-11-17 回签**）
 
 #### 触发（已定，不需要 A 选）
 
 - 时机：`提交本轮报价` 成功、且新状态渲染完成之后。
-- 动作：前端 `POST /session/{session_id}/debrief`（**fire-and-forget**）。
+- 动作：从**提交响应**或 `GET /session/{session_id}/state` 读取 `coach_advice`（A 两处同源，同一 `basis_version` 逐字节一致）。**教练不通过 `debrief` 触发**；`debrief` 只在终局打开时调用一次。
 - 约束：
   1. 提交链路**不得 `await`** 该请求；`debrief` 失败不影响提交成功的结果展示与本地状态。
   2. 提交失败分支（`INVALID_ACTION` / `VERSION_CONFLICT` / `TIMEOUT` / `SESSION_BUSY`）**一律不触发**。
@@ -89,7 +91,7 @@
   4. 同一 `basis_version` 只触发一次；同轮重复点击「提交本轮总结」不得重复触发。
   5. pending 期间用户可继续改条款、选卡、提交下一轮，**不允许**任何禁用、遮罩或 loading 挡路。
 
-请求示例：
+终局 `debrief` 示例（**教练不走此端点**，仅用于终局复盘）：
 
 ```http
 POST /session/sess-20261116-01/debrief
@@ -132,6 +134,7 @@ GET /session/sess-20261116-01/state
 ```
 
 - 优点：不加新端点、不新增轮询；`version` 与建议天然同源。
+- **A 2026-11-17 回签**：提交响应也会带回同一份 `coach_advice`，前端可在提交响应或 `GET /state` 二选一读取，两处同一 `basis_version` 逐字节一致。
 - 代价：A 要把投影字段从 9 个扩到 10 个，并接受该字段可缺省。
 - 缺省语义：`coach_advice` 不存在 → 前端保持「未生成」；存在但 `status="pending"` → 「生成中」。
 
@@ -206,7 +209,7 @@ GET /session/sess-20261116-01/coach
 | 产出时机 | 终局，由 A 的终局端点返回（K5=A） | 每轮提交后，异步 |
 | 结构 | 四维分 + `total` + 一句话 `feedback` | `items[]` + `evidence[]` |
 | 前端职责 | 只做展示与 S/A/B/C/D 评级映射，**不重算加权** | 只做展示与有效性校验，**不生成、不改写** |
-| 首轮特例 | `null` → 显示「首轮不计分」 | 首轮（对方未发言）也应有 `stage` 类建议，**不受 `null` 影响** |
+| 首轮特例 | `null` → 显示「本轮未评分」 | 首轮（对方未发言）也应有 `next_move` / `risk` 类建议，**不受 `null` 影响** |
 | 展示位置 | 终局覆盖层 | 左栏底部面板（与「会场纪要与事件」并列） |
 | 状态字段 | `speakerScore`（已存在） | `coach / coachStatus / coachCollapsed`（新增） |
 
@@ -223,9 +226,22 @@ GET /session/sess-20261116-01/coach
 | `items[].apply_hint` | `items[].applyHint` |
 | `items[].action_id` | `items[].actionId`（仅 evidence 内） |
 
+**实现口径（T6 现状）**：前端当前**透传后端 snake_case**（`coach.basis_version` / `items[].ap_cost` / `items[].apply_hint`），组件层直接读取；不额外做 camelCase 映射。原因：A 尚未选定取回方案（A/B），提前重构会让 `sanitize → store → 组件` 三处同时改动，与本轮 diff 混在一起不可评审。A 选定方案后如需统一命名，单独开一次重构。
+
+> 上表是「A 选定取回方案后」的目标口径，不代表 T6 已有实现；以本段现状为准。
+
+**A 2026-11-17 回签（覆盖本节旧口径）**：
+
+- `items[].kind` 只有 `risk / opportunity / next_move` 三值，不再使用 `stage / alternative`；
+- `basis_round` 已加；`evidence[]` 已补 `kind / round / label`；`clause` 只在 `clauses[].name` 可查时填；
+- `coach_advice` 在提交响应与 `GET /state` 两处同源；
+- 前端命名仍透传 snake_case，等 A 定稿后单独开重构（不做 camelCase 映射）。
+
 ---
 
 ## 2. 完整 JSON 示例
+
+> 示例中的 `kind` 仍是旧值；A 回签后按 `risk / opportunity / next_move` 理解。`evidence` 已按 2026-11-17 回签补齐 `kind / round / label`。
 
 > `round` 与 `clause` 取自 mock 现行数据（`version=12`、`round=3`、条款名与 `mockAdapter.createState()` 一致）。
 > `action_id` 仅演示 A 的 `a` + 6 位数字格式；联调时必须能在行动账本中查到，否则该 item 会被前端断言 1 过滤。

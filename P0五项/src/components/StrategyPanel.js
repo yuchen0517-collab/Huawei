@@ -1,5 +1,6 @@
 import { escapeHTML, icon, PanelHeading } from './ui.js';
 import { CoachPanel } from './CoachPanel.js';
+import { ActionBar } from './ActionBar.js';
 
 export function StrategyCard({ strategy, selected = false }) {
   return `<button class="strategy-card${strategy.recommended ? ' recommended' : ''}${selected ? ' selected' : ''}" data-action="toggle-strategy" data-strategy-id="${escapeHTML(strategy.id)}" aria-pressed="${selected}">
@@ -34,12 +35,13 @@ export function HandFooterContent({ used, total, canEndTurn, anim = null, phase 
 }
 
 /**
- * 策略卡区。基础行动条（接受 / 拒绝 / 维持 / 最后报价 / 退出）暂不上屏，
- * 需要时把 ActionBar 放回 #strategyCards 上方即可，其余逻辑不变。
+ * 策略卡区。基础行动条（接受 / 拒绝 / 维持 / 最后报价 / 退出）固定在 #strategyCards 上方；
+ * 可用性仍由 store.baseActions 派生，组件只负责画。
  */
-export function StrategyPanel({ strategies, selectedIds, used, total, canEndTurn, version = 1, phase = 'ready', coach = null, coachStatus = 'idle', coachCollapsed = true }) {
+export function StrategyPanel({ strategies, selectedIds, used, total, canEndTurn, version = 1, phase = 'ready', coach = null, coachStatus = 'idle', coachCollapsed = true, baseActions = [] }) {
   return `<aside class="side-panel strategy-panel" id="strategyPanel" aria-label="策略卡区" tabindex="-1">
     ${PanelHeading({ title: '策略卡区', collapseAction: 'collapse-strategy', collapseLabel: '收起策略卡区' })}
+    <div id="actionBar">${ActionBar({ actions: baseActions })}</div>
     <div class="strategy-cards" id="strategyCards">${StrategyCards({ strategies, selectedIds })}</div>
     <div class="coach-slot" id="coachSlot">${CoachPanel({ coach, status: coachStatus, collapsed: coachCollapsed, version })}</div>
     <div class="hand-footer" id="handFooter">${HandFooterContent({ used, total, canEndTurn, phase, draftCount: selectedIds.length })}</div>

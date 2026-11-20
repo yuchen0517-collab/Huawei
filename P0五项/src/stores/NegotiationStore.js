@@ -365,6 +365,75 @@ if (patches.length > 0) {
     if (reason) this.state.endReason = reason;
   }
 
+  /** 自动推演：只记录控制状态与日志，不绕过 lockRound / ROUND_LOCKED / 幂等。 */
+  startAutoPlay(mode = 'continuous') {
+    const auto = this.state.autoPlay;
+    auto.active = true;
+    auto.mode = mode === 'step' ? 'step' : 'continuous';
+    auto.pendingRound = null;
+    auto.startedAtRound = this.state.round;
+    auto.lastError = null;
+    if (auto.mode === 'continuous') auto.steps = [];
+  }
+
+  pauseAutoPlay(reason = 'paused') {
+    if (!this.state.autoPlay.active) return;
+    this.state.autoPlay.active = false;
+    this.state.autoPlay.pendingRound = null;
+    this.state.autoPlay.lastError = reason;
+    this.recordAutoPlayStep({
+      round: this.state.round,
+      label: '暂停',
+      version: this.state.version,
+      clausesVersion: this.state.clausesVersion,
+      at: Date.now(),
+      status: 'paused',
+      reason
+    });
+  }
+
+  stopAutoPlay(reason = 'user') {
+    if (!this.state.autoPlay.active) return;
+    this.state.autoPlay.active = false;
+    this.state.autoPlay.pendingRound = null;
+    this.state.autoPlay.lastError = reason;
+    this.recordAutoPlayStep({
+      round: this.state.round,
+      label: '停止',
+      version: this.state.version,
+      clausesVersion: this.state.clausesVersion,
+      at: Date.now(),
+      status: 'stopped',
+      reason
+    });
+  }
+
+  setAutoPlaySpeed(speed) {
+    const value = Number(speed);
+    if ([1, 1.5, 2].includes(value)) this.state.autoPlay.speed = value;
+  }
+
+  recordAutoPlayStep(step) {
+    this.state.autoPlay.steps.push({
+      round: step.round,
+      label: step.label,
+      version: step.version,
+      clausesVersion: step.clausesVersion,
+      at: step.at,
+      status: step.status || 'ok',
+      reason: step.reason || null
+    });
+    if (this.state.autoPlay.steps.length > 80) this.state.autoPlay.steps.shift();
+  }
+
+  clearAutoPlaySteps() {
+    this.state.autoPlay.steps = [];
+  }
+
+  markAutoPlayPending(round) {
+    this.state.autoPlay.pendingRound = round == null ? null : round;
+  }
+
   reset() {
     this.state = createInitialNegotiation();
   }

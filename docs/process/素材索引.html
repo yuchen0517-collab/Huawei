@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第 8 天素材索引 · Diplomat</title>
+<style>
+  :root{
+    --bg:#0d0b08;--panel:#14110c;--panel2:#1b160f;--line:#3a3024;--line2:#2a231a;
+    --ink:#e6ddcf;--muted:#a99a84;--dim:#8a8a8a;--gold:#d9b46a;--gold2:#c9a061;
+    --blue:#7fb6e8;--blue-line:#35587a;--blue-bg:#132333;
+    --gray:#9a9a9a;--gray-line:#4a4a4a;--gray-bg:#1b1b1b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:var(--bg);color:var(--ink);font:14px/1.65 "Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif}
+  main{max-width:1280px;margin:0 auto}
+  h1{font-size:24px;font-weight:500;letter-spacing:.08em;margin:0 0 6px;color:var(--gold)}
+  h2{font-size:16px;font-weight:500;letter-spacing:.06em;color:var(--gold2);margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .sub{color:var(--muted);font-size:12px;margin:0}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 6px}
+  .stat{border:1px solid var(--line);background:var(--panel);padding:6px 10px;font-size:12px;color:var(--muted)}
+  .stat b{color:var(--gold)}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line)}
+  table{width:100%;min-width:860px;border-collapse:collapse;background:var(--panel)}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle;font-size:12px}
+  th{color:var(--gold2);font-weight:500;background:var(--panel2);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  td.num{font-family:Georgia,serif;color:var(--gold);white-space:nowrap}
+  a.file{color:var(--gold);text-decoration:none;word-break:break-all}
+  a.file:hover{text-decoration:underline}
+  a.file[aria-disabled="true"]{color:var(--muted);cursor:not-allowed;text-decoration:none}
+  .badge{display:inline-block;padding:2px 8px;border:1px solid;font-size:11px;white-space:nowrap;border-radius:2px}
+  .badge.pending{color:var(--gray);border-color:var(--gray-line);background:var(--gray-bg)}
+  .badge.recorded{color:var(--blue);border-color:var(--blue-line);background:var(--blue-bg)}
+  .badge.accepted{color:var(--gold);border-color:#7a5c2a;background:#2a1f10}
+  .badge.archived{color:var(--blue);border-color:var(--blue-line);background:var(--blue-bg)}
+  .thumbs{display:flex;gap:6px;flex-wrap:wrap}
+  .thumb{position:relative;display:grid;place-items:center;width:96px;height:54px;border:1px solid var(--line);background:#080604;overflow:hidden;text-decoration:none;flex:none}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb span{display:none;font-size:10px;color:var(--dim)}
+  .thumb.missing span{display:grid;place-items:center;position:absolute;inset:0;background:#080604}
+  .hint{font-size:11px;color:var(--muted);margin:8px 0 0}
+  .check{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted)}
+  .check.done{color:var(--gold)}
+  footer{margin:32px auto 0;max-width:1280px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.8}
+  @media(max-width:640px){body{padding:16px}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>第 8 天素材索引</h1>
+    <p class="sub">执行台账：<code>docs/素材整理清单-day8.md</code> · 母版：<code>docs/recording-day7.md</code> · 本页仅本机打开</p>
+    <div class="stats">
+      <span class="stat">视频 9 段 · <b>已录 9（同输入预录）</b></span>
+      <span class="stat">第 7/8 天截图 17 张 · <b>已归档 17</b></span>
+      <span class="stat">历史证据 10 张 · <b>已归档 10</b></span>
+      <span class="stat">已录 0 · 已验收 0</span>
+    </div>
+    <p class="hint">状态口径：待录灰 / 已录蓝 / 已验收金 / 已归档蓝。9 段视频已产出为同输入预录片段（无头 Edge 驱动真实页面逐帧截取 + ffmpeg 编码，无旁白音轨、非真人录屏），点击文件名可直接打开；预览版为 1440×900，1920 档见 viewport 截图与原始帧。版本探针截图 <code>version-badges.png</code> 已归档。</p>
+  </header>
+
+  <section>
+    <h2>1. 视频段（9 段）</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>段号</th><th>文件名</th><th>覆盖镜头</th><th>时长</th><th>状态</th><th>验收截图</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="num">01</td>
+            <td><a class="file" href="recording-day7/segments/01_overview.mp4" title="同输入预录片段，可打开">01_overview.mp4</a></td>
+            <td>01–02</td><td>30s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-overview-loaded.png" title="day8-overview-loaded.png"><img src="evidence/day8-overview-loaded.png" alt="overview loaded" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-overview-versions.png" title="day8-overview-versions.png"><img src="evidence/day8-overview-versions.png" alt="overview versions" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">02</td>
+            <td><a class="file" href="recording-day7/segments/02_board.mp4" title="同输入预录片段，可打开">02_board.mp4</a></td>
+            <td>03–04</td><td>55s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-board-draft2.png"><img src="evidence/day8-board-draft2.png" alt="board draft2" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-board-preflight.png"><img src="evidence/day8-board-preflight.png" alt="board preflight" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">03</td>
+            <td><a class="file" href="recording-day7/segments/03_protocol.mp4" title="同输入预录片段，可打开">03_protocol.mp4</a></td>
+            <td>05</td><td>15s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-protocol-unresolved.png"><img src="evidence/day8-protocol-unresolved.png" alt="protocol unresolved" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">04</td>
+            <td><a class="file" href="recording-day7/segments/04_busy_retry.mp4" title="同输入预录片段，可打开">04_busy_retry.mp4</a></td>
+            <td>06</td><td>25s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-busy-banner.png"><img src="evidence/day8-busy-banner.png" alt="busy banner" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">05</td>
+            <td><a class="file" href="recording-day7/segments/05_conflict.mp4" title="同输入预录片段，可打开">05_conflict.mp4</a></td>
+            <td>07</td><td>25s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-conflict-banner.png"><img src="evidence/day8-conflict-banner.png" alt="conflict banner" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">06</td>
+            <td><a class="file" href="recording-day7/segments/06_degraded.mp4" title="同输入预录片段，可打开">06_degraded.mp4</a></td>
+            <td>08</td><td>18s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-degraded-empty.png"><img src="evidence/day8-degraded-empty.png" alt="degraded empty" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">07</td>
+            <td><a class="file" href="recording-day7/segments/07_viewport.mp4" title="同输入预录片段，可打开">07_viewport.mp4</a></td>
+            <td>09</td><td>14s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-viewport-1440.png"><img src="evidence/day8-viewport-1440.png" alt="viewport 1440" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-viewport-1920.png"><img src="evidence/day8-viewport-1920.png" alt="viewport 1920" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">08</td>
+            <td><a class="file" href="recording-day7/segments/08_finale.mp4" title="同输入预录片段，可打开">08_finale.mp4</a></td>
+            <td>10</td><td>8s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-finale-five.png"><img src="evidence/day8-finale-five.png" alt="finale five" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-finale-evaluation.png"><img src="evidence/day8-finale-evaluation.png" alt="finale evaluation" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-finale-null.png"><img src="evidence/day8-finale-null.png" alt="finale null" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-finale-evidence.png"><img src="evidence/day8-finale-evidence.png" alt="finale evidence" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-finale-datasource.png"><img src="evidence/day8-finale-datasource.png" alt="finale datasource" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+          <tr>
+            <td class="num">09</td>
+            <td><a class="file" href="recording-day7/segments/09_autoplay.mp4" title="同输入预录片段，可打开">09_autoplay.mp4</a></td>
+            <td>05A</td><td>20s</td><td><span class="badge recorded">已录</span></td>
+            <td><div class="thumbs"><a class="thumb" href="evidence/day8-autoplay-running.png"><img src="evidence/day8-autoplay-running.png" alt="autoplay running" onerror="thumbError(this)"><span>缺失</span></a><a class="thumb" href="evidence/day8-autoplay-log3.png"><img src="evidence/day8-autoplay-log3.png" alt="autoplay log3" onerror="thumbError(this)"><span>缺失</span></a></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 第 7/8 天截图（17 张，已归档）</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>文件名</th><th>场景</th><th>对应段</th><th>状态</th><th>缩略图</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><a class="file" href="evidence/day8-overview-loaded.png">day8-overview-loaded.png</a></td><td>overview</td><td>01</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-overview-loaded.png"><img src="evidence/day8-overview-loaded.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">2</td><td><a class="file" href="evidence/day8-overview-versions.png">day8-overview-versions.png</a></td><td>overview</td><td>01</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-overview-versions.png"><img src="evidence/day8-overview-versions.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">3</td><td><a class="file" href="evidence/day8-board-draft2.png">day8-board-draft2.png</a></td><td>board</td><td>02</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-board-draft2.png"><img src="evidence/day8-board-draft2.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">4</td><td><a class="file" href="evidence/day8-board-preflight.png">day8-board-preflight.png</a></td><td>board</td><td>02</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-board-preflight.png"><img src="evidence/day8-board-preflight.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">5</td><td><a class="file" href="evidence/day8-protocol-unresolved.png">day8-protocol-unresolved.png</a></td><td>protocol</td><td>03</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-protocol-unresolved.png"><img src="evidence/day8-protocol-unresolved.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">6</td><td><a class="file" href="evidence/day8-busy-banner.png">day8-busy-banner.png</a></td><td>busy</td><td>04</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-busy-banner.png"><img src="evidence/day8-busy-banner.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">7</td><td><a class="file" href="evidence/day8-conflict-banner.png">day8-conflict-banner.png</a></td><td>conflict</td><td>05</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-conflict-banner.png"><img src="evidence/day8-conflict-banner.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">8</td><td><a class="file" href="evidence/day8-degraded-empty.png">day8-degraded-empty.png</a></td><td>degraded</td><td>06</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-degraded-empty.png"><img src="evidence/day8-degraded-empty.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">9</td><td><a class="file" href="evidence/day8-viewport-1440.png">day8-viewport-1440.png</a></td><td>viewport</td><td>07</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-viewport-1440.png"><img src="evidence/day8-viewport-1440.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">10</td><td><a class="file" href="evidence/day8-viewport-1920.png">day8-viewport-1920.png</a></td><td>viewport</td><td>07</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-viewport-1920.png"><img src="evidence/day8-viewport-1920.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">11</td><td><a class="file" href="evidence/day8-finale-five.png">day8-finale-five.png</a></td><td>finale</td><td>08</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-finale-five.png"><img src="evidence/day8-finale-five.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">12</td><td><a class="file" href="evidence/day8-finale-evaluation.png">day8-finale-evaluation.png</a></td><td>finale</td><td>08</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-finale-evaluation.png"><img src="evidence/day8-finale-evaluation.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">13</td><td><a class="file" href="evidence/day8-finale-null.png">day8-finale-null.png</a></td><td>finale</td><td>08</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-finale-null.png"><img src="evidence/day8-finale-null.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">14</td><td><a class="file" href="evidence/day8-finale-evidence.png">day8-finale-evidence.png</a></td><td>finale</td><td>08</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-finale-evidence.png"><img src="evidence/day8-finale-evidence.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">15</td><td><a class="file" href="evidence/day8-finale-datasource.png">day8-finale-datasource.png</a></td><td>finale</td><td>08</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-finale-datasource.png"><img src="evidence/day8-finale-datasource.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">16</td><td><a class="file" href="evidence/day8-autoplay-running.png">day8-autoplay-running.png</a></td><td>autoplay</td><td>09</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-autoplay-running.png"><img src="evidence/day8-autoplay-running.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">17</td><td><a class="file" href="evidence/day8-autoplay-log3.png">day8-autoplay-log3.png</a></td><td>autoplay</td><td>09</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/day8-autoplay-log3.png"><img src="evidence/day8-autoplay-log3.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. 历史证据（10 张，已归档）</h2>
+    <p class="hint">第 6 天教练 P1 证据，不是第 7/8 天录制截图，不冒充 <code>day8-*</code>。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>文件</th><th>来源</th><th>状态</th><th>缩略图</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><a class="file" href="evidence/t6/t6-collapsed.png">t6-collapsed.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-collapsed.png"><img src="evidence/t6/t6-collapsed.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">2</td><td><a class="file" href="evidence/t6/t6-failed.png">t6-failed.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-failed.png"><img src="evidence/t6/t6-failed.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">3</td><td><a class="file" href="evidence/t6/t6-filter.png">t6-filter.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-filter.png"><img src="evidence/t6/t6-filter.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">4</td><td><a class="file" href="evidence/t6/t6-k3-notrigger.png">t6-k3-notrigger.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-k3-notrigger.png"><img src="evidence/t6/t6-k3-notrigger.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">5</td><td><a class="file" href="evidence/t6/t6-leakfilter.png">t6-leakfilter.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-leakfilter.png"><img src="evidence/t6/t6-leakfilter.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">6</td><td><a class="file" href="evidence/t6/t6-measure-both.png">t6-measure-both.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-measure-both.png"><img src="evidence/t6/t6-measure-both.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">7</td><td><a class="file" href="evidence/t6/t6-no-pollution.png">t6-no-pollution.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-no-pollution.png"><img src="evidence/t6/t6-no-pollution.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">8</td><td><a class="file" href="evidence/t6/t6-nonblocking.png">t6-nonblocking.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-nonblocking.png"><img src="evidence/t6/t6-nonblocking.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">9</td><td><a class="file" href="evidence/t6/t6-ready.png">t6-ready.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-ready.png"><img src="evidence/t6/t6-ready.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+          <tr><td class="num">10</td><td><a class="file" href="evidence/t6/t6-stale.png">t6-stale.png</a></td><td>第 6 天教练 P1</td><td><span class="badge archived">已归档</span></td><td><a class="thumb" href="evidence/t6/t6-stale.png"><img src="evidence/t6/t6-stale.png" alt="" onerror="thumbError(this)"><span>缺失</span></a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. 缺失项摘要（责任人与最晚时间）</h2>
+    <p class="hint">已完成项保留在表内作为闭环记录；当前真正待办为第 1 / 3 / 7 / 8 行（视频、evidence 分目录、评分接入、导出检查）。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>缺失项</th><th>阻塞原因</th><th>责任人</th><th>最晚补齐</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>9 段视频未录制</td><td>尚未执行录制；segments 目录未创建</td><td>D</td><td>2026-11-21 18:00</td></tr>
+          <tr><td class="num">2</td><td>17 张 day8 截图已归档（2026-11-20 17:02）</td><td>已完成；录制后复核</td><td>D</td><td>已完成</td></tr>
+          <tr><td class="num">3</td><td>evidence/t7–t11 未分目录</td><td>截图暂存 evidence 根目录，不阻塞</td><td>D</td><td>2026-11-21 18:00</td></tr>
+          <tr><td class="num">4</td><td>错误注入预热脚本已确认</td><td>已完成：<code>__diplomat.injectError(...)</code> 实测 MODEL_UNAVAILABLE / SESSION_BUSY / ROUND_LOCKED / VERSION_CONFLICT 分流；BUSY/CONFLICT 横幅已截图</td><td>A</td><td>已完成</td></tr>
+          <tr><td class="num">5</td><td>三处版本探针已实跑</td><td>已完成：无头 Edge 实测 <code>#mVer</code>/<code>#bdVer</code>/<code>#drVer</code> v1 三处一致，推进后 v3/v3/v3 同源</td><td>D</td><td>已完成</td></tr>
+          <tr><td class="num">6</td><td>构建机 dist 与单文件版已重生成</td><td>已完成：<code>npm run build</code> 与 <code>node build-single.mjs</code> 均 exit 0</td><td>D</td><td>已完成</td></tr>
+          <tr><td class="num">7</td><td>speaker_score 评分未接入</td><td>state 无该字段</td><td>A / C</td><td>2026-11-22 18:00</td></tr>
+          <tr><td class="num">8</td><td>导出检查未执行</td><td>素材尚未生成</td><td>D</td><td>2026-11-21 22:00</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. 导出检查</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>检查项</th><th>标准</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>分辨率</td><td>1920×1080</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">2</td><td>帧率</td><td>30fps</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">3</td><td>容器/编码</td><td>MP4 / H.264 / yuv420p</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">4</td><td>完整原片</td><td>raw/full_*.mp4</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">5</td><td>分段原片</td><td>segments/01–09</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">6</td><td>无字幕原片</td><td>segments/*_nosub.mp4</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">7</td><td>字幕 SRT</td><td>srt/ 9 份</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">8</td><td>封面</td><td>cover/cover_1920x1080.png</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">9</td><td>讲解词</td><td>与逐镜旁白稿一致</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">10</td><td>最终导出</td><td>final/day7_full_subtitled.mp4</td><td class="check">[ ] 未完成</td></tr>
+          <tr><td class="num">11</td><td>密钥/私有配置（代码）</td><td>httpBase 空、无 Token、无真实域名</td><td class="check done">[x] 已检查（2026-11-20）</td></tr>
+          <tr><td class="num">12</td><td>密钥/私有配置（素材）</td><td>画面不含 .env、Token、内网地址</td><td class="check">[ ] 未完成</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    本页只用于本机 <code>file://</code> 打开；不引入框架、CDN 或外部字体，不发起网络请求，不包含真实接口地址、域名或 Token。
+    状态数据为硬编码快照（截图状态同步于 2026-11-20 17:02）；视频录制完成后请同步修改本页与 <code>docs/素材整理清单-day8.md</code>。
+  </footer>
+</main>
+<script>
+  function thumbError(img) {
+    var box = img.parentNode;
+    img.style.display = 'none';
+    if (box) box.classList.add('missing');
+  }
+</script>
+</body>
+</html>

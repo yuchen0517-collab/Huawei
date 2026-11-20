@@ -10,7 +10,7 @@ function summaryBlock(title, items = []) {
  * 报价板：协议签署板就在报价板里（谈判树只放谈判树）。
  * 条款数值按 kind 渲染，不再统一标成「估计值 / 可信度」。
  */
-export function ReportContent({ topic, clauses = [], drafts = {}, draftCount = 0, pendingCount = 0, submitting = false, summary = null }) {
+export function ReportContent({ topic, clauses = [], drafts = {}, draftCount = 0, pendingCount = 0, submitting = false, summary = null, version = 1 }) {
   const summaryHtml = summary
     ? `<div class="report-summary">
         ${summaryBlock('谈判结果', summary.outcome)}
@@ -24,6 +24,7 @@ export function ReportContent({ topic, clauses = [], drafts = {}, draftCount = 0
     ${summaryHtml}
     <div class="board-head"><strong>协议签署板</strong><small>逐条选定我方立场，再提交本轮修订</small></div>
     <div id="reportBoard">${ClauseBoard({ clauses, drafts, draftCount, pendingCount, submitting })}</div>
+    <div class="board-foot"><span>协议版本</span><em class="version-chip" id="bdVer">v${version}</em></div>
   </div>`;
 }
 

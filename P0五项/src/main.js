@@ -13,6 +13,9 @@ import {
   HandFooterContent,
   StatusStrip,
   ClauseBoard,
+  AutoPlayPanel,
+  ActionBar,
+  DebriefPage,
   ToastController,
   TreeContent,
   TreeDrawerHeader,
@@ -28,6 +31,7 @@ import { submitAction, injectError, adapterId } from './services/adapter.js';
 import { actionIdFor, peekActionId, consumeActionId } from './services/idempotency.js';
 import { fetchCoach, sanitizeCoach, setCoachMode, getCoachMode, coachRequestCount } from './services/coach.js';
 import { ENDGAME_COPY, buildReportSummary } from './domain/endgame.js';
+import { buildDebrief } from './domain/debrief.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const store = new NegotiationStore();
@@ -37,6 +41,8 @@ let treeTrigger = null;
 let submitting = false;
 let busyLeft = 0;
 let busyTimer = null;
+let autoPlayTimer = null;
+let autoPlayRaf = null;
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -62,6 +68,7 @@ const eventCard = new EventCardController();
 const appShell = $('.app-shell');
 const workspace = $('#workspace');
 const fabPositionKey = 'diplomat-fab-pos';
+renderAutoPlay();
 
 function setPanelA11y(side, expanded) {
   const panel = side === 'strategy' ? $('#strategyPanel') : $('#situationPanel');
@@ -279,6 +286,143 @@ function initReportFab() {
   window.addEventListener('orientationchange', place);
 }
 
+function renderAutoPlay() {
+  const host = $('#autoPlaySlot');
+  if (!host) return;
+  const logWasOpen = Boolean(host.querySelector('.autoplay-log')?.open);
+  host.innerHTML = AutoPlayPanel({
+    autoPlay: store.state.autoPlay,
+    round: store.state.round,
+    ended: store.state.ended,
+    phase: store.state.phase
+  });
+  if (logWasOpen) {
+    const log = host.querySelector('.autoplay-log');
+    if (log) log.open = true;
+  }
+}
+
+function clearAutoPlayTimers() {
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+  if (autoPlayRaf) { cancelAnimationFrame(autoPlayRaf); autoPlayRaf = null; }
+}
+
+function stopAutoPlayFor(reason) {
+  clearAutoPlayTimers();
+  if (!store.state.autoPlay.active) return;
+  store.stopAutoPlay(reason);
+  renderAutoPlay();
+  renderStrategy();
+}
+
+function pauseAutoPlayForHuman() {
+  if (!store.state.autoPlay.active) return;
+  clearAutoPlayTimers();
+  store.pauseAutoPlay('paused');
+  toast.show('自动推演已暂停，人工接管');
+  renderAutoPlay();
+  renderStrategy();
+}
+
+function startAutoPlayRun(mode) {
+  if (store.state.ended) return;
+  if (replyTimer) { toast.show('等待对方回应后再继续'); return; }
+  clearAutoPlayTimers();
+  store.startAutoPlay(mode);
+  renderAutoPlay();
+  renderStrategy();
+  autoPlayNext();
+}
+
+function pauseAutoPlayByUser() {
+  if (!store.state.autoPlay.active) return;
+  clearAutoPlayTimers();
+  store.pauseAutoPlay('paused');
+  renderAutoPlay();
+  renderStrategy();
+}
+
+function stopAutoPlayByUser() {
+  clearAutoPlayTimers();
+  store.stopAutoPlay('user');
+  renderAutoPlay();
+  renderStrategy();
+}
+
+function autoPlayNext() {
+  const auto = store.state.autoPlay;
+  if (!auto.active || store.state.ended || submitting || replyTimer) return;
+  if (store.state.roundLocked) { stopAutoPlayFor('round_locked'); return; }
+  if (store.state.error) { stopAutoPlayFor('error'); return; }
+  const judged = store.judge;
+  if (judged) { stopAutoPlayFor(judged.reason); renderEndgame(judged.reason); return; }
+  const hasIntent = store.state.selectedIds.length > 0
+    || store.state.baseAction.kind !== 'none'
+    || Object.keys(store.state.stanceDrafts || {}).length > 0;
+  if (!hasIntent) {
+    const result = store.chooseBaseAction('hold');
+    if (!result.ok) { stopAutoPlayFor(result.reason || 'no_intent'); return; }
+  }
+  submitTurn({ fromAutoPlay: true });
+}
+
+function scheduleAutoPlayNext() {
+  clearAutoPlayTimers();
+  const auto = store.state.autoPlay;
+  if (!auto.active) return;
+  if (auto.mode === 'step') {
+    store.pauseAutoPlay('step');
+    renderAutoPlay();
+    renderStrategy();
+    return;
+  }
+  const delay = 400 / (auto.speed || 1);
+  autoPlayRaf = requestAnimationFrame(() => {
+    autoPlayTimer = setTimeout(() => autoPlayNext(), delay);
+  });
+}
+
+function checkAutoPlayVersionConsistency() {
+  const state = store.state;
+  const windowState = state.responseWindow;
+  if (windowState.open && Number(windowState.version) !== Number(state.version)) {
+    return { ok: false, reason: 'window_version' };
+  }
+  const nodes = document.querySelectorAll('[data-version], .version-chip, #bdVer, #drVer');
+  if (nodes.length > 0) {
+    const mismatched = Array.from(nodes).some(node => {
+      const text = (node.textContent || '').trim();
+      return text !== '' && !text.includes(`v${state.version}`);
+    });
+    if (mismatched) return { ok: false, reason: 'display_version' };
+  }
+  return { ok: true };
+}
+
+function onRoundSettled(round, payload) {
+  const auto = store.state.autoPlay;
+  if (!auto.active) return;
+  if (store.state.round <= round) return;
+  if (store.state.ended) { stopAutoPlayFor('ended'); return; }
+  if (store.state.roundLocked) { stopAutoPlayFor('round_locked'); return; }
+  if (store.state.error) { stopAutoPlayFor('error'); return; }
+  const judged = store.judge;
+  if (judged) { stopAutoPlayFor(judged.reason); renderEndgame(judged.reason); return; }
+  const versionCheck = checkAutoPlayVersionConsistency();
+  if (!versionCheck.ok) { stopAutoPlayFor('version_conflict'); return; }
+  store.markAutoPlayPending(null);
+  store.recordAutoPlayStep({
+    round,
+    label: payload && payload.label ? payload.label : '自动推进',
+    version: store.state.version,
+    clausesVersion: store.state.clausesVersion,
+    at: Date.now(),
+    status: 'ok'
+  });
+  renderAutoPlay();
+  scheduleAutoPlayNext();
+}
+
 function renderStatusStrip() {
   const host = $('#statusStrip');
   if (!host) return;
@@ -331,9 +475,17 @@ function updateDraftFoot() {
   stat.textContent = `已修订 ${Object.keys(store.state.stanceDrafts || {}).length} 条 · 未决 ${summary.pending + summary.open} 条`;
 }
 
+function renderActionBar() {
+  const host = $('#actionBar');
+  if (!host) return;
+  host.innerHTML = ActionBar({ actions: store.baseActions });
+}
+
 function renderStrategy(anim = null) {
   const state = store.state;
   renderStatusStrip();
+  renderAutoPlay();
+  renderActionBar();
   if ($('#strategyCards')) $('#strategyCards').classList.toggle('is-readonly', state.ended);
   if ($('#coachSlot')) $('#coachSlot').classList.toggle('is-readonly', state.ended);
   $('#strategyCards').innerHTML = StrategyCards({
@@ -409,8 +561,31 @@ async function requestCoach() {
   run();
 }
 
+/** 协议版本号三处同源，全部读 store.state.version（#mVer 顶栏 / #bdVer 报价板 / #drVer 抽屉）。 */
+function renderVersion() {
+  const text = `v${store.state.version}`;
+  ['#mVer', '#bdVer', '#drVer'].forEach(id => {
+    const node = $(id);
+    if (node) node.textContent = text;
+  });
+}
+
 function renderRound() {
   $('#roundNumber').textContent = formatRound(Math.min(store.state.round, store.state.maxRounds));
+  renderVersion();
+}
+
+/** 录制前探针：报价板打开、抽屉存在时三处徽标应同源。 */
+function versionBadges() {
+  const nodes = ['#mVer', '#bdVer', '#drVer'].map(id => $(id)).filter(Boolean);
+  const texts = nodes.map(node => (node.textContent || '').trim());
+  const expected = `v${store.state.version}`;
+  return {
+    count: nodes.length,
+    texts,
+    expected,
+    ok: nodes.length === 3 && texts.every(text => text === expected)
+  };
 }
 
 function renderMetrics() {
@@ -435,7 +610,8 @@ function openReport() {
       draftCount: Object.keys(store.state.stanceDrafts || {}).length,
       pendingCount: summary.pending + summary.open,
       submitting: store.state.phase === 'loading',
-      summary: buildReportSummary(store.state)
+      summary: buildReportSummary(store.state),
+      version: store.state.version
     }),
     primary: '提交本轮修订',
     secondary: '达成协议',
@@ -444,6 +620,25 @@ function openReport() {
       refreshReportBoard();
     },
     onSecondary: () => { modal.close(); toast.show('演示版：协议已达成'); }
+  });
+}
+
+function renderDebrief() {
+  return DebriefPage({
+    debrief: buildDebrief(store.state),
+    coach: store.state.coach
+  });
+}
+
+function openDebrief() {
+  closePanelFocus(false);
+  modal.open({
+    title: '终局复盘',
+    kicker: 'DEBRIEF',
+    content: renderDebrief(),
+    primary: '查看报价板',
+    secondary: '关闭',
+    onPrimary: openReport
   });
 }
 
@@ -461,7 +656,8 @@ function openTree() {
   if (header) header.outerHTML = TreeDrawerHeader({
     topic,
     round: Math.min(store.state.round, store.state.maxRounds),
-    nodeCount: (store.state.log || []).length + 1
+    nodeCount: (store.state.log || []).length + 1,
+    version: store.state.version
   });
   treeBody.innerHTML = TreeContent({ state: store.state, topic });
   appShell.classList.add('tree-open');
@@ -537,9 +733,9 @@ function renderEndgame(reason) {
     title: copy.title,
     kicker: copy.kicker,
     content: `<div class="endgame-tone ${copy.tone}"></div><p>${escapeHTML(judgement.summary || '')}</p><p class="endgame-hint">${escapeHTML(judgement.metricsHint || '')}</p>`,
-    primary: '查看战报',
+    primary: '查看复盘',
     secondary: '重新谈判',
-    onPrimary: openReport,
+    onPrimary: openDebrief,
     onSecondary: resetNegotiation
   });
 }
@@ -552,6 +748,7 @@ function useResponseTransition() {
 }
 
 function pickBaseAction(kind) {
+  pauseAutoPlayForHuman();
   if (kind === 'exit') { requestExit(); return; }
   const result = store.chooseBaseAction(kind);
   if (!result.ok) {
@@ -592,6 +789,7 @@ function confirmExit() {
 }
 
 function toggleStrategy(button) {
+  pauseAutoPlayForHuman();
   const before = store.state.actionPoints - store.usedActionPoints;
   const result = store.toggleStrategy(button.dataset.strategyId);
   if (!result.ok) {
@@ -660,6 +858,7 @@ async function submitTurn(options = {}) {
 
   const payload = store.prepareTurn();
   if (!payload) {
+    if (options.fromAutoPlay) { stopAutoPlayFor('no_intent'); return; }
     if (options.fromRevision) {
       toast.show('请先修改至少一条条款立场。');
       return;
@@ -673,6 +872,10 @@ async function submitTurn(options = {}) {
   stopBusyCountdown();
   submitting = true;
   store.clearError();
+  if (options.fromAutoPlay) {
+    store.markAutoPlayPending(payload.round);
+    renderAutoPlay();
+  }
   store.setPhase('loading');
   renderStrategy();
   renderError();
@@ -703,6 +906,7 @@ async function submitTurn(options = {}) {
       renderStrategy();
     }
     if (response.error.error === 'SESSION_BUSY') startBusyCountdown(response.error.retryAfter);
+    if (options.fromAutoPlay) stopAutoPlayFor(response.error.error);
     return;
   }
 
@@ -737,21 +941,28 @@ async function submitTurn(options = {}) {
 
   const judged = store.judge;
   if (judged) {
+    if (store.state.autoPlay.active) stopAutoPlayFor(judged.reason);
     if (judged.reason === 'withdraw') toast.show('已按主动退出处理，本场谈判结束。');
     renderEndgame(judged.reason);
     return;
   }
 
-  toast.show(payload.revisions && payload.revisions.length > 0
-    ? '本轮修订已提交'
-    : `第 ${turn.round} 轮策略已提交`);
+  if (!options.fromAutoPlay) {
+    toast.show(payload.revisions && payload.revisions.length > 0
+      ? '本轮修订已提交'
+      : `第 ${turn.round} 轮策略已提交`);
+  }
 
   clearTimeout(replyTimer);
   replyTimer = setTimeout(() => {
+    replyTimer = null;
     if (store.state.ended) return;
     const reply = store.recordOpponentReply(turn.round);
     appendSpeech(reply);
     renderStrategy();
+    renderRound();
+    renderMetrics();
+    onRoundSettled(turn.round, payload);
   }, 650);
 
   requestCoach();
@@ -759,11 +970,32 @@ async function submitTurn(options = {}) {
 
 const actions = {
   'toggle-strategy': toggleStrategy,
+  'open-debrief': openDebrief,
+  'debrief-jump': button => {
+    const round = Number(button.dataset.round);
+    modal.close();
+    jumpToRound(round);
+  },
+  'toggle-debrief-section': (button, event) => {
+    event.preventDefault();
+    const details = button.closest('details');
+    if (details) details.open = !details.open;
+  },
   'base-action': button => pickBaseAction(button.dataset.kind),
   'confirm-exit': () => confirmExit(),
   'use-transition': () => useResponseTransition(),
   'stance-change': () => {},
-  'end-turn': () => submitTurn(),
+  'end-turn': () => { pauseAutoPlayForHuman(); submitTurn(); },
+  'autoplay-start': () => startAutoPlayRun('continuous'),
+  'autoplay-pause': () => pauseAutoPlayByUser(),
+  'autoplay-step': () => startAutoPlayRun('step'),
+  'autoplay-stop': () => stopAutoPlayByUser(),
+  'autoplay-speed': button => { store.setAutoPlaySpeed(Number(button.dataset.speed)); renderAutoPlay(); },
+  'toggle-autoplay-log': (button, event) => {
+    event.preventDefault();
+    const details = button.closest('details');
+    if (details) details.open = !details.open;
+  },
   'toggle-coach': () => { store.toggleCoach(); renderCoach(); },
   'retry-coach': () => requestCoach(),
   'retry-turn': () => submitTurn(),
@@ -851,6 +1083,7 @@ document.addEventListener('click', event => {
 
 document.addEventListener('change', event => {
   const stance = event.target.closest('.cb-select');
+  if (stance) pauseAutoPlayForHuman();
   if (stance) {
     store.setStanceDraft(stance.dataset.clauseId, stance.value);
     stance.classList.toggle('changed', stance.value !== 'hold');
@@ -898,5 +1131,8 @@ window.__diplomat = {
   coachRequests: () => coachRequestCount(),
   renderError,
   renderEndgame,
-  judge: () => store.judge
+  judge: () => store.judge,
+  versionBadges,
+  openDebrief,
+  renderDebrief
 };

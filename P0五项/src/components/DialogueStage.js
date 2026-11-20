@@ -40,10 +40,9 @@ export function ReportFab() {
   </button>`;
 }
 
-export function DialogueStage({ speeches, topic }) {
+export function DialogueStage({ speeches }) {
   return `<section class="main-stage" aria-label="谈判会场" tabindex="-1">
-    <div class="stage-heading"><div><strong class="stage-topic">${escapeHTML(topic.title)}</strong></div></div>
     <div class="error-slot" id="errorSlot"></div>
-    <div class="dialogue-scroll" id="dialogueScroll" aria-live="polite"><div class="status-strip-slot" id="statusStrip"></div>${DialogueMessages({ speeches })}</div>
+    <div class="dialogue-scroll" id="dialogueScroll" aria-live="polite"><div class="status-strip-slot" id="statusStrip"></div><div class="autoplay-slot" id="autoPlaySlot"></div>${DialogueMessages({ speeches })}</div>
   </section>`;
 }

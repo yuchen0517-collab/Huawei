@@ -61,6 +61,15 @@ export function createInitialNegotiation() {
     selectedIds: [],
     baseAction: { kind: 'none', atRound: 0, atVersion: 0 },
     stanceDrafts: {},
+    autoPlay: {
+      active: false,
+      mode: 'step',
+      speed: 1,
+      pendingRound: null,
+      startedAtRound: null,
+      steps: [],
+      lastError: null
+    },
     finalOfferUsed: false,
     endReason: null,
     stagnantRounds: 0,

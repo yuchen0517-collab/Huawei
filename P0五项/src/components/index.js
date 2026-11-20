@@ -1,8 +1,11 @@
 export { NegotiationApp } from './NegotiationApp.js';
 export { Topbar } from './Topbar.js';
+export { Topicbar } from './Topicbar.js';
 export { StrategyPanel, StrategyCard, StrategyCards, HandFooterContent } from './StrategyPanel.js';
 export { ActionBar } from './ActionBar.js';
 export { ClauseBoard } from './ClauseBoard.js';
+export { AutoPlayPanel } from './AutoPlayPanel.js';
+export { DebriefPage } from './DebriefPage.js';
 export { StatusStrip } from './StatusStrip.js';
 export { DialogueStage, DialogueMessages, Speech, ReportFab } from './DialogueStage.js';
 export { SituationPanel, MetricList, RelationMatrix } from './SituationPanel.js';
