@@ -133,13 +133,17 @@ class AdapterMappingTest(unittest.TestCase):
         self.assertEqual(scope["positions"]["cn"]["ideal"], 28.0)
         self.assertEqual(score(scope, 28, "cn"), 1.0)
         self.assertEqual(score(scope, 7, "cn"), 0.0)
-        self.assertAlmostEqual(score(scope, 17.5, "cn"), 0.5, places=6)
+        # 红线锚定：cn 红线 14 → 0，中点 21 → 0.5
+        self.assertEqual(score(scope, 14, "cn"), 0.0)
+        self.assertAlmostEqual(score(scope, 21, "cn"), 0.5, places=6)
 
     def test_numeric_lower_better_scores(self):
         scope = clause_by_name(self.adapted, "受管制先进制程门槛")
         self.assertEqual(scope["positions"]["us"]["ideal"], 14.0)
         self.assertEqual(score(scope, 14, "us"), 1.0)
-        self.assertAlmostEqual(score(scope, 28, "us"), 1.0 / 3.0, places=6)
+        # 红线锚定：us 红线 21 → 0，超过红线一律 0，不再有「残留分数」
+        self.assertEqual(score(scope, 21, "us"), 0.0)
+        self.assertEqual(score(scope, 28, "us"), 0.0)
         self.assertLess(score(scope, 28, "us"), score(scope, 14, "us"))
 
     def test_enum_redline_in_is_inverted(self):
@@ -341,10 +345,10 @@ class AdapterEngineTest(unittest.TestCase):
         cls.plan = initial_plan(cls.scenario)
 
     def test_initial_utility_matches_engine(self):
-        # initial 改为「双方 ideal 中点 + 硬红线可行域夹逼」后的基线：
-        # cn=0.796667 / us=0.671667（us 不变是夹具的偶然，见 INTEGRATION_NOTES 5.1）。
-        self.assertAlmostEqual(utility(self.plan, "cn", self.scenario), 0.7967, places=4)
-        self.assertAlmostEqual(utility(self.plan, "us", self.scenario), 0.6717, places=4)
+        # 11-20 改为「红线锚定」后的基线：红线=0、目标=1，不再按物理区间算 closeness。
+        # cn=0.625 / us=0.30
+        self.assertAlmostEqual(utility(self.plan, "cn", self.scenario), 0.625, places=4)
+        self.assertAlmostEqual(utility(self.plan, "us", self.scenario), 0.30, places=4)
 
     def test_initial_plan_respects_hard_redlines(self):
         plan = initial_plan(self.scenario)
@@ -444,7 +448,7 @@ class AdapterEngineTest(unittest.TestCase):
         engine = RulesEngine(deepcopy(self.scenario), session_id="e2e-test")
         steps = (
             ("c1", "cn", "offer", {"受管制先进制程门槛": 14}),
-            ("u1", "us", "counter_offer", {"逐案许可有效期": 12}),
+            ("u1", "us", "counter_offer", {"逐案许可有效期": 20}),
             ("c2", "cn", "counter_offer", {"争端解决渠道": "bilateral"}),
         )
         for action_id, actor, action_type, patch in steps:

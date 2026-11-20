@@ -63,6 +63,12 @@ def round_half_up(value: float) -> int:
 
 
 def closeness(value: float, ideal: float, low: float, high: float) -> float:
+    """偏离度：1 表示正好命中 ideal，0 表示落在区间端点。
+
+    注意：协议质量与 BATNA 比较**不再**使用本函数。判分必须用「红线锚定」
+    （见 `score`），否则踩在自己红线上仍能拿到 0.86 分，BATNA 比较会失真。
+    本函数保留给需要「离理想值多远」这类展示型度量的场景。
+    """
     span = float(high) - float(low)
     if span <= 0:
         return 1.0 if float(value) == float(ideal) else 0.0
@@ -70,8 +76,34 @@ def closeness(value: float, ideal: float, low: float, high: float) -> float:
     return max(0.0, min(1.0, score))
 
 
+def _numeric_direction(position: dict, ideal: float, low: float, high: float) -> str:
+    """判定数值议题的偏好方向。
+
+    优先级：场景声明的 `direction`（B 契约 goals[].direction，适配层透传）→
+    红线方向 → ideal 相对区间中点。红线方向只在没有显式方向时才作为代理：
+    「target 24 + 上限红线 30」是 higher_better，若按红线方向推断会得到
+    lower_better，把「越高越好」判反（backup 场景的追溯适用期）。
+    """
+    direction = position.get("direction")
+    if direction in ("higher_better", "lower_better"):
+        return direction
+    redline_direction = position.get("redline_direction")
+    if redline_direction == "below_is_violation":
+        return "higher_better"
+    if redline_direction == "above_is_violation":
+        return "lower_better"
+    midpoint = (float(low) + float(high)) / 2.0
+    return "higher_better" if float(ideal) >= midpoint else "lower_better"
+
+
 def score(clause: dict, option, party: str) -> float:
-    """统一打分接口，返回 0~1。未知 option 返回 0.0（由校验层报 UNKNOWN_OPTION）。"""
+    """统一打分接口，返回 0~1。未知 option 返回 0.0（由校验层报 UNKNOWN_OPTION）。
+
+    数值条款用「红线锚定」：红线（无硬红线时退软红线，再无则退区间端点）为 0，
+    目标值为 1，超过目标封顶 1.0。这样「踩红线 = 不谈」，BATNA 比较才有意义；
+    旧实现按整个物理区间算 closeness，踩红线（800/1500）仍得 0.857，会得出
+    “触碰红线的协议净赚”的错误结论。
+    """
     if clause.get("type") == "numeric":
         position = (clause.get("positions") or {}).get(party, {})
         ideal = position.get("ideal", clause.get("initial"))
@@ -80,7 +112,30 @@ def score(clause: dict, option, party: str) -> float:
             numeric = float(option)
         except (TypeError, ValueError):
             return 0.0
-        return closeness(numeric, float(ideal), float(low), float(high))
+        if ideal is None:
+            return 0.0
+        target = float(ideal)
+        direction = _numeric_direction(position, target, low, high)
+        # 锚点取「该方向上的最差可接受值」：higher_better 从区间下界起算，
+        # 只有同向红线下界才抬高锚点；反向红线（例如 higher_better 却设了上限）
+        # 不参与锚定，否则会把越高越好判成越低越好。
+        redline = position.get("redline")
+        redline_direction = position.get("redline_direction")
+        if direction == "higher_better":
+            anchor = float(low)
+            if redline is not None and redline_direction == "below_is_violation":
+                anchor = max(anchor, float(redline))
+        else:
+            anchor = float(high)
+            if redline is not None and redline_direction == "above_is_violation":
+                anchor = min(anchor, float(redline))
+        if target == anchor:
+            return 1.0 if numeric == target else 0.0
+        if direction == "higher_better":
+            raw = (numeric - anchor) / (target - anchor)
+        else:
+            raw = (anchor - numeric) / (anchor - target)
+        return max(0.0, min(1.0, raw))
 
     for item in clause.get("options", []):
         if item.get("id") == option:

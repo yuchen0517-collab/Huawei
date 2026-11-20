@@ -281,7 +281,11 @@ class ApiLeakTest(unittest.TestCase):
         full = self.engine.evaluate()
         self.assertEqual(full["batna_comparison"]["cn"]["batna"], 30)
         self.assertEqual(full["batna_comparison"]["us"]["batna"], 60)
-        self.assertEqual(full["batna_comparison"]["us"]["net_gain"], 67 - 60)
+        # net_gain 的口径是 achieved - batna；不写死 achieved，避免效用模型调整时误报
+        self.assertEqual(
+            full["batna_comparison"]["us"]["net_gain"],
+            full["batna_comparison"]["us"]["achieved"] - 60,
+        )
 
         for viewer, mine, other, mine_batna in (
             ("cn", "cn", "us", 30),

@@ -162,6 +162,24 @@ B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `
 `adapter/scenario_adapter.py::_adapt_clause_roles` 在 B→C 转换时把 `issue_id` 映射成条款名，因为引擎的 `offer_patch`
 与卡牌校验都以条款名为键。覆盖层随后只做存在性校验，不再改写角色值。
 
+## 6.1 效用口径（协议质量 / BATNA 比较 / 场景 QA 共用同一套）
+
+`engine/indices.py::score`、`scenario agent v2/agent/scenario/zopa.py`、`terminal.package_utility` 三处必须同口径，
+否则同一份协议在 App 与 QA 里会得出相反结论（曾发生：no_zopa 变体在 QA 里双方都该退出、在 App 里双方都大赚）。
+
+- **数值条款：红线锚定。** 该方向上的最差可接受值（同向红线，没有则区间端点）记 0，目标值记 1，超过目标封顶 1.0。
+  这样「踩红线 = 不谈」，BATNA 比较才有意义。
+- **枚举条款：逐方按 target 位次衰减。** 目标选项 1.0，其余按 order 距离线性递减；B 用 `options[].score_by_party`
+  显式给出逐方分时优先采用。不再用「P2 = order/N」反推（该公式只在双方偏好完全镜像时成立）。
+- **偏好方向：** 以 `goals[].direction` 为准（适配层透传到 `positions[].direction`）。不能只看红线方向——
+  「越高越好 + 上限红线」是合法组合，按红线反推会把方向判反。
+- **部分协议：** 协议评价只计协议包里写明的条款，被搁置的议题不计入本次成交收益；
+  过程指数 `interest` 仍按现状延续计算，两者用途不同。
+- **参考成交方案：** `zopa.suggest_deal` 在可行域内取 max-min 均衡点，不再取「order 最小的选项」（那恒为 P1 最优）。
+
+一致性由 `check_score_alignment.py`（逐项比对 zopa 与引擎）和 `test_score_parity.py`（回归测试）守护；
+改动上述任一公式都必须同时跑这两个文件。
+
 ## 7. 隐私与 debrief
 
 内部归档包含双方私有状态和行动 ID，只能用于候选事务与内部验收，不得写入 HTTP 响应或公开日志。服务重启后内存会话不会恢复（会话记录落盘在 `runtime/sessions/`，含行动账本与教练建议缓存）。

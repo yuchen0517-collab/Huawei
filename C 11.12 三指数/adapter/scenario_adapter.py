@@ -1019,6 +1019,10 @@ def _adapt_numeric_clause(
             )
         else:
             position["ideal"] = float(goal["target"])
+            # 透传偏好方向：红线方向并不总与偏好一致（「越高越好 + 上限红线」
+            # 是合法组合），引擎若按红线反推会把方向判反。
+            if goal.get("direction") in ("higher_better", "lower_better"):
+                position["direction"] = goal["direction"]
             raw_weights[party][name] = float(goal["weight"])
 
         redline_items = [

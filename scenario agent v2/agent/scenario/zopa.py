@@ -6,15 +6,17 @@
 
 只做纯计算，不调模型、不写状态。
 
-口径（与 load_scenario.py 一致）：
-· numeric：区间被红线收窄；有硬红线用硬红线，没有则退回软红线
-· enumerated：可接受集合 = 全部选项减去红线禁用的选项
-· 得分：numeric 线性归一到 0~1；enumerated 按 order，
-  parties[0] 用 (N-order+1)/N、parties[1] 用 order/N
+口径（与引擎 `engine/indices.py::score` 完全一致，两处必须同改）：
+· numeric：红线锚定。红线（无硬红线退软红线，再无退区间端点）为 0，
+  目标值为 1，超过目标封顶 1.0。踩红线等于不谈，BATNA 比较才有意义
+· enumerated：逐方按 target 位次衰减（target=1.0，其余按 order 距离线性递减），
+  不再用「P2 取 order/N」的反推公式，因为那假设双方偏好完全相反，
+  而实际场景 P1 目标 O2、P2 目标 O3，假设不成立（BACKLOG #4）
 · 效用 = 100 × Σ(weight × score)
 """
 from __future__ import annotations
 
+import itertools
 from typing import Any, Mapping
 
 __all__ = [
@@ -149,28 +151,52 @@ def score(scenario: Mapping[str, Any], party_id: str, issue_id: str, value: Any)
         direction = goal.get("direction")
         redlines = _edge_redlines(state, issue_id)
         if direction == "higher_better":
-            reservation = float(value_range.get("min", 0))
+            anchor = float(value_range.get("min", 0))
             for redline in redlines:
                 if redline.get("op") == "min" and isinstance(redline.get("value"), (int, float)):
-                    reservation = max(reservation, float(redline["value"]))
-            raw = (float(value) - reservation) / (target - reservation) if target != reservation else 0.0
+                    anchor = max(anchor, float(redline["value"]))
+            numerator, denominator = float(value) - anchor, target - anchor
         elif direction == "lower_better":
-            reservation = float(value_range.get("max", 0))
+            anchor = float(value_range.get("max", 0))
             for redline in redlines:
                 if redline.get("op") == "max" and isinstance(redline.get("value"), (int, float)):
-                    reservation = min(reservation, float(redline["value"]))
-            raw = (reservation - float(value)) / (reservation - target) if reservation != target else 0.0
+                    anchor = min(anchor, float(redline["value"]))
+            numerator, denominator = anchor - float(value), anchor - target
         else:
             raise ValueError(f"{issue_id} 是 numeric，direction 不能是 {direction!r}")
-        return max(0.0, min(1.0, raw))
+        # 红线与目标重合（零容忍议题）：只有精确落在目标上才算满分。
+        # 与引擎 `engine/indices.py::score` 保持同一处理，否则同一份方案
+        # 会出现 App 给 1.0、QA 给 0.0 的分歧（backup 的「追溯适用期」就是这种）。
+        if denominator == 0:
+            return 1.0 if float(value) == target else 0.0
+        return max(0.0, min(1.0, numerator / denominator))
 
     total = len(issue.get("options") or [])
     for option in issue.get("options") or []:
         if option.get("option_id") == value:
             scores = option.get("score_by_party")
-            if isinstance(scores, Mapping) and party_id in scores:
-                return float(scores[party_id])
+            if isinstance(scores, Mapping):
+                for key, candidate in scores.items():
+                    if isinstance(key, str) and key.lower() == party_id.lower():
+                        return float(candidate)
             break
+
+    # 逐方按 target 位次衰减，与适配层 `_ranked_scores` 同一公式。
+    option_ids = [
+        item["option_id"]
+        for item in sorted(
+            issue.get("options") or [], key=lambda item: item.get("order", 1)
+        )
+    ]
+    target = goal.get("target")
+    if target in option_ids and value in option_ids:
+        if total <= 1:
+            return 1.0
+        step = 1.0 / (total - 1)
+        distance = abs(option_ids.index(value) - option_ids.index(target))
+        return max(0.0, 1.0 - distance * step)
+
+    # 数据不完整（target 不在选项里）时才退回 order 推导，并保持原方向约定。
     order = _order_of(issue, value)
     if party_id == parties[0]:
         return (total - order + 1) / total
@@ -226,10 +252,53 @@ def evaluate_deal(scenario: Mapping[str, Any], deal: Mapping[str, Any]) -> dict[
     return result
 
 
+def _deal_candidates(
+    scenario: Mapping[str, Any], issue_id: str, item: Mapping[str, Any]
+) -> list[Any]:
+    """单个议题的候选取值：数值取可行区间端点/中点/建议点/双方理想值，枚举取交集。"""
+    if item["type"] != "numeric":
+        return list(item["zopa"])
+    low, high = item["zopa"]
+    points = {float(low), float(high), (float(low) + float(high)) / 2.0}
+    if item["suggested"] is not None:
+        points.add(float(item["suggested"]))
+    for party in _parties(scenario):
+        goal = _goal(_state(scenario, party), issue_id)
+        target = goal.get("target")
+        if isinstance(target, (int, float)) and low <= float(target) <= high:
+            points.add(float(target))
+    return sorted(points)
+
+
 def suggest_deal(scenario: Mapping[str, Any]) -> dict[str, Any]:
-    """每个 feasible 议题取交集内的点，拼一份参考成交方案，供自检与 Demo 使用。"""
-    deal: dict[str, Any] = {}
-    for issue_id, item in scenario_feasibility(scenario)["per_issue"].items():
-        if item["suggested"] is not None:
-            deal[issue_id] = item["suggested"]
-    return deal
+    """在可行域里取「双方最差效用最大」（max-min）的均衡方案，供自检与 Demo 使用。
+
+    旧实现取每个议题 order 最小的选项，而 order=1 恒为「对 P1 最有利」，
+    等于系统性偏袒 P1：backup 场景因此给出 63.75 / 28.33（P2 低于 BATNA 35），
+    而同一可行域里存在 50.0 / 46.67 的均衡点。这里改为穷举可行组合取 max-min，
+    并以效用和对 max-min 相同的组合做确定性 tie-break。
+    """
+    per_issue = scenario_feasibility(scenario)["per_issue"]
+    feasible = {
+        issue_id: item
+        for issue_id, item in per_issue.items()
+        if item["suggested"] is not None
+    }
+    if not feasible:
+        return {}
+    issue_ids = list(feasible)
+    pools = [
+        _deal_candidates(scenario, issue_id, feasible[issue_id])
+        for issue_id in issue_ids
+    ]
+    parties = _parties(scenario)
+    best_key: tuple[float, float] | None = None
+    best_deal: dict[str, Any] = {}
+    for combo in itertools.product(*pools):
+        deal = dict(zip(issue_ids, combo))
+        utils = [utility(scenario, party, deal) for party in parties]
+        key = (min(utils), sum(utils))
+        if best_key is None or key > best_key:
+            best_key = key
+            best_deal = deal
+    return best_deal

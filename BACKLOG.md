@@ -7,7 +7,7 @@
 | 1 | B 场景软红线（hard:false）在 C 引擎格式中无对应位 | 转换器只处理硬红线；main_chip_controls 中 5 条软红线（中方 I2/I3、美方 I1/I2/I4）被跳过 | 三人对齐软红线语义后再补转换，不擅自改 B 的数据 |
 | 2 | index_rules（形象/信任指数规则）B 未提供 | 转换器暂借 `C 11.12 三指数/scenarios/demo_scenario.json` 的 index_rules | 等 B 提供场景级指数规则后替换 |
 | 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | 传入 B 场景时仅引擎场景切换，Prompt 文案与初始指数展示未联动 | 三人对齐后决定 Prompt 是否随场景生成 |
-| 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | **11-20 代码侧已修**：适配层改为优先读 `options[].score_by_party`（大小写不敏感；只给部分选项打分时回落 target 推导并告警 `SCORE_BY_PARTY_INCOMPLETE`），配 2 条回归。**数据侧仍缺**：三份 B 场景都还没有逐方分，`check_score_alignment` 仍报 6 处排序不一致 | B 按契约补 `score_by_party`（schema 已允许），补完适配层自动生效 |
+| 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | **11-20 已统一**：适配层优先读 `options[].score_by_party`；缺省改为「按各自 target 的位次衰减」，不再用 order 反推 P2（该公式只在双方偏好完全相反时成立）。旧的 `check_score_alignment.py` 已重写为 zopa↔引擎口径比对，并升级成 `test_score_parity.py`，当前 6/6 一致 | 可选：B 若要更精细的偏好表达，仍可按 schema 补逐方分（适配层已支持） |
 | 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
 | 6 | 外部交付目录（C 11.12 三指数、scenario agent v2、Diplomat_webdemo2.0）被仓库 pytest 误收集 | C 的 79 条测试只能在其自身目录下运行（仓库 rootdir 下收集会 ImportError），已在 conftest.py 的 collect_ignore 中排除 | 无，属既定约束；C 的测试一律 cd 到其目录后跑 `python -m pytest tests/ -q` |
 | 7 | B 分支 feat/scenario-b 的 factcard_loader.py 带 6 处未解决合并冲突标记（<<<<<<< Updated upstream），test_factcard_loader.py 无法收集 | ✅ 11/13 已在本分支解决：按 B 自己 test_factcard_loader.py 的断言统一保留 Updated upstream 一侧，B 目录 77 条测试全绿 | B 的 feat/scenario-b 分支上仍是坏的，通知她同步修复，避免下次合并把冲突标记带回来 |
@@ -17,8 +17,8 @@
 | --- | --- | --- | --- |
 | 8 | 行动契约 v2 与僵局口径偏离 C 的 6b076bb 基线 | ✅ 11-20 已按语义合并并验证：保留 A 的 `check_card_action` 与 `card_payload`，同时收编 C 的多方合并、accept 前置条件、`redline_check` 按 viewer 裁剪；C 引擎套件 245 条全绿 | 推回 `feat/rules-c` 时提醒 C 不要用旧基线整体覆盖 |
 
-## 2026-11-20 评分口径双轨（待 A/B 拍板，**当前最大隐患**）
+## 2026-11-20 评分口径双轨（已解决）
 
 | 编号 | 事项 | 现状 | 待办 |
 | --- | --- | --- | --- |
-| 9 | B 的 `zopa.py` 与引擎 `engine/indices.py` 是两套打分：enumerated 前者按 order（P1 `(N-order+1)/N`、P2 `order/N`），后者按 target 位次衰减；numeric 前者按「红线→目标」比例归一，后者按「区间内 closeness(ideal)」 | 同一份参考成交方案：main 引擎 cn 82.55 / us 66.29，zopa 67.86 / 48.21；**no_zopa 引擎 93.16 / 53.37（都远高于 BATNA 40/35），zopa 35.89 / 28.57（都低于）**；backup 引擎 77.50 / 41.67，zopa 66.25 / 41.67 | 两条路对「是否该退出」给出相反结论，而 App 用引擎口径、B 的 QA 与测试用 zopa 口径。必须由 A/B 决定唯一口径，再据此重标 BATNA（40/35/38 目前是按 zopa 口径标的） |
+| 9 | B 的 `zopa.py` 与引擎 `engine/indices.py` 是两套打分：enumerated 一个按 order、一个按 target；numeric 一个按比例归一、一个按整段区间 closeness；部分协议一个跳过未谈成议题、一个按现状计入 | **11-20 已统一**：numeric 改「红线锚定」（红线 0、目标 1、超目标封顶）；enumerated 改「逐方 target 位次」；新增 `terminal.package_utility`，协议评价只计协议包内条款；适配层透传 `goals[].direction`（避免「越高越好 + 上限红线」被判反）；`suggest_deal` 由 order[0] 改为可行域 max-min 均衡点 | 无。`test_score_parity.py` 已守护口径，改动这两处必须同步跑 |

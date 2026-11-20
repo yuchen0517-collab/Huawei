@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import Dict, List, Optional
 
-from .indices import initial_plan, round_half_up, utility
+from .indices import round_half_up, score
 from .validator import (
     clause_map,
     clause_names,
@@ -38,6 +37,26 @@ def coverage(agreement_clauses: Dict[str, dict], scenario: dict) -> tuple[list, 
     return covered, missing
 
 
+def package_utility(agreement_clauses: Dict[str, dict], scenario: dict, party: str) -> float:
+    """只计「本次协议里真正写明的条款」的效用，0~1。
+
+    部分协议里被搁置的议题不计入本次成交收益（手册 5.2：其余议题被明确搁置、
+    延期或转入其他程序）。这与 B 的 `zopa.evaluate_deal` 同口径，否则同一份
+    部分协议在 App 与 QA 里会给出相反结论。
+
+    注意与过程指数 `interest` 的区别：`interest` 是「当前局面」（未谈成的条款
+    按现状延续），`package_utility` 是「这份协议本身值多少」，用途不同。
+    """
+    total = 0.0
+    for clause in scenario.get("clauses", []):
+        entry = agreement_clauses.get(clause["name"])
+        if entry is None:
+            continue
+        weight = float((clause.get("weights") or {}).get(party, 0.0))
+        total += weight * score(clause, option_value(entry), party)
+    return total
+
+
 def agreement_quality(state, scenario: dict) -> dict:
     if state.agreement is None:
         return {
@@ -53,10 +72,9 @@ def agreement_quality(state, scenario: dict) -> dict:
     total = len(clause_names(scenario))
     cov = (len(covered) / total) if total else 0.0
 
-    plan = initial_plan(scenario)
-    for name, entry in clauses.items():
-        plan[name] = deepcopy(entry)
-    utils = [utility(plan, party, scenario) for party in party_ids(scenario)]
+    utils = [
+        package_utility(clauses, scenario, party) for party in party_ids(scenario)
+    ]
     mean_utility = round_half_up(sum(utils) / len(utils) * 100.0) if utils else None
 
     return {
@@ -83,7 +101,14 @@ def batna_comparison(state, scenario: dict, viewer: str = "") -> dict:
         else:
             party_id = party
             batna = None
-        achieved = int(state.indices.get(party_id, {}).get("interest", 0))
+        # 有协议时用「协议包效用」而不是过程指数：部分协议里被搁置的议题
+        # 不属于本次成交收益，否则会与 B 的 zopa 口径得出相反结论。
+        if state.agreement is not None:
+            achieved = round_half_up(
+                package_utility(state.agreement.clauses, scenario, party_id) * 100.0
+            )
+        else:
+            achieved = int(state.indices.get(party_id, {}).get("interest", 0))
         hidden = bool(viewer) and party_id != viewer
         if batna is None or hidden:
             result[party_id] = {
