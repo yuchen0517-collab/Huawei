@@ -415,5 +415,252 @@
     "verdict": "direct",
     "zopa_exists": true,
     "notes": "交换结构：中方在税率上退到 3% 以内，换取美方在加征关税上让到分步取消；门槛与追溯期作为次级筹码微调。"
+  },
+  "index_rules": {
+    "scale": [
+      0,
+      100
+    ],
+    "initial": {
+      "P1": {
+        "image": 60,
+        "trust": 45
+      },
+      "P2": {
+        "image": 55,
+        "trust": 40
+      }
+    },
+    "sensitivity": {
+      "P1": {
+        "image": 0.9,
+        "trust": 1.2
+      },
+      "P2": {
+        "image": 1.1,
+        "trust": 0.9
+      }
+    },
+    "constructive_proposal": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 2,
+        "trust_delta": 1
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 3,
+        "trust_delta": 2
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 5,
+        "trust_delta": 3
+      }
+    },
+    "cite_rules": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 1,
+        "trust_delta": 1
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 2,
+        "trust_delta": 2
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 3,
+        "trust_delta": 3
+      }
+    },
+    "hardline_stance": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -1,
+        "trust_delta": 2
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -2,
+        "trust_delta": 3
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -3,
+        "trust_delta": 4
+      }
+    },
+    "broken_promise": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -5,
+        "trust_delta": -5
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -6,
+        "trust_delta": -6
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -8,
+        "trust_delta": -8
+      }
+    },
+    "personal_attack": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -5,
+        "trust_delta": -4
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -7,
+        "trust_delta": -6
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -10,
+        "trust_delta": -8
+      }
+    },
+    "redline_provoke": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -3,
+        "trust_delta": -1
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -4,
+        "trust_delta": -2
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -5,
+        "trust_delta": -2
+      }
+    },
+    "procedural": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 0,
+        "trust_delta": 0
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 0,
+        "trust_delta": 0
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 1,
+        "trust_delta": 1
+      }
+    },
+    "diplomatic_reframe": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 3,
+        "trust_delta": 2
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 4,
+        "trust_delta": 3
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 5,
+        "trust_delta": 4
+      }
+    },
+    "protect_ally": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 1,
+        "trust_delta": 3
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 2,
+        "trust_delta": 4
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 3,
+        "trust_delta": 6
+      }
+    },
+    "keep_promise": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 1,
+        "trust_delta": 2
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 2,
+        "trust_delta": 3
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 3,
+        "trust_delta": 4
+      }
+    },
+    "betray_ally": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -4,
+        "trust_delta": -5
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -5,
+        "trust_delta": -7
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -7,
+        "trust_delta": -10
+      }
+    },
+    "vague_stance": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": -1,
+        "trust_delta": -2
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": -2,
+        "trust_delta": -3
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": -3,
+        "trust_delta": -4
+      }
+    },
+    "conditional_concession": {
+      "slight": {
+        "interest_delta": 0,
+        "image_delta": 0,
+        "trust_delta": 0
+      },
+      "moderate": {
+        "interest_delta": 0,
+        "image_delta": 1,
+        "trust_delta": 0
+      },
+      "major": {
+        "interest_delta": 0,
+        "image_delta": 2,
+        "trust_delta": 1
+      }
+    }
   }
 }

@@ -5,7 +5,7 @@
 | 编号 | 事项 | 现状 | 待办 |
 | --- | --- | --- | --- |
 | 1 | B 场景软红线（hard:false）在 C 引擎格式中无对应位 | 转换器只处理硬红线；main_chip_controls 中 5 条软红线（中方 I2/I3、美方 I1/I2/I4）被跳过 | 三人对齐软红线语义后再补转换，不擅自改 B 的数据 |
-| 2 | index_rules（形象/信任指数规则）B 未提供 | 转换器暂借 `C 11.12 三指数/scenarios/demo_scenario.json` 的 index_rules | 等 B 提供场景级指数规则后替换 |
+| 2 | index_rules（形象/信任指数规则）B 未提供 | **11-20 已解决**：三份场景各自写入 `index_rules`（13 标签 × 3 档 + 逐方 `initial` / `sensitivity` + `scale`），数值先与内置表一致以保证行为不变。B 契约（`models.py` R15 / `scenario.schema.json`）已放开 `scale` 与 `sensitivity`，适配层对 `initial` / `sensitivity` 的参与方键做大小写归一（兼容 P1/P2） | 无。B 想给某个场景不同的指数手感，直接改该场景里的数字即可，不用动代码 |
 | 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | **11-20 已修**：新增 `prompt_context.py`，按运行时场景生成对手 System Prompt（主题/议题/各方立场/目标排序/红线/BATNA/隐藏任务/事实与假设），初始指数改取场景 `index_rules`；默认 `ai_governance` 仍用手写文案与 agents.json 数值 | 无。回归见 `test_scenario_prompt.py`（含「Prompt 不泄露对方私牌」） |
 | 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | **11-20 已统一并补数据**：适配层优先读 `options[].score_by_party`；三份场景的枚举选项已写入逐方分（按各自 target 位次推导，行为不变，R16 校验 0 问题）；缺省值也改为「逐方 target 位次」，不再用 order 反推 P2。`check_score_alignment.py` 已重写为 zopa↔引擎比对并由 `test_score_parity.py` 守护，当前 6/6 一致 | 无。B 若要调整偏好，直接改场景里的 `score_by_party` 即可，无需改代码 |
 | 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |

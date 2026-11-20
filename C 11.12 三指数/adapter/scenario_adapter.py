@@ -236,15 +236,17 @@ def _normalize_index_rules(
             )
 
     # 4) initial：全局值展开到每个参与方；已是分层形状则原样保留。
+    #    键按小写归一：B 的 parties 常用 P1/P2，而这里统一用小写 party_id 比对。
     raw_initial = raw.get("initial")
     raw_initial = raw_initial if isinstance(raw_initial, dict) else {}
+    initial_lower = {str(key).lower(): value for key, value in raw_initial.items()}
     layered = any(
-        isinstance(raw_initial.get(party), dict) for party in party_ids
+        isinstance(initial_lower.get(party), dict) for party in party_ids
     )
     initial: Dict[str, Dict[str, int]] = {}
     for party in party_ids:
         if layered:
-            values = raw_initial.get(party) or {}
+            values = initial_lower.get(party) or {}
             if not isinstance(values, dict):
                 values = {}
         else:
@@ -275,7 +277,10 @@ def _normalize_index_rules(
     # 6) sensitivity：B 1.1 未提供，不编造；省略该键等价于全体 1.0 敏感度。
     raw_sensitivity = raw.get("sensitivity")
     if isinstance(raw_sensitivity, dict) and raw_sensitivity:
-        rules["sensitivity"] = deepcopy(raw_sensitivity)
+        rules["sensitivity"] = {
+            str(party).lower(): deepcopy(block)
+            for party, block in raw_sensitivity.items()
+        }
     else:
         warnings.append(
             _warning(

@@ -208,6 +208,16 @@ B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `
   这两处是必需的：缺了它们真实模型会把 `"800TFLOPS(FP16)"` 整串当取值，被引擎判 `VALUE_OUT_OF_RANGE`。
 - 对手动作若被引擎拒绝，会带纠正提示重试一次；仍失败才抛回原始错误（保留 `engine_error`）。
 
+## 6.3 指数规则（index_rules）归属
+
+- 每份 B 场景自带 `index_rules`：13 个 effect label × `slight/moderate/major` 三档的
+  `image_delta` / `trust_delta`（`interest_delta` 引擎暂不接，固定 0），外加 `scale`、
+  逐方 `initial` 与逐方 `sensitivity`。
+- 场景没写时，适配层才回落到内置表（`C 11.12 三指数/scenarios/demo_scenario.json`）并打
+  `DEFAULT_INDEX_RULES` 警告；三份交付场景现在都已自带，不再借用。
+- B 想给某个议题不同的指数手感，直接改该场景里的数字，不用动代码，也不影响其它场景。
+- 参与方键用场景自己的 `party_id`（`P1`/`P2`），适配层做大小写归一后再映射成会话约定的 `cn/us`。
+
 ## 7. 隐私与 debrief
 
 内部归档包含双方私有状态和行动 ID，只能用于候选事务与内部验收，不得写入 HTTP 响应或公开日志。服务重启后内存会话不会恢复（会话记录落盘在 `runtime/sessions/`，含行动账本与教练建议缓存）。

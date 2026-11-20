@@ -485,22 +485,74 @@
     },
     "index_rules": {
       "type": "object",
-      "description": "行为标签 → 三指数增减的内嵌表，键为 13 个 effect label，每个标签固定 slight / moderate / major 三档；initial 提供 image / trust 初值。整块可选：缺省时引擎使用内置表（docs/contracts/index_rules.v1.json）。适配层「自带则原样保留」，因此这里必须是引擎可直接读取的形状，不放进 runtime，也不用 URN 间接引用。",
+      "description": "行为标签 → 三指数增减的内嵌表，键为 13 个 effect label，每个标签固定 slight / moderate / major 三档；initial 提供 image / trust 初值，scale 与 sensitivity 用于场景级调参。整块可选：缺省时引擎使用内置表（docs/contracts/index_rules.v1.json）。场景自带时适配层原样保留，因此这里必须是引擎可直接读取的形状，不放进 runtime，也不用 URN 间接引用。",
       "properties": {
         "initial": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "开局 image / trust 初值，0–100。缺省均为 50。",
-          "properties": {
-            "image": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 100
+          "description": "开局 image / trust 初值，0–100。可以写成全局 {image, trust}（双方相同），也可以逐方写成 {party: {image, trust}}。缺省均为 50。",
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "image": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "trust": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
             },
-            "trust": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 100
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "image": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "trust": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "scale": {
+          "type": "array",
+          "description": "指数取值量纲，缺省 [0, 100]。",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "sensitivity": {
+          "type": "object",
+          "description": "逐方敏感度，乘在行为标签的增减上。缺省按 1.0（各方等权）。不同议题的指数波动幅度本应不同，这里是场景级调参入口。",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "image": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              },
+              "trust": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              }
             }
           }
         }

@@ -1156,27 +1156,98 @@ MAGNITUDES = ("slight", "moderate", "major")
 _INDEX_DELTA_FIELDS = ("interest_delta", "image_delta", "trust_delta")
 
 
+def _check_index_initial(initial: Any, problems: list[Problem]) -> None:
+    """initial 支持两种形状：全局 {image, trust}，或逐方 {party: {image, trust}}。"""
+    if not isinstance(initial, Mapping):
+        problems.append(Problem(
+            "R15_index_rules", "index_rules.initial",
+            f"initial 必须是对象，实际为 {type(initial).__name__}",
+        ))
+        return
+    layered = any(isinstance(value, Mapping) for value in initial.values())
+    blocks = (
+        [(str(party), block) for party, block in initial.items()]
+        if layered
+        else [("", initial)]
+    )
+    for party, block in blocks:
+        if not isinstance(block, Mapping):
+            problems.append(Problem(
+                "R15_index_rules",
+                f"index_rules.initial.{party}" if party else "index_rules.initial",
+                "必须是对象（image / trust）",
+            ))
+            continue
+        for key in ("image", "trust"):
+            if key not in block:
+                continue
+            value = block.get(key)
+            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100:
+                problems.append(Problem(
+                    "R15_index_rules",
+                    f"index_rules.initial.{party}.{key}" if party else f"index_rules.initial.{key}",
+                    f"必须是 [0, 100] 内的整数，实际为 {value!r}",
+                ))
+
+
 def validate_index_rules(rules: Mapping[str, Any]) -> list[Problem]:
-    """校验一张行为标签表；键集必须覆盖 13 个 effect label。"""
+    """校验一张行为标签表；键集必须覆盖 13 个 effect label。
+
+    可选键：`initial`（全局或逐方）、`scale`（[min, max]）、`sensitivity`
+    （逐方 image / trust 敏感度）。后两者是场景级调参入口：不同议题的指数
+    波动幅度本就应该不同，写死一份全局默认值会让所有场景的指数手感一样。
+    """
     problems: list[Problem] = []
 
     initial = rules.get("initial")
     if initial is not None:
-        if not isinstance(initial, Mapping):
+        _check_index_initial(initial, problems)
+
+    scale = rules.get("scale")
+    if scale is not None:
+        if (
+            not isinstance(scale, list)
+            or len(scale) != 2
+            or any(isinstance(item, bool) or not isinstance(item, (int, float)) for item in scale)
+        ):
             problems.append(Problem(
-                "R15_index_rules", "index_rules.initial",
-                f"initial 必须是对象，实际为 {type(initial).__name__}",
+                "R15_index_rules", "index_rules.scale",
+                "scale 必须是两个数字组成的数组，例如 [0, 100]",
+            ))
+        elif float(scale[0]) >= float(scale[1]):
+            problems.append(Problem(
+                "R15_index_rules", "index_rules.scale",
+                f"scale 下限必须小于上限，实际为 {scale}",
+            ))
+
+    sensitivity = rules.get("sensitivity")
+    if sensitivity is not None:
+        if not isinstance(sensitivity, Mapping):
+            problems.append(Problem(
+                "R15_index_rules", "index_rules.sensitivity",
+                f"sensitivity 必须是对象，实际为 {type(sensitivity).__name__}",
             ))
         else:
-            for key in ("image", "trust"):
-                if key not in initial:
-                    continue
-                value = initial.get(key)
-                if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100:
+            for party, block in sensitivity.items():
+                if not isinstance(block, Mapping):
                     problems.append(Problem(
-                        "R15_index_rules", f"index_rules.initial.{key}",
-                        f"必须是 [0, 100] 内的整数，实际为 {value!r}",
+                        "R15_index_rules", f"index_rules.sensitivity.{party}",
+                        "必须是对象（image / trust）",
                     ))
+                    continue
+                for key in ("image", "trust"):
+                    if key not in block:
+                        continue
+                    value = block.get(key)
+                    if (
+                        isinstance(value, bool)
+                        or not isinstance(value, (int, float))
+                        or not 0 < float(value) <= 3
+                    ):
+                        problems.append(Problem(
+                            "R15_index_rules", f"index_rules.sensitivity.{party}.{key}",
+                            f"必须是 (0, 3] 内的数值，实际为 {value!r}",
+                        ))
 
     for label in EFFECT_LABELS:
         path = f"index_rules.{label}"
@@ -1222,10 +1293,10 @@ def validate_index_rules(rules: Mapping[str, Any]) -> list[Problem]:
                     ))
 
     for key in rules:
-        if key != "initial" and key not in EFFECT_LABELS:
+        if key not in ("initial", "scale", "sensitivity") and key not in EFFECT_LABELS:
             problems.append(Problem(
                 "R15_index_rules", f"index_rules.{key}",
-                f"{key!r} 不是 13 个 effect label 之一",
+                f"{key!r} 不是 13 个 effect label 之一，也不是 initial / scale / sensitivity",
             ))
     return problems
 

@@ -97,6 +97,36 @@ class NormalizeShapeTest(unittest.TestCase):
     def test_scale_defaults_to_zero_hundred(self):
         self.assertEqual(self.rules["scale"], [0, 100])
 
+    def test_scale_provided_is_preserved(self):
+        source = b_table()
+        source["scale"] = [0, 200]
+        rules, _ = _normalize_index_rules(source, ["p1", "p2"])
+        self.assertEqual(rules["scale"], [0, 200])
+
+    def test_layered_initial_uses_party_ids_case_insensitively(self):
+        """B 的 parties 写作 P1/P2，initial 的键也必须能对上。"""
+        source = b_table()
+        source["initial"] = {
+            "P1": {"image": 70, "trust": 20},
+            "P2": {"image": 40, "trust": 80},
+        }
+        rules, _ = _normalize_index_rules(source, ["p1", "p2"])
+        self.assertEqual(rules["initial"]["p1"], {"image": 70, "trust": 20})
+        self.assertEqual(rules["initial"]["p2"], {"image": 40, "trust": 80})
+
+    def test_sensitivity_provided_is_preserved(self):
+        source = b_table()
+        source["sensitivity"] = {
+            "P1": {"image": 0.5, "trust": 1.5},
+            "P2": {"image": 1.2, "trust": 0.8},
+        }
+        rules, warnings = _normalize_index_rules(source, ["p1", "p2"])
+        self.assertEqual(
+            rules["sensitivity"],
+            {"p1": {"image": 0.5, "trust": 1.5}, "p2": {"image": 1.2, "trust": 0.8}},
+        )
+        self.assertNotIn("SENSITIVITY_ABSENT", codes(warnings))
+
     def test_sensitivity_absent_is_one_and_warned(self):
         self.assertNotIn("sensitivity", self.rules)
         self.assertIn("SENSITIVITY_ABSENT", codes(self.warnings))
