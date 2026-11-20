@@ -391,6 +391,35 @@ class AdapterEngineTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(code, "REDLINE_VIOLATION")
 
+    def test_cross_party_redline_is_a_legal_move(self):
+        """对方红线不是行动方的禁令：引擎只校验行动方自己的红线。
+
+        否则对手永远无法提出我方不能接受的方案，谈判失去对抗性；而且模型
+        可以靠「哪种方案被拒」反推出我方私牌。
+        """
+        engine = RulesEngine(deepcopy(self.scenario), session_id="cross-redline")
+        # 争端解决渠道：cn 硬红线是 unilateral；us 提出 unilateral 只触碰 cn 的红线
+        ok, code, message, _ = submit(
+            engine,
+            "us-cross",
+            "us",
+            "offer",
+            {"争端解决渠道": "unilateral"},
+        )
+        self.assertTrue(ok, f"{code}: {message}")
+
+        # 但同一方自己踩自己的红线仍然要被拒
+        engine_self = RulesEngine(deepcopy(self.scenario), session_id="self-redline")
+        ok, code, _, _ = submit(
+            engine_self,
+            "cn-self",
+            "cn",
+            "offer",
+            {"争端解决渠道": "unilateral"},
+        )
+        self.assertFalse(ok)
+        self.assertEqual(code, "REDLINE_VIOLATION")
+
     def test_boundary_value_is_not_violation(self):
         engine = RulesEngine(deepcopy(self.scenario), session_id="boundary-test")
         ok, code, message, _ = submit(

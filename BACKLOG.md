@@ -22,3 +22,4 @@
 | 编号 | 事项 | 现状 | 待办 |
 | --- | --- | --- | --- |
 | 9 | B 的 `zopa.py` 与引擎 `engine/indices.py` 是两套打分：enumerated 一个按 order、一个按 target；numeric 一个按比例归一、一个按整段区间 closeness；部分协议一个跳过未谈成议题、一个按现状计入 | **11-20 已统一**：numeric 改「红线锚定」（红线 0、目标 1、超目标封顶）；enumerated 改「逐方 target 位次」；新增 `terminal.package_utility`，协议评价只计协议包内条款；适配层透传 `goals[].direction`（避免「越高越好 + 上限红线」被判反）；`suggest_deal` 由 order[0] 改为可行域 max-min 均衡点 | 无。`test_score_parity.py` 已守护口径，改动这两处必须同步跑 |
+| 10 | 行动校验把「双方红线」都当禁令：`validate_action` 调 `redline_violations(touched, scenario)` 时未限定参与方 | **11-20 已修**：`redline_violations` 增加 `parties` 参数，行动校验只传 `(actor,)`，终局评价仍查全部。原因：替对方守红线既不合谈判语义（对方可提出我方不能接受的方案，由我方拒绝），也会泄露对方私牌（按被拒方案反推） | 推回 `feat/rules-c` 时说明：默认行为仍是查全部，只有行动校验用 actor 过滤，别改回全局 |

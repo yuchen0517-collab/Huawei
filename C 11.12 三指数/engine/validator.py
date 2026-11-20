@@ -8,7 +8,7 @@ schema → action_type（schema 内）→ phase → 幂等 → 版本
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 ACTION_TYPES = (
     "offer",
@@ -315,15 +315,26 @@ def is_soft_redline_violation(clause: dict, option, party: str) -> bool:
     return option in ((clause.get("soft_redlines") or {}).get(party) or [])
 
 
-def redline_violations(plan: Dict[str, dict], scenario: dict) -> List[Tuple[str, str]]:
+def redline_violations(
+    plan: Dict[str, dict],
+    scenario: dict,
+    parties: Optional[Sequence[str]] = None,
+) -> List[Tuple[str, str]]:
+    """红线违反清单。`parties` 为空时检查全部参与方（用于终局评价）。
+
+    行动合法性校验必须传 `parties=(actor,)`：引擎只能替行动方守他自己的红线。
+    替对方守红线既不合谈判语义（对方本来就可以提出我方不能接受的方案，由我方
+    拒绝或反报价），也会泄露对方私牌——模型靠“哪种方案被拒”就能反推对方底线。
+    """
     violations: List[Tuple[str, str]] = []
     clauses = clause_map(scenario)
+    targets = list(parties) if parties is not None else party_ids(scenario)
     for name, entry in plan.items():
         clause = clauses.get(name)
         if clause is None:
             continue
         option = option_value(entry)
-        for party in party_ids(scenario):
+        for party in targets:
             if is_redline_violation(clause, option, party):
                 violations.append((name, party))
     return violations
@@ -459,9 +470,11 @@ def validate_action(action, state, scenario: dict) -> Tuple[bool, str, str]:
     if action_type in OFFER_ACTIONS and patch:
         plan = apply_patch(effective_plan(state, scenario), patch)
         touched = {name: plan[name] for name in patch if name in plan}
-        violations = redline_violations(touched, scenario)
+        violations = redline_violations(touched, scenario, parties=(actor,))
     elif action_type == "accept":
-        violations = redline_violations(effective_plan(state, scenario), scenario)
+        violations = redline_violations(
+            effective_plan(state, scenario), scenario, parties=(actor,)
+        )
     else:
         violations = []
 
