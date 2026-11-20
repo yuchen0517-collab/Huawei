@@ -3,7 +3,7 @@
 场景来源：`scenario agent v2/data/scenarios/main_chip_controls.json`，
 经 load_scenario.py（C 侧 load_scenario_bridge）转换，不使用最小场景。
 真实芯片场景使用脚本化对手，不是真模型推演或真实在线模型验收。
-我方行动完全由 api.build_auto_action 自动决策：open_issues 非空时 statement，
+我方行动完全由 api.build_auto_action 自动决策：open_issues 非空时选择可用过渡卡，
 为空时 accept。
 """
 
@@ -129,11 +129,16 @@ def test_chip_scripted_opponent_five_steps_to_full_agreement(monkeypatch):
     assert get_state(sid)["open_issues"] == list(FULL_PATCH)
 
     seen_rounds = []
+    seen_left = []
     for step in range(1, 6):
         resp = auto_step(sid)
         assert resp.status_code == 200, resp.text
         state = resp.json()
         seen_rounds.append(state["round"])
+        seen_left.append(state["action_points_left"])
+        # D 契约：action_points 全程恒等于本回合预算（芯片场景 4 子议题 → 5）。
+        assert state["action_points"] == 5
+        assert state["action_points_per_round"] == 5
         status = auto_status(sid)
         assert status["current_round"] == state["round"]
         assert status["last_error"] is None
@@ -153,7 +158,9 @@ def test_chip_scripted_opponent_five_steps_to_full_agreement(monkeypatch):
             mine, opponent = history[-2], history[-1]
             assert mine["actor"] == "cn"
             assert mine["origin"] == "auto_player"
-            assert mine["action_type"] == "statement"
+            assert mine["action_type"] in {"statement", "probe", "counter_offer"}
+            if mine["action_type"] != "counter_offer":
+                assert mine["card_id"] is not None
             assert opponent["actor"] == "us"
             assert opponent["origin"] == "opponent_ai"
             assert opponent["action_type"] == "offer"
@@ -175,7 +182,9 @@ def test_chip_scripted_opponent_five_steps_to_full_agreement(monkeypatch):
             f"auto={status['status']} terminal={status['terminal_type']}"
         )
 
-    assert seen_rounds == [2, 3, 4, 5, 5]
+    assert seen_rounds == [1, 1, 1, 2, 2]
+    # 第 4 步双方都已对清空后的方案报价（条件 c），回合推进并回满。
+    assert seen_left == [4, 3, 2, 5, 4]
     assert opponent_calls == [0, 1, 2, 3]  # 终局步不再调用对手
     assert stored_document(sid)["auto_status"] == "done"
     assert stored_document(sid)["auto_terminal_type"] == "FULL_AGREEMENT"
@@ -270,7 +279,8 @@ def test_auto_timeout_once_pauses_and_recovers(monkeypatch):
     monkeypatch.setattr(api, "generate_opponent_turn", opponent_with_patch(FULL_PATCH))
     resumed = auto_step(sid)
     assert resumed.status_code == 200, resumed.text
-    assert resumed.json()["round"] == 2
+    assert resumed.json()["round"] == 1
+    assert resumed.json()["action_points_left"] == 4
     assert len(resumed.json()["action_history"]) == 2
     assert [event["action_id"] for event in resumed.json()["action_history"]] == [
         "a000001", "a000002",
@@ -320,10 +330,11 @@ def test_auto_step_serializes_and_exposes_running(monkeypatch):
         resp = future.result(timeout=15)
 
     assert resp.status_code == 200, resp.text
-    assert resp.json()["round"] == 2
+    assert resp.json()["round"] == 1
+    assert resp.json()["action_points_left"] == 4
     status = auto_status(sid)
     assert status["status"] == "paused"
-    assert status["current_round"] == 2
+    assert status["current_round"] == 1
     assert stored_document(sid)["auto_status"] == "paused"
 
 
@@ -335,6 +346,7 @@ def test_auto_status_session_not_found():
 
 
 def test_auto_five_explicit_steps_commit_independently(monkeypatch):
+    """芯片场景预算 5：5 次 auto_step = 5 个来回（10 手），恰好用完一个回合。"""
     sid = new_real_session()
     opponent_calls = script_opponent(monkeypatch, [NUMERIC_PATCH] * 5)
     previous = get_state(sid)
@@ -343,13 +355,16 @@ def test_auto_five_explicit_steps_commit_independently(monkeypatch):
         resp = auto_step(sid)
         assert resp.status_code == 200, resp.text
         state = resp.json()
-        assert state["round"] == previous["round"] + 1
+        # 前 4 手仍在同一回合，第 5 手用完预算才换回合。
+        expected_round = 1 if step < 5 else 2
+        assert state["round"] == expected_round
+        assert state["action_points_left"] == (5 - step if step < 5 else 5)
         assert len(state["action_history"]) == len(previous["action_history"]) + 2
         assert state["status"] == "active"
         assert auto_status(sid) == {
             "session_id": sid,
             "status": "paused",
-            "current_round": step + 1,
+            "current_round": expected_round,
             "terminal_type": None,
             "last_error": None,
         }
@@ -360,12 +375,12 @@ def test_auto_five_explicit_steps_commit_independently(monkeypatch):
         assert document["auto_status"] == "paused"
         previous = state
 
-    assert previous["round"] == 6
+    assert previous["round"] == 2
     assert len(previous["action_history"]) == 10
     assert opponent_calls == [0, 1, 2, 3, 4]
     final_document = stored_document(sid)
     assert get_state(sid) == previous
-    assert auto_status(sid)["current_round"] == 6
+    assert auto_status(sid)["current_round"] == 2
     assert stored_document(sid) == final_document
     print(f"[five-full-steps] round={previous['round']} history={len(previous['action_history'])}")
 
@@ -426,7 +441,7 @@ def test_auto_status_legacy_active_and_terminal_records(monkeypatch):
     api.SESSIONS.clear()
     restored = auto_status(terminal_sid)
     assert restored["status"] == "done"
-    assert restored["current_round"] == 2
+    assert restored["current_round"] == 1
     assert restored["terminal_type"] == "FULL_AGREEMENT"
     assert restored["last_error"] is None
 
@@ -568,13 +583,14 @@ def test_auto_busy_rejects_action_and_allows_other_session(monkeypatch):
             assert auto_status(sid)["status"] == "running"
             other = auto_step(other_sid)
             assert other.status_code == 200, other.text
-            assert other.json()["round"] == 2
+            assert other.json()["round"] == 1
         finally:
             release.set()
         response = future.result(timeout=15)
 
     assert response.status_code == 200, response.text
-    assert response.json()["round"] == 2
+    assert response.json()["round"] == 1
+    assert response.json()["action_points_left"] == 4
     assert len(response.json()["action_history"]) == 2
 
 
@@ -619,7 +635,8 @@ def test_auto_persistence_failure_before_running_pauses_and_recovers(monkeypatch
 
     recovered = auto_step(sid)
     assert recovered.status_code == 200, recovered.text
-    assert recovered.json()["round"] == 2
+    assert recovered.json()["round"] == 1
+    assert recovered.json()["action_points_left"] == 4
     assert auto_status(sid)["last_error"] is None
 
 
@@ -653,7 +670,8 @@ def test_auto_persistence_failure_final_before_replace_recovers_paused(monkeypat
 
     recovered = auto_step(sid)
     assert recovered.status_code == 200, recovered.text
-    assert recovered.json()["round"] == 2
+    assert recovered.json()["round"] == 1
+    assert recovered.json()["action_points_left"] == 4
     assert auto_status(sid)["last_error"] is None
 
 

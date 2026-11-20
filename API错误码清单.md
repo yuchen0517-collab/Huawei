@@ -64,7 +64,7 @@
 {"error": "ROUND_LOCKED", "detail": "谈判已结束，不能再继续自动推进。", "engine_error": "PHASE_CLOSED"}
 
 // VERSION_CONFLICT（409）
-{"error": "VERSION_CONFLICT", "detail": "客户端基线版本与服务端当前版本不一致……", "version": 7, "current_state": {"...": "14 字段投影"}}
+{"error": "VERSION_CONFLICT", "detail": "客户端基线版本与服务端当前版本不一致……", "version": 7, "current_state": {"...": "18 字段投影（含 speaker_score）"}}
 
 // SESSION_BUSY（409）
 {"error": "SESSION_BUSY", "detail": "本会话有另一轮正在处理，请稍后重试；本次未推进。", "retry_after": 1}

@@ -122,6 +122,214 @@
         }
       }
     },
+    "/session/{session_id}/fork": {
+      "post": {
+        "summary": "Fork Endpoint",
+        "operationId": "fork_endpoint_session__session_id__fork_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateProjection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "at_version / at_action_id 不一致",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VERSION_CONFLICT（该版本没有可用快照）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INVALID_REQUEST",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/compare": {
+      "get": {
+        "summary": "Compare Endpoint",
+        "operationId": "compare_endpoint_session__session_id__compare_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "other",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Other"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Compare Endpoint Session  Session Id  Compare Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "两支会话不同源",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/{session_id}/takeover": {
+      "post": {
+        "summary": "Takeover Endpoint",
+        "operationId": "takeover_endpoint_session__session_id__takeover_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SESSION_BUSY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/session/{session_id}/auto_status": {
       "get": {
         "summary": "Auto Status Endpoint",
@@ -592,6 +800,56 @@
         ],
         "title": "AutoStatusResponse"
       },
+      "AvailableCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "family": {
+            "type": "string",
+            "title": "Family"
+          },
+          "quote_board": {
+            "type": "boolean",
+            "title": "Quote Board"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "target_clause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Clause"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "family",
+          "quote_board",
+          "available",
+          "reason"
+        ],
+        "title": "AvailableCard"
+      },
       "ClauseDef": {
         "properties": {
           "name": {
@@ -998,6 +1256,35 @@
         "title": "ErrorEnvelope",
         "description": "六码之外的通用错误（会话不存在、参数校验、复盘未开放等）。"
       },
+      "ForkRequest": {
+        "properties": {
+          "at_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At Version"
+          },
+          "at_action_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At Action Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ForkRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1033,6 +1320,91 @@
           "offers"
         ],
         "title": "OfferView"
+      },
+      "PendingHint": {
+        "properties": {
+          "responder": {
+            "type": "string",
+            "title": "Responder"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "deferrals_used": {
+            "type": "integer",
+            "title": "Deferrals Used"
+          },
+          "deferrals_left": {
+            "type": "integer",
+            "title": "Deferrals Left"
+          },
+          "must_resolve": {
+            "type": "boolean",
+            "title": "Must Resolve"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "responder",
+          "version",
+          "deferrals_used",
+          "deferrals_left",
+          "must_resolve",
+          "text"
+        ],
+        "title": "PendingHint"
+      },
+      "SpeakerScore": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "position_clarity": {
+            "type": "integer",
+            "title": "Position Clarity"
+          },
+          "diplomatic_tact": {
+            "type": "integer",
+            "title": "Diplomatic Tact"
+          },
+          "emotional_control": {
+            "type": "integer",
+            "title": "Emotional Control"
+          },
+          "substance_quality": {
+            "type": "integer",
+            "title": "Substance Quality"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "source": {
+            "type": "string",
+            "const": "rule",
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "position_clarity",
+          "diplomatic_tact",
+          "emotional_control",
+          "substance_quality",
+          "feedback",
+          "source"
+        ],
+        "title": "SpeakerScore",
+        "description": "D 回签的评分形状：键名、层级、取值范围一律不改。"
       },
       "StateProjection": {
         "properties": {
@@ -1089,16 +1461,50 @@
           },
           "action_points": {
             "type": "integer",
-            "title": "Action Points"
+            "title": "Action Points",
+            "description": "每回合预算（上限）"
           },
           "action_points_per_round": {
             "type": "integer",
-            "title": "Action Points Per Round"
+            "title": "Action Points Per Round",
+            "description": "我方每回合可出手数"
+          },
+          "action_points_left": {
+            "type": "integer",
+            "title": "Action Points Left",
+            "description": "本回合我方剩余手数，逐手递减"
           },
           "coach_advice": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/CoachAdvice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available_cards": {
+            "items": {
+              "$ref": "#/components/schemas/AvailableCard"
+            },
+            "type": "array",
+            "title": "Available Cards"
+          },
+          "pending_hint": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingHint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "speaker_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpeakerScore"
               },
               {
                 "type": "null"
@@ -1121,7 +1527,9 @@
           "clauses",
           "version",
           "action_points",
-          "action_points_per_round"
+          "action_points_per_round",
+          "action_points_left",
+          "available_cards"
         ],
         "title": "StateProjection"
       },

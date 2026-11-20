@@ -818,6 +818,8 @@ OFFLINE_RESPONSES = [
     {
         "action": {
             "action_type": "statement",
+            "card_id": "public_commitment",
+            "card_payload": {"text": "我方承诺专家组职能限于风险通报，并按贡献度确定算力配额。"},
             "offer_patch": {},
             "conditions": [],
             "expected_effect": "把专家组职能限定在风险通报，并把配额分配拉回市场原则。",
@@ -1068,6 +1070,8 @@ def main() -> int:
                 obj = {
                     "action": {
                         "action_type": "statement",
+                        "card_id": "public_commitment",
+                        "card_payload": {"text": prose},
                         "offer_patch": {},
                         "conditions": [],
                         "expected_effect": "",

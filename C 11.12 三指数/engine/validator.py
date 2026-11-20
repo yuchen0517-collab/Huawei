@@ -54,7 +54,7 @@ REQUIRED_FIELDS = (
     "expected_effect",
     "public_message",
 )
-ALLOWED_FIELDS = frozenset(REQUIRED_FIELDS) | {"effect_labels"}
+ALLOWED_FIELDS = frozenset(REQUIRED_FIELDS) | {"effect_labels", "card_payload"}
 PATCH_ENTRY_FIELDS = frozenset({"option", "note"})
 EFFECT_FIELDS = frozenset({"label", "magnitude", "clause", "reason"})
 

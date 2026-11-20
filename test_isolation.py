@@ -204,6 +204,8 @@ def test_api_responses_use_public_projection_without_private_markers(monkeypatch
 
     action_response = client.post(f"/session/{session_id}/action", json={
         "action_type": "statement",
+        "card_id": "public_commitment",
+        "card_payload": {"text": "我方承诺继续公开磋商。"},
         "offer_patch": {},
         "conditions": [],
         "expected_effect": "",

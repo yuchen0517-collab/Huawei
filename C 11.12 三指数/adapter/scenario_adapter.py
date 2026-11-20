@@ -1,7 +1,7 @@
 """成员B 场景契约 → 成员C 引擎场景的单向只读适配层。
 
 设计约束：
-- 不改 B 的契约（urn:diplomat:schema:scenario:1.0/1.1），不改引擎核心逻辑；
+- 不改 B 的契约（urn:diplomat:schema:scenario:1.0），不改引擎核心逻辑；
 - B 侧字段名一律不改，只在中间层翻译成引擎已冻结的 C 侧格式；
 - 转换过程完全确定，不使用随机、时间、UUID、网络或 LLM；
 - 所有 warning 都是结构化 dict：{"code", "field", "message"}。
@@ -35,6 +35,29 @@ B_ENUM_OPS = ("in", "not_in")
 
 DEFAULT_DEADLOCK_ROUNDS = 2
 DEFAULT_ACTION_POINTS_PER_ROUND = 3
+
+# B 契约 1.1 的 13 个行为标签与三档幅度；与 engine/validator.py 的
+# LABELS / MAGNITUDES 完全一致。适配层不 import 引擎，故在此复述一份，
+# tests/test_index_rules_v1.py 有守卫测试防止两处漂移。
+INDEX_RULE_LABELS = (
+    "constructive_proposal",
+    "cite_rules",
+    "hardline_stance",
+    "broken_promise",
+    "personal_attack",
+    "redline_provoke",
+    "procedural",
+    "diplomatic_reframe",
+    "protect_ally",
+    "keep_promise",
+    "betray_ally",
+    "vague_stance",
+    "conditional_concession",
+)
+INDEX_RULE_MAGNITUDES = ("slight", "moderate", "major")
+INDEX_RULE_ENGINE_KEYS = frozenset(
+    {"scale", "initial", "sensitivity", "image_actions", "trust_actions"}
+)
 
 # 默认查表：口径与 scenarios/demo_scenario.json 的 index_rules 完全一致。
 # 结算表的唯一源头是 demo_scenario.json；改表时必须同步本常量，
@@ -91,6 +114,180 @@ def _warning(code: str, field: str, message: str) -> dict:
     return {"code": code, "field": field, "message": message}
 
 
+def _delta_value(band: dict, key: str, warnings: List[dict], field: str) -> int:
+    """取一个行为增量；缺失按 0，非数值记 warning 并按 0。"""
+    if key not in band:
+        return 0
+    value = band[key]
+    if not _is_number(value):
+        warnings.append(
+            _warning(
+                "INDEX_RULE_DELTA_INVALID",
+                field,
+                f"{key} 必须为数值，实际为 {value!r}，已按 0 处理。",
+            )
+        )
+        return 0
+    return int(value)
+
+
+def _normalize_index_rules(
+    raw: dict, party_ids: List[str]
+) -> Tuple[dict, List[dict]]:
+    """把 B 契约 1.1 的 index_rules 无损转换为引擎可读形状。
+
+    B 1.1 形状（13 个标签平铺在顶层，每档含 interest_delta / image_delta /
+    trust_delta）与引擎期望形状（image_actions / trust_actions 两张表）不同，
+    而适配层对 index_rules 是「自带则原样保留」，若不转换会导致 image/trust
+    静默归零。本函数只做结构搬移，不改变任何数值语义：
+
+    - image_actions[label][magnitude] = raw[label][magnitude]["image_delta"]
+    - trust_actions[label][magnitude] = raw[label][magnitude]["trust_delta"]
+    - initial：B 是全局 {image, trust}，展开到每个参与方；已分层则原样保留
+    - scale：B 无此键，补 [0, 100]
+    - sensitivity：B 无此键，**不编造**，省略并按 1.0 等权处理 + warning
+    - interest_delta：引擎无落点，忽略并记 INTEREST_DELTA_UNSUPPORTED
+
+    输入若已是引擎原生形状（含 image_actions / trust_actions），原样深拷贝返回。
+    """
+    warnings: List[dict] = []
+
+    if not isinstance(raw, dict) or not raw:
+        return deepcopy(DEFAULT_INDEX_RULES), warnings
+
+    # 1) 已是引擎原生形状：原样保留，不再改任何数值。
+    if any(key in raw for key in ("image_actions", "trust_actions")):
+        warnings.append(
+            _warning(
+                "INDEX_RULES_ALREADY_NATIVE",
+                "$.index_rules",
+                "输入 index_rules 已是引擎原生形状（含 image_actions / trust_actions），"
+                "适配层原样保留。",
+            )
+        )
+        return deepcopy(raw), warnings
+
+    # 2) 形状不可识别：非空但既不是引擎形状，也没有任何 B 1.1 标签。
+    if not any(label in raw for label in INDEX_RULE_LABELS) and "initial" not in raw:
+        raise ScenarioContractError(
+            "$.index_rules: 形状不可识别：既无 image_actions / trust_actions，"
+            f"也不含 B 契约 1.1 的 13 个行为标签，实际顶层键为 {sorted(raw)}。"
+        )
+
+    image_actions: Dict[str, Dict[str, int]] = {}
+    trust_actions: Dict[str, Dict[str, int]] = {}
+    interest_ignored: List[str] = []
+
+    for label in INDEX_RULE_LABELS:
+        entry = raw.get(label)
+        if not isinstance(entry, dict):
+            warnings.append(
+                _warning(
+                    "INDEX_RULE_LABEL_MISSING",
+                    f"$.index_rules.{label}",
+                    f"B 1.1 结算表缺少标签 {label!r}，已补全三档为 0。",
+                )
+            )
+            entry = {}
+
+        image_actions[label] = {}
+        trust_actions[label] = {}
+        for magnitude in INDEX_RULE_MAGNITUDES:
+            band = entry.get(magnitude)
+            if not isinstance(band, dict):
+                image_actions[label][magnitude] = 0
+                trust_actions[label][magnitude] = 0
+                continue
+            image_actions[label][magnitude] = _delta_value(
+                band,
+                "image_delta",
+                warnings,
+                f"$.index_rules.{label}.{magnitude}.image_delta",
+            )
+            trust_actions[label][magnitude] = _delta_value(
+                band,
+                "trust_delta",
+                warnings,
+                f"$.index_rules.{label}.{magnitude}.trust_delta",
+            )
+            if "interest_delta" in band:
+                interest_ignored.append(f"{label}.{magnitude}")
+
+    if interest_ignored:
+        warnings.append(
+            _warning(
+                "INTEREST_DELTA_UNSUPPORTED",
+                "$.index_rules.*.*.interest_delta",
+                "引擎的 interest 由条款效用计算，行为标签没有 interest 结算通道；"
+                f"已忽略 {len(interest_ignored)} 个 interest_delta（待与 B / 队长裁决，"
+                "见 docs/INDEX_RULES_V1_GAP.md）。",
+            )
+        )
+
+    # 3) 未知顶层键：忽略并记 warning，保持加法兼容（不抛错）。
+    for key in raw:
+        if key not in INDEX_RULE_LABELS and key not in INDEX_RULE_ENGINE_KEYS:
+            warnings.append(
+                _warning(
+                    "INDEX_RULE_LABEL_UNKNOWN",
+                    f"$.index_rules.{key}",
+                    f"未知的行为标签 {key!r}，不在 13 个合法标签内，已忽略。",
+                )
+            )
+
+    # 4) initial：全局值展开到每个参与方；已是分层形状则原样保留。
+    raw_initial = raw.get("initial")
+    raw_initial = raw_initial if isinstance(raw_initial, dict) else {}
+    layered = any(
+        isinstance(raw_initial.get(party), dict) for party in party_ids
+    )
+    initial: Dict[str, Dict[str, int]] = {}
+    for party in party_ids:
+        if layered:
+            values = raw_initial.get(party) or {}
+            if not isinstance(values, dict):
+                values = {}
+        else:
+            values = raw_initial
+        initial[party] = {
+            "image": int(values.get("image", 50)),
+            "trust": int(values.get("trust", 50)),
+        }
+
+    # 5) scale：B 无此键，补引擎默认量纲。
+    raw_scale = raw.get("scale")
+    if (
+        isinstance(raw_scale, list)
+        and len(raw_scale) == 2
+        and all(_is_number(item) for item in raw_scale)
+    ):
+        scale = list(raw_scale)
+    else:
+        scale = [0, 100]
+
+    rules: Dict[str, object] = {
+        "scale": scale,
+        "initial": initial,
+        "image_actions": image_actions,
+        "trust_actions": trust_actions,
+    }
+
+    # 6) sensitivity：B 1.1 未提供，不编造；省略该键等价于全体 1.0 敏感度。
+    raw_sensitivity = raw.get("sensitivity")
+    if isinstance(raw_sensitivity, dict) and raw_sensitivity:
+        rules["sensitivity"] = deepcopy(raw_sensitivity)
+    else:
+        warnings.append(
+            _warning(
+                "SENSITIVITY_ABSENT",
+                "$.index_rules.sensitivity",
+                "B 契约 1.1 未提供参与方敏感度，引擎按 1.0 处理（各方等权）。",
+            )
+        )
+
+    return rules, warnings
+
+
 def _is_number(value) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
@@ -105,42 +302,6 @@ def _as_list(value) -> list:
 
 def _as_dict(value) -> dict:
     return value if isinstance(value, dict) else {}
-
-
-def _adapt_index_rules(rules: dict, party_ids: List[str]) -> Tuple[dict, bool]:
-    initial = _as_dict(rules.get("initial"))
-    engine_keys = ("scale", "sensitivity", "image_actions", "trust_actions")
-    if any(key in rules for key in engine_keys) or any(
-        isinstance(value, dict) for value in initial.values()
-    ):
-        return deepcopy(rules), False
-
-    adapted = deepcopy(DEFAULT_INDEX_RULES)
-    adapted["initial"] = {
-        party_id: {
-            "image": initial.get("image", 50),
-            "trust": initial.get("trust", 50),
-        }
-        for party_id in party_ids
-    }
-    adapted["sensitivity"] = {
-        party_id: {"image": 1.0, "trust": 1.0} for party_id in party_ids
-    }
-    for label, levels in rules.items():
-        if label == "initial" or not isinstance(levels, dict):
-            continue
-        for magnitude, deltas in levels.items():
-            if not isinstance(deltas, dict):
-                continue
-            if "image_delta" in deltas:
-                adapted["image_actions"].setdefault(label, {})[magnitude] = deepcopy(
-                    deltas["image_delta"]
-                )
-            if "trust_delta" in deltas:
-                adapted["trust_actions"].setdefault(label, {})[magnitude] = deepcopy(
-                    deltas["trust_delta"]
-                )
-    return adapted, True
 
 
 def _normalized_private_state(raw) -> dict:
@@ -194,6 +355,21 @@ def validate_b_contract(b_scenario) -> List[str]:
     if "terminal_rules" in b_scenario and not isinstance(terminal_rules, dict):
         errors.append("$.terminal_rules: 必须是对象。")
     elif isinstance(terminal_rules, dict):
+        # B 契约 1.1 冻结语义：三个布尔只接受 JSON true/false，缺失或非布尔
+        # 一律视为契约错误，引擎不得用 bool() 兜底。
+        for key in ("allow_walk_away", "partial_agreement_allowed"):
+            if key not in terminal_rules:
+                errors.append(
+                    f"$.terminal_rules.{key}: 缺少必填布尔（B 契约 1.1 要求必填）。"
+                )
+        if (
+            "accept_requires_no_open_issue" not in terminal_rules
+            and "accept_requires_no_open_issues" not in terminal_rules
+        ):
+            errors.append(
+                "$.terminal_rules.accept_requires_no_open_issue: "
+                "缺少必填布尔（B 契约 1.1 要求必填；复数兼容键亦可）。"
+            )
         # B 契约用单数 accept_requires_no_open_issue，C 场景用复数。
         # 两者都接受，单数优先；同时出现且取值冲突视为契约错误。
         for key in (
@@ -211,30 +387,51 @@ def validate_b_contract(b_scenario) -> List[str]:
                 "$.terminal_rules: accept_requires_no_open_issue 与 "
                 "accept_requires_no_open_issues 同时出现且取值冲突。"
             )
+
+        # deadlock_rounds 位于 terminal_rules 内部（B 1.1），而非顶层。
         if "deadlock_rounds" in terminal_rules:
-            rounds = terminal_rules["deadlock_rounds"]
-            if not isinstance(rounds, int) or isinstance(rounds, bool):
-                errors.append("$.terminal_rules.deadlock_rounds: 必须是非 bool 整数。")
-            elif not 2 <= rounds <= 10:
-                errors.append("$.terminal_rules.deadlock_rounds: 必须在 2～10 范围内。")
+            deadlock = terminal_rules["deadlock_rounds"]
+            if (
+                not isinstance(deadlock, int)
+                or isinstance(deadlock, bool)
+                or deadlock < 2
+                or deadlock > 10
+            ):
+                errors.append(
+                    "$.terminal_rules.deadlock_rounds: 期望 2~10 的整数，"
+                    f"实际为 {deadlock!r}。"
+                )
             elif (
                 isinstance(max_rounds, int)
                 and not isinstance(max_rounds, bool)
-                and rounds > max_rounds
+                and deadlock > max_rounds
             ):
                 errors.append(
-                    "$.terminal_rules.deadlock_rounds: 不得大于 max_rounds。"
+                    "$.terminal_rules.deadlock_rounds: 不得大于 max_rounds="
+                    f"{max_rounds}，实际为 {deadlock}。"
                 )
 
-    runtime = b_scenario.get("runtime")
-    if "runtime" in b_scenario and not isinstance(runtime, dict):
-        errors.append("$.runtime: 必须是对象。")
-    elif isinstance(runtime, dict) and "action_points_per_round" in runtime:
-        points = runtime["action_points_per_round"]
-        if not isinstance(points, int) or isinstance(points, bool):
-            errors.append("$.runtime.action_points_per_round: 必须是非 bool 整数。")
-        elif not 1 <= points <= 5:
-            errors.append("$.runtime.action_points_per_round: 必须在 1～5 范围内。")
+    # runtime 块：其中字段都必须被引擎显式读取，禁止在适配层写死。
+    if "runtime" in b_scenario:
+        runtime = b_scenario["runtime"]
+        if not isinstance(runtime, dict):
+            errors.append("$.runtime: 必须是对象。")
+        else:
+            for key in runtime:
+                if key != "action_points_per_round":
+                    errors.append(f"$.runtime.{key}: 未定义的运行参数。")
+            if "action_points_per_round" in runtime:
+                points = runtime["action_points_per_round"]
+                if (
+                    not isinstance(points, int)
+                    or isinstance(points, bool)
+                    or points < 1
+                    or points > 5
+                ):
+                    errors.append(
+                        "$.runtime.action_points_per_round: 期望 1~5 的整数，"
+                        f"实际为 {points!r}。"
+                    )
 
     parties = b_scenario.get("parties")
     party_ids: List[str] = []
@@ -304,17 +501,37 @@ def validate_b_contract(b_scenario) -> List[str]:
                             errors.append(f"{path}.range: min/max 必须是数值。")
                         elif float(low) >= float(high):
                             errors.append(f"{path}.range: 期望 min < max。")
-                        elif "initial" in issue:
-                            initial = issue["initial"]
-                            if not _is_number(initial):
+                        else:
+                            step = range_value.get("step")
+                            if step is not None and (
+                                not _is_number(step) or float(step) <= 0
+                            ):
                                 errors.append(
-                                    f"{path}.initial: 数值议题的初始值必须是数值。"
+                                    f"{path}.range.step: 必须是正数，实际为 {step!r}。"
                                 )
-                            elif float(initial) < float(low) or float(initial) > float(high):
-                                errors.append(
-                                    f"{path}.initial: 初始值 {initial!r} "
-                                    f"不在 [{low}, {high}] 内。"
-                                )
+                            elif "initial" in issue:
+                                initial = issue["initial"]
+                                if not _is_number(initial):
+                                    errors.append(
+                                        f"{path}.initial: 数值议题的初始值必须是数值。"
+                                    )
+                                elif float(initial) < float(low) or float(
+                                    initial
+                                ) > float(high):
+                                    errors.append(
+                                        f"{path}.initial: 初始值 {initial!r} "
+                                        f"不在 [{low}, {high}] 内。"
+                                    )
+                                elif step is not None:
+                                    ratio = (
+                                        float(initial) - float(low)
+                                    ) / float(step)
+                                    if abs(ratio - round(ratio)) > 1e-9:
+                                        errors.append(
+                                            f"{path}.initial: 初始值 {initial!r} 不是 "
+                                            f"step={step} 的整数倍"
+                                            f"（(value-min)/step={ratio!r}）。"
+                                        )
                 else:
                     options = issue.get("options")
                     if not isinstance(options, list) or not options:
@@ -354,6 +571,32 @@ def validate_b_contract(b_scenario) -> List[str]:
                                     f"{path}.initial: 初始值必须是该议题的 option_id 之一，"
                                     f"实际为 {initial!r}。"
                                 )
+
+                # initial_ref：可选；填写时必须能在同场景的 public_facts[].fact_id
+                # 或 assumptions[].assumption_id 中解析到。
+                if "initial_ref" in issue:
+                    ref = issue["initial_ref"]
+                    if not _require_text(ref):
+                        errors.append(
+                            f"{path}.initial_ref: 必须是非空字符串，实际为 {ref!r}。"
+                        )
+                    else:
+                        resolvable = set()
+                        for fact in _as_list(b_scenario.get("public_facts")):
+                            if isinstance(fact, dict) and _require_text(
+                                fact.get("fact_id")
+                            ):
+                                resolvable.add(fact["fact_id"])
+                        for assumption in _as_list(b_scenario.get("assumptions")):
+                            if isinstance(assumption, dict) and _require_text(
+                                assumption.get("assumption_id")
+                            ):
+                                resolvable.add(assumption["assumption_id"])
+                        if ref not in resolvable:
+                            errors.append(
+                                f"{path}.initial_ref: 无法在 public_facts[].fact_id "
+                                f"或 assumptions[].assumption_id 中解析到 {ref!r}。"
+                            )
 
     private_state = b_scenario.get("private_state_by_party")
     if "private_state_by_party" in b_scenario:
@@ -594,6 +837,16 @@ def _adapt_enum_clause(
         "weights": {},
         "redlines": hard_redlines,
     }
+    if isinstance(issue.get("initial_ref"), str) and issue["initial_ref"]:
+        result["initial_ref"] = issue["initial_ref"]
+        warnings.append(
+            _warning(
+                "INITIAL_REF_RESOLVED",
+                f"issues[{issue_id}].initial_ref",
+                f"初始值依据 {issue['initial_ref']!r} 已解析并保留在 "
+                f"clauses[{issue_id}].initial_ref，供审计追溯。",
+            )
+        )
     if any(soft_redlines.values()):
         result["soft_redlines"] = soft_redlines
     return result
@@ -749,7 +1002,7 @@ def _adapt_numeric_clause(
 
     initial = _resolve_numeric_initial(issue, positions, low, high, warnings, name)
 
-    return {
+    result = {
         "name": name,
         "issue_id": issue_id,
         "type": "numeric",
@@ -760,6 +1013,17 @@ def _adapt_numeric_clause(
         "weights": {},
         "positions": positions,
     }
+    if isinstance(issue.get("initial_ref"), str) and issue["initial_ref"]:
+        result["initial_ref"] = issue["initial_ref"]
+        warnings.append(
+            _warning(
+                "INITIAL_REF_RESOLVED",
+                f"issues[{issue_id}].initial_ref",
+                f"初始值依据 {issue['initial_ref']!r} 已解析并保留在 "
+                f"clauses[{issue_id}].initial_ref，供审计追溯。",
+            )
+        )
+    return result
 
 
 def _apply_weights(
@@ -893,47 +1157,64 @@ def _adapt(b_scenario: dict) -> Tuple[dict, List[dict]]:
 
     terminal_rules_source = _as_dict(b_scenario["terminal_rules"])
     # 单数键（B 契约）优先；复数键（C 场景）兼容。契约校验已排除两者冲突。
+    # 三布尔已在 validate_b_contract 中强制必填，此处不再用 .get(..., True) 兜底。
     if "accept_requires_no_open_issue" in terminal_rules_source:
         accept_no_open = terminal_rules_source["accept_requires_no_open_issue"]
     else:
-        accept_no_open = terminal_rules_source.get(
-            "accept_requires_no_open_issues", True
-        )
+        accept_no_open = terminal_rules_source["accept_requires_no_open_issues"]
     terminal_rules = {
-        "allow_walk_away": terminal_rules_source.get("allow_walk_away", True),
+        "allow_walk_away": terminal_rules_source["allow_walk_away"],
         "accept_requires_no_open_issues": accept_no_open,
-        "partial_agreement_allowed": terminal_rules_source.get(
-            "partial_agreement_allowed", True
-        ),
+        "partial_agreement_allowed": terminal_rules_source[
+            "partial_agreement_allowed"
+        ],
     }
 
-    deadlock_rounds = terminal_rules_source.get(
-        "deadlock_rounds", DEFAULT_DEADLOCK_ROUNDS
-    )
+    # runtime：字段必须显式读取，缺省才回落默认值并记 warning。
     runtime_source = _as_dict(b_scenario.get("runtime"))
-    action_points_per_round = runtime_source.get(
-        "action_points_per_round", DEFAULT_ACTION_POINTS_PER_ROUND
-    )
+    if "action_points_per_round" in runtime_source:
+        action_points_per_round = runtime_source["action_points_per_round"]
+    else:
+        action_points_per_round = DEFAULT_ACTION_POINTS_PER_ROUND
+        warnings.append(
+            _warning(
+                "RUNTIME_ACTION_POINTS_DEFAULTED",
+                "$.runtime.action_points_per_round",
+                "B 场景未提供 runtime.action_points_per_round，已回落默认值 "
+                f"{DEFAULT_ACTION_POINTS_PER_ROUND}。",
+            )
+        )
+
+    # deadlock_rounds 位于 terminal_rules 内部（B 1.1），缺省 2。
+    if "deadlock_rounds" in terminal_rules_source:
+        deadlock_rounds = terminal_rules_source["deadlock_rounds"]
+    else:
+        deadlock_rounds = DEFAULT_DEADLOCK_ROUNDS
+        warnings.append(
+            _warning(
+                "DEADLOCK_ROUNDS_DEFAULTED",
+                "$.terminal_rules.deadlock_rounds",
+                "B 场景未提供 terminal_rules.deadlock_rounds，已回落默认值 "
+                f"{DEFAULT_DEADLOCK_ROUNDS}。",
+            )
+        )
 
     provided_index_rules = b_scenario.get("index_rules")
     if isinstance(provided_index_rules, dict) and provided_index_rules:
-        index_rules, converted = _adapt_index_rules(provided_index_rules, party_ids)
-        if converted:
-            warnings.append(
-                _warning(
-                    "INDEX_RULES_ADAPTED",
-                    "$.index_rules",
-                    "B 1.1 全局初值已展开到各参与方，image/trust 行为增量已转换为引擎查表。",
-                )
+        # B 1.1 原生表是 13 标签平铺形状，必须转换为引擎的
+        # image_actions / trust_actions 两张表，否则结算会静默归零。
+        index_rules, index_warnings = _normalize_index_rules(
+            provided_index_rules, party_ids
+        )
+        warnings.extend(index_warnings)
+        warnings.append(
+            _warning(
+                "INDEX_RULES_PRESERVED",
+                "$.index_rules",
+                "输入场景自带 index_rules，适配层已归一为引擎可读形状"
+                "（原生形状原样保留），不使用默认查表。",
             )
-        else:
-            warnings.append(
-                _warning(
-                    "INDEX_RULES_PRESERVED",
-                    "$.index_rules",
-                    "输入场景自带引擎格式 index_rules，适配层原样保留，不使用默认查表。",
-                )
-            )
+        )
     else:
         index_rules = deepcopy(DEFAULT_INDEX_RULES)
         warnings.append(

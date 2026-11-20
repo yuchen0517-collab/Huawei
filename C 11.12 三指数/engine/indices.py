@@ -33,6 +33,26 @@ FALLBACK_LABELS = {
 }
 
 INDEX_NAMES = ("interest", "image", "trust")
+INDEX_RULE_TABLES = ("image_actions", "trust_actions")
+
+
+class IndexRulesShapeError(ValueError):
+    """场景 index_rules 非空、但形状不可识别时抛出。
+
+    防静默失效：早期实现查不到表就返回 0，导致 B 契约 1.1 的原生形状
+    （13 个标签平铺在顶层）在适配层未转换时被静默忽略，Image / Trust
+    永远停在初值且不报错。现在只要表非空且既无 image_actions 也无
+    trust_actions，就显式失败。空表（{} 或缺失）仍按「无表则 delta=0」
+    处理，以兼容不带结算表的 demo / 老场景。
+    """
+
+
+def _shape_error(rules) -> IndexRulesShapeError:
+    keys = sorted(rules.keys()) if isinstance(rules, dict) else type(rules).__name__
+    return IndexRulesShapeError(
+        "index_rules 形状不可识别：既无 image_actions 也无 trust_actions，"
+        f"实际顶层键为 {keys}。请检查场景是否使用了未经适配层转换的 B 1.1 原生表。"
+    )
 
 
 def round_half_up(value: float) -> int:
@@ -101,14 +121,28 @@ def interest_value(plan: Dict[str, dict], party: str, scenario: dict) -> int:
 def initial_indices(scenario: dict) -> Dict[str, Dict[str, int]]:
     plan = initial_plan(scenario)
     rules = scenario.get("index_rules", {}) or {}
-    initial = rules.get("initial", {}) or {}
+    initial = (rules.get("initial") if isinstance(rules, dict) else None) or {}
+    # 兼容两种形状：
+    #   1) 引擎原生（按参与方分层）{"cn": {"image": ..}, "us": {...}}；
+    #   2) B 契约 1.1 原生（全场景一个值、双方共用）{"image": .., "trust": ..}。
+    # 适配层会展开为形状 1；这里仍兼容形状 2，避免上游绕过适配层时静默回落 50。
+    global_initial = (
+        initial
+        if isinstance(initial, dict)
+        and not any(isinstance(initial.get(party), dict) for party in party_ids(scenario))
+        else {}
+    )
     result: Dict[str, Dict[str, int]] = {}
     for party in party_ids(scenario):
         values = initial.get(party, {}) or {}
+        if not isinstance(values, dict):
+            values = {}
+        merged = dict(global_initial)
+        merged.update(values)
         result[party] = {
             "interest": interest_value(plan, party, scenario),
-            "image": int(values.get("image", 50)),
-            "trust": int(values.get("trust", 50)),
+            "image": int(merged.get("image", 50)),
+            "trust": int(merged.get("trust", 50)),
         }
     return result
 
@@ -218,17 +252,68 @@ def resolve_labels(
 
 
 def _table_delta(
-    table: dict, sensitivity: dict, index: str, label: str, magnitude: str
+    table: dict,
+    sensitivity: dict,
+    index: str,
+    label: str,
+    magnitude: str,
+    warnings: List[dict] | None = None,
 ) -> int:
-    base = (table.get(label) or {}).get(magnitude)
+    entry = table.get(label)
+    if entry is None:
+        return 0
+    if not isinstance(entry, dict):
+        if warnings is not None:
+            warnings.append(
+                {
+                    "code": "INDEX_RULE_TABLE_INVALID",
+                    "field": f"index_rules.{index}_actions.{label}",
+                    "message": f"标签 {label!r} 的结算项不是对象，已按 0 处理。",
+                }
+            )
+        return 0
+    if magnitude not in entry:
+        if warnings is not None:
+            warnings.append(
+                {
+                    "code": "INDEX_RULE_MAGNITUDE_MISSING",
+                    "field": f"index_rules.{index}_actions.{label}.{magnitude}",
+                    "message": (
+                        f"标签 {label!r} 缺少档位 {magnitude!r}，"
+                        "已按 0 处理；请补全 slight/moderate/major 三档。"
+                    ),
+                }
+            )
+        return 0
+    base = entry.get(magnitude)
     if base is None:
         return 0
     factor = float((sensitivity or {}).get(index, 1.0))
     return round_half_up(float(base) * factor)
 
 
-def behaviour_delta(actor: str, item: dict, scenario: dict) -> Dict[str, int]:
+def behaviour_delta(
+    actor: str,
+    item: dict,
+    scenario: dict,
+    warnings: List[dict] | None = None,
+) -> Dict[str, int]:
+    """计算一次发言标签对 image / trust 的增量。
+
+    - 结构性自检：`index_rules` 非空但既无 `image_actions` 也无
+      `trust_actions` 时抛 `IndexRulesShapeError`，不再静默返回 0；
+    - 表为空时保持旧行为（delta=0），兼容不带结算表的场景；
+    - 表中有该标签但缺当前档位时，若传入 `warnings` 列表则写入
+      结构化 warning `INDEX_RULE_MAGNITUDE_MISSING`，否则按 0 处理
+      （默认不传，保持 `apply_effects` 的既有调用与状态结构不变）。
+    """
     rules = scenario.get("index_rules", {}) or {}
+    if rules and (
+        not isinstance(rules, dict)
+        or not any(key in rules for key in INDEX_RULE_TABLES)
+    ):
+        raise _shape_error(rules)
+
     sensitivity = (rules.get("sensitivity") or {}).get(actor, {}) or {}
     image_table = rules.get("image_actions", {}) or {}
     trust_table = rules.get("trust_actions", {}) or {}
@@ -240,11 +325,11 @@ def behaviour_delta(actor: str, item: dict, scenario: dict) -> Dict[str, int]:
 
     if target in ("image", "both"):
         deltas["image"] = _table_delta(
-            image_table, sensitivity, "image", label, magnitude
+            image_table, sensitivity, "image", label, magnitude, warnings
         )
     if target in ("trust", "both"):
         deltas["trust"] = _table_delta(
-            trust_table, sensitivity, "trust", label, magnitude
+            trust_table, sensitivity, "trust", label, magnitude, warnings
         )
     return deltas
 

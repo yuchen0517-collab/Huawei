@@ -10,3 +10,8 @@
 | 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | 按 negotiability.notes 口径实现，仅在双方偏好完全相反时成立 | 若后续场景双方偏好非完全相反，需 B 给出逐方 score || 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
 | 6 | 外部交付目录（C 11.12 三指数、scenario agent v2、Diplomat_webdemo2.0）被仓库 pytest 误收集 | C 的 79 条测试只能在其自身目录下运行（仓库 rootdir 下收集会 ImportError），已在 conftest.py 的 collect_ignore 中排除 | 无，属既定约束；C 的测试一律 cd 到其目录后跑 `python -m pytest tests/ -q` |
 | 7 | B 分支 feat/scenario-b 的 factcard_loader.py 带 6 处未解决合并冲突标记（<<<<<<< Updated upstream），test_factcard_loader.py 无法收集 | ✅ 11/13 已在本分支解决：按 B 自己 test_factcard_loader.py 的断言统一保留 Updated upstream 一侧，B 目录 77 条测试全绿 | B 的 feat/scenario-b 分支上仍是坏的，通知她同步修复，避免下次合并把冲突标记带回来 |
+## 2026-11-19 引擎口径偏离 C 基线
+
+| 编号 | 事项 | 现状 | 待办 |
+| --- | --- | --- | --- |
+| 8 | 行动契约 v2 与僵局口径偏离 C 的 6b076bb 基线 | A 在 `engine/validator.py` 放行 `card_payload`，在 `engine/core.py` 对覆盖层标记的 v2 场景前置执行卡牌校验，并显式按双方均无新版本累计僵局；覆盖层注入我方 4/5 手与 3 轮阈值 | 将 C 文件 diff 贴群并同步 C；推回 `feat/rules-c` 或要求 C 下次合并保留这些改动，不能用基线整体覆盖 |

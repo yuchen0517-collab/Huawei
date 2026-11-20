@@ -2,6 +2,8 @@
 logs/
 __pycache__/
 runtime/sessions/
+.venv*/
+venv/
 
 # DSH 本地插件目录：bundle 配置内含 GitHub MCP 令牌，禁止提交
 .dsh-plugins/

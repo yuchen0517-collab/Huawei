@@ -23,7 +23,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jsonschema import Draft202012Validator
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -48,19 +48,26 @@ from engine.core import IllegalDebriefAccess, RulesEngine
 from engine.state import NegotiationState, Offer
 from engine.terminal import TERMINAL_TYPES
 from engine.validator import ERRORS as ENGINE_ERRORS
+from engine.validator import OFFER_ACTIONS
+from engine.validator import effective_plan as engine_effective_plan
+from engine.validator import is_redline_violation, is_soft_redline_violation
 from engine.validator import validate_action as validate_engine_action
+
+import negotiation_rules
+from scenario_overrides import apply_overrides, role_clause
 
 SCENARIO_ID = "ai_governance"
 MY_ACTOR = "cn"
 IDENTITY_FIELDS = ("action_id", "actor", "card_id")
 TRANSPORT_FIELDS = ("client_action_id", "base_version")
 ACTION_FIELDS = ("action_type", "offer_patch", "conditions", "expected_effect")
-OPTIONAL_ACTION_FIELDS = ("effect_labels",)
+OPTIONAL_ACTION_FIELDS = ("effect_labels", "card_payload")
 
 
 def pick_action_fields(source: dict) -> dict:
-    """提取行动字段：必填字段必取，可选字段（effect_labels）有才带。"""
+    """提取行动字段：必填字段必取，可选字段有才带。"""
     picked = {k: source[k] for k in ACTION_FIELDS}
+    picked["card_id"] = source.get("card_id")
     for key in OPTIONAL_ACTION_FIELDS:
         if source.get(key) is not None:
             picked[key] = source[key]
@@ -68,9 +75,10 @@ def pick_action_fields(source: dict) -> dict:
 PUBLIC_STATE_KEYS = (
     "session_id", "round", "phase", "my_offer", "opponent_offer",
     "open_issues", "action_history", "status", "mode",
-    # 11/17 契约扩到 14 字段：条款投影、行动数版本、行动点与教练建议。
     "clauses", "version", "action_points", "action_points_per_round",
-    "coach_advice",
+    "action_points_left",
+    "coach_advice", "available_cards", "pending_hint",
+    "speaker_score",
 )
 # 11/16 及以前的投影只有 9 个字段。旧幂等账本里的缓存投影无法按新契约回放，
 # 加载时会被丢弃；旧意图号是前端已废弃的 `act-` 前缀，不会被再次提交。
@@ -104,6 +112,16 @@ AUTO_STATUS_ERROR_DETAIL = "自动推演记录不可安全恢复，已禁止自�
 PHASE_CLOSED_DETAIL = "谈判已结束，不能继续自动推进。"
 AUTO_FIELDS = ("auto_status", "auto_terminal_type", "auto_last_error")
 AutoStatus = Literal["running", "paused", "done", "error"]
+
+# 按手快照：只落服务端磁盘，engine_state 是 god_view 存档。
+SNAPSHOT_LIMIT = 20
+SNAPSHOT_FIELDS = (
+    "action_id", "version", "round", "engine_state",
+    "messages_len", "action_seq", "auto_status",
+)
+# fork 幂等只记内存映射：写回原会话会破坏“原会话零改动”的承诺。
+FORK_LEDGER: dict[tuple[str, str], str] = {}
+FORK_LOCK = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # 对外六码（11/17 契约）。引擎原来的 18 个码只放在 engine_error 里。
@@ -201,7 +219,7 @@ class AutoStatusResponse(BaseModel):
 
 # ---------------------------------------------------------------------------
 # 对外投影模型：同时作为 openapi.json 的 schema 来源。
-# 状态投影的 14 个字段必须与 PUBLIC_STATE_KEYS 一一对应。
+# 状态投影的 17 个字段必须与 PUBLIC_STATE_KEYS 一一对应。
 # ---------------------------------------------------------------------------
 class ClauseRange(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -269,6 +287,40 @@ class CoachAdvice(BaseModel):
     fail_reason: str | None = None
 
 
+class AvailableCard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    family: str
+    quote_board: bool
+    available: bool
+    reason: str
+    target_clause: str | None = None
+
+
+class PendingHint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    responder: str
+    version: int
+    deferrals_used: int
+    deferrals_left: int
+    must_resolve: bool
+    text: str
+
+
+class SpeakerScore(BaseModel):
+    """D 回签的评分形状：键名、层级、取值范围一律不改。"""
+
+    model_config = ConfigDict(extra="forbid")
+    total: int
+    position_clarity: int
+    diplomatic_tact: int
+    emotional_control: int
+    substance_quality: int
+    feedback: str
+    source: Literal["rule"]
+
+
 class StateProjection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     session_id: str
@@ -282,9 +334,16 @@ class StateProjection(BaseModel):
     mode: str
     clauses: list[ClauseDef]
     version: int
-    action_points: int
-    action_points_per_round: int
+    # action_points 语义由 D 回签锁定：恒等于每回合预算（上限），不做递减。
+    # 真实剩余手数走 action_points_left，旧字段一个都不改。
+    action_points: int = Field(description="每回合预算（上限）")
+    action_points_per_round: int = Field(description="我方每回合可出手数")
+    action_points_left: int = Field(description="本回合我方剩余手数，逐手递减")
     coach_advice: CoachAdvice | None = None
+    available_cards: list[AvailableCard]
+    pending_hint: PendingHint | None = None
+    # 未评分给 null，不补 0：0 是“算出来很差”，null 是“本轮未评分”。
+    speaker_score: SpeakerScore | None = None
 
 
 class ApiErrorCode(str, Enum):
@@ -350,6 +409,11 @@ class SessionRecord:
     # GET /state 与提交响应共用同一份，generated_at 不随请求时间漂移。
     coach_cache: dict = field(default_factory=dict)
     coach_lock: threading.Lock = field(default_factory=threading.Lock)
+    # 本回合我方已经出手的次数，逐手 +1、回合结束归零。
+    # 只用于投影 action_points_left，不参与任何已签字段的语义。
+    my_hands_in_round: int = 0
+    # 按手快照（服务端存档，含 god_view engine_state）。最多 SNAPSHOT_LIMIT 条。
+    snapshots: list = field(default_factory=list)
 
 
 SESSIONS: dict[str, SessionRecord] = {}
@@ -455,6 +519,76 @@ def restore_engine(engine: RulesEngine) -> RulesEngine:
         engine.session_id,
         engine.state.to_archive_dict(),
     )
+
+
+def build_session_snapshot(
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    auto_status: AutoStatus,
+) -> dict:
+    """构造一条按手快照。engine_state 是 god_view 存档，只允许落服务端磁盘。"""
+    try:
+        return {
+            "action_id": make_action_id(runtime.action_seq) if runtime.action_seq else None,
+            "version": runtime.action_seq,
+            "round": engine.state.round,
+            "engine_state": engine.state.to_archive_dict(),
+            "messages_len": len(runtime.messages),
+            "action_seq": runtime.action_seq,
+            "auto_status": auto_status,
+        }
+    except Exception:
+        raise internal_api_error()
+
+
+def merge_snapshot(snapshots: list, snapshot: dict) -> list:
+    """同版本覆盖、新版本追加，只保留最近 SNAPSHOT_LIMIT 条。"""
+    result = copy.deepcopy(snapshots)
+    if result and result[-1]["version"] == snapshot["version"]:
+        result[-1] = snapshot
+    elif result and result[-1]["version"] > snapshot["version"]:
+        # 不回退到更旧的状态（例如失败回滚前的预写），保留已有快照。
+        return result
+    else:
+        result.append(snapshot)
+    return result[-SNAPSHOT_LIMIT:]
+
+
+def validate_snapshots(data: Any) -> list:
+    if data is None:
+        return []
+    if not isinstance(data, list):
+        raise ValueError()
+    result = []
+    for item in data:
+        if not isinstance(item, dict) or set(item) != set(SNAPSHOT_FIELDS):
+            raise ValueError()
+        action_id = item["action_id"]
+        if action_id is not None and (not isinstance(action_id, str) or not action_id):
+            raise ValueError()
+        version = item["version"]
+        round_no = item["round"]
+        messages_len = item["messages_len"]
+        action_seq = item["action_seq"]
+        for value in (version, round_no, messages_len, action_seq):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError()
+        if round_no < 1:
+            raise ValueError()
+        if not isinstance(item["engine_state"], dict):
+            raise ValueError()
+        if item["auto_status"] not in ("running", "paused", "done", "error"):
+            raise ValueError()
+        result.append({
+            "action_id": action_id,
+            "version": version,
+            "round": round_no,
+            "engine_state": copy.deepcopy(item["engine_state"]),
+            "messages_len": messages_len,
+            "action_seq": action_seq,
+            "auto_status": item["auto_status"],
+        })
+    return result[-SNAPSHOT_LIMIT:]
 
 
 def engine_record_facts(engine: RulesEngine) -> tuple[str, str | None, bool]:
@@ -622,6 +756,8 @@ def encode_session_document(
     auto_status: AutoStatus,
     auto_terminal_type: str | None,
     auto_last_error: AutoError | dict | None,
+    my_hands_in_round: int | None = None,
+    snapshots: list | None = None,
 ) -> dict:
     try:
         error_data = validate_auto_combination(
@@ -631,6 +767,12 @@ def encode_session_document(
             auto_last_error,
         )
         ledger = validate_idempotency_ledger(idempotency_ledger, rec.session_id, rec.mode)
+        hands = rec.my_hands_in_round if my_hands_in_round is None else my_hands_in_round
+        if isinstance(hands, bool) or not isinstance(hands, int) or hands < 0:
+            raise ValueError()
+        snapshot_data = validate_snapshots(
+            rec.snapshots if snapshots is None else snapshots
+        )
         return {
             "schema_version": 1,
             "session_id": rec.session_id,
@@ -646,6 +788,7 @@ def encode_session_document(
             },
             "scenario": copy.deepcopy(engine.scenario),
             "engine_state": engine.state.to_archive_dict(),
+            "snapshots": snapshot_data,
             "runtime": {
                 "messages": copy.deepcopy(list(runtime.messages)),
                 "offline_cursor": runtime.offline_cursor,
@@ -656,6 +799,7 @@ def encode_session_document(
                 ],
             },
             "idempotency_ledger": ledger,
+            "my_hands_in_round": hands,
             "coach_cache": encode_coach_cache(rec, engine, runtime),
             "auto_status": auto_status,
             "auto_terminal_type": auto_terminal_type,
@@ -683,7 +827,9 @@ def decode_session_document(document: dict) -> SessionRecord:
     try:
         if not isinstance(document, dict) or not required.issubset(document):
             raise ValueError()
-        if set(document) - required - set(AUTO_FIELDS) - {"schema_version", "coach_cache"}:
+        if set(document) - required - set(AUTO_FIELDS) - {
+            "schema_version", "coach_cache", "my_hands_in_round", "snapshots",
+        }:
             raise ValueError()
         if "schema_version" in document and (
             isinstance(document["schema_version"], bool) or document["schema_version"] != 1
@@ -763,6 +909,7 @@ def decode_session_document(document: dict) -> SessionRecord:
             action_seq=action_seq,
             action_meta=tuple(action_meta),
         )
+        scenario = apply_overrides(scenario)
         engine = restore_engine_from_archive(scenario, session_id, document["engine_state"])
         if engine.state.scenario_id != scenario_id:
             raise ValueError()
@@ -771,6 +918,15 @@ def decode_session_document(document: dict) -> SessionRecord:
             session_id,
             mode,
         )
+        # 旧会话记录没有 my_hands_in_round：按 0 处理，等同于旧口径
+        # （每回合最多一次 /action），升级后继续可用。
+        my_hands_in_round = document.get("my_hands_in_round", 0)
+        if (
+            isinstance(my_hands_in_round, bool)
+            or not isinstance(my_hands_in_round, int)
+            or my_hands_in_round < 0
+        ):
+            raise ValueError()
         rec = SessionRecord(
             session_id=session_id,
             scenario_id=scenario_id,
@@ -788,6 +944,8 @@ def decode_session_document(document: dict) -> SessionRecord:
             engine=engine,
             runtime=runtime,
             idempotency_ledger=ledger,
+            my_hands_in_round=my_hands_in_round,
+            snapshots=validate_snapshots(document.get("snapshots")),
         )
         coach_cache = decode_coach_cache(document.get("coach_cache"))
         if coach_cache is not None:
@@ -812,7 +970,10 @@ def persist_session(
     auto_status: AutoStatus,
     auto_terminal_type: str | None,
     auto_last_error: AutoError | dict | None,
+    my_hands_in_round: int | None = None,
 ) -> dict:
+    snapshot = build_session_snapshot(engine, runtime, auto_status)
+    merged = merge_snapshot(rec.snapshots, snapshot)
     document = encode_session_document(
         rec,
         engine,
@@ -821,8 +982,12 @@ def persist_session(
         auto_status,
         auto_terminal_type,
         auto_last_error,
+        my_hands_in_round,
+        snapshots=merged,
     )
     get_session_store().write(document)
+    with rec.state_lock:
+        rec.snapshots = merged
     return document
 
 
@@ -883,10 +1048,23 @@ def _clean_number(value: Any) -> int | float:
     return value
 
 
+DEFAULT_ACTION_POINTS_PER_ROUND = 4
+
+
 def scenario_budget(scenario: dict) -> int:
-    raw = scenario.get("action_points_per_round", 3)
+    """action_points_per_round = **我方**每回合可出手数。
+
+    口径（11/19 定死）：
+    - 默认 4；子议题 >= 4 的场景 5。该值由场景覆盖层
+      （scenario_overrides.apply_overrides）按条款数写入场景，
+      这里只做兜底与校验，不再从引擎的共享计数反推。
+    - 一次 /action = 我方一手 + 对手一手；本项目里"手"只数我方行动。
+    - action_points 对外恒等于本函数返回值（D 回签：只显示上限、不递减），
+      真实剩余手数由 action_points_left 表达。
+    """
+    raw = scenario.get("action_points_per_round", DEFAULT_ACTION_POINTS_PER_ROUND)
     if isinstance(raw, bool) or not isinstance(raw, int) or raw < 0:
-        return 3
+        return DEFAULT_ACTION_POINTS_PER_ROUND
     return raw
 
 
@@ -947,6 +1125,339 @@ def project_clause_defs(scenario: dict, my_offers: dict) -> list[dict]:
             "initial": initial,
         })
     return defs
+
+
+# ---------------------------------------------------------------------------
+# speaker_score：D 11/17 选定方案 (b)，A 侧按规则启发式，source 固定 "rule"。
+#
+# 只读 action_history / public_state / 场景公开定义，不碰引擎状态、不算第二套
+# 总分；前端只做展示与 S/A/B/C/D 映射。开关只有一处：
+#   SPEAKER_SCORE_MODE = "rule"        规则启发式（当前默认）
+#   SPEAKER_SCORE_MODE = "passthrough" D 改口选 (a)：服务端不造数，整块 null
+#   SPEAKER_SCORE_MODE = "off"         选 (c)：本轮不上，整块 null
+# 三种策略挂在同一张表里，主路径不做 if/elif 分支。
+# ---------------------------------------------------------------------------
+SPEAKER_SCORE_MODE = os.environ.get("SPEAKER_SCORE_MODE", "rule").strip().lower()
+SPEAKER_SCORE_WEIGHTS = {
+    "position_clarity": 0.25,
+    "diplomatic_tact": 0.20,
+    "emotional_control": 0.20,
+    "substance_quality": 0.35,
+}
+SPEAKER_WARNING_IGNORES = frozenset({"缺少 mood", "缺少 round_summary"})
+_MISSING = object()
+
+
+def action_history_view(public: dict, runtime: RuntimeMetadata) -> list[dict]:
+    """公开行动账本：与 project_engine_state 使用同一套 origin/warnings 口径。"""
+    action_meta = {action_id: (origin, warnings) for action_id, origin, warnings in runtime.action_meta}
+    history = []
+    for event in public["public_events"]:
+        if event.get("type") != "action":
+            continue
+        record = copy.deepcopy(event)
+        default_origin = "human" if record.get("actor") == MY_ACTOR else "opponent_ai"
+        origin, warnings = action_meta.get(record.get("action_id"), (default_origin, ()))
+        record["origin"] = origin
+        record["warnings"] = list(warnings)
+        history.append(record)
+    return history
+
+
+def _score_int(value: float) -> int:
+    return max(0, min(100, int(round(value))))
+
+
+def _clause_defs(scenario: dict) -> dict[str, dict]:
+    return {
+        clause["name"]: clause
+        for clause in scenario.get("clauses") or []
+        if isinstance(clause, dict) and isinstance(clause.get("name"), str)
+    }
+
+
+def _option_of(entry: Any) -> Any:
+    return entry.get("option") if isinstance(entry, dict) else entry
+
+
+def _numeric_option(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", text):
+            return float(text)
+    return None
+
+
+def _is_concession(clause: dict | None, previous: Any, current: Any, opponent: Any) -> bool:
+    """让步 = 朝对方最新立场移动；没有对方锚点时，任何改动都按试探性让步计。"""
+    if opponent is _MISSING or opponent is None:
+        return True
+    if previous == opponent:
+        return current != opponent
+    if current == opponent:
+        return True
+    if clause is not None and clause.get("type") == "numeric":
+        before = _numeric_option(previous)
+        after = _numeric_option(current)
+        target = _numeric_option(opponent)
+        if before is not None and after is not None and target is not None:
+            return abs(after - target) < abs(before - target)
+    return False
+
+
+def _open_issues_before_accept(my_plan: dict, opponent_plan: dict, scenario: dict) -> list[str]:
+    """复刻引擎口径：双方都未表态，或双方表态但取值冲突，才算未决。"""
+    issues = []
+    for clause in scenario.get("clauses") or []:
+        name = clause.get("name")
+        if not isinstance(name, str):
+            continue
+        mine = my_plan.get(name, _MISSING)
+        theirs = opponent_plan.get(name, _MISSING)
+        if mine is _MISSING and theirs is _MISSING:
+            issues.append(name)
+        elif mine is not _MISSING and theirs is not _MISSING and mine != theirs:
+            issues.append(name)
+    return issues
+
+
+def _speaker_metrics(history: list[dict], public: dict, scenario: dict, me: str) -> dict:
+    clauses = _clause_defs(scenario)
+    my_plan: dict = {}
+    opponent_plan: dict = {}
+    metrics = {
+        "my_actions": 0,
+        "my_offers": 0,
+        "my_inquiries": 0,
+        "inquiry_yield": 0,
+        "condition_actions": 0,
+        "reciprocated_concessions": 0,
+        "final_offer": False,
+        "accept_no_open_issues": None,
+        "walks": 0,
+        "redline_hits": 0,
+        "soft_redline_hits": 0,
+        "meaningful_warnings": 0,
+        "empty_messages": 0,
+        "message_actions": 0,
+    }
+    statement_indexes = []
+
+    for index, event in enumerate(history):
+        actor = event.get("actor")
+        action_type = event.get("action_type")
+        patch = event.get("offer_patch") or {}
+        if not isinstance(patch, dict):
+            patch = {}
+
+        if actor != me:
+            if action_type in OFFER_ACTIONS:
+                for name, entry in patch.items():
+                    opponent_plan[name] = _option_of(entry)
+            continue
+
+        metrics["my_actions"] += 1
+        message = event.get("public_message")
+        if isinstance(message, str) and message.strip():
+            metrics["message_actions"] += 1
+        else:
+            metrics["empty_messages"] += 1
+        for warning in event.get("warnings") or []:
+            if str(warning) not in SPEAKER_WARNING_IGNORES:
+                metrics["meaningful_warnings"] += 1
+
+        if action_type == "statement":
+            metrics["my_inquiries"] += 1
+            statement_indexes.append(index)
+        elif action_type == "walk_away":
+            metrics["walks"] += 1
+        elif action_type == "accept":
+            issues = _open_issues_before_accept(my_plan, opponent_plan, scenario)
+            metrics["accept_no_open_issues"] = len(issues) == 0
+
+        if action_type not in OFFER_ACTIONS:
+            continue
+
+        metrics["my_offers"] += 1
+        if action_type == "final_offer":
+            metrics["final_offer"] = True
+        conditions = event.get("conditions") or []
+        if conditions:
+            metrics["condition_actions"] += 1
+
+        changed = 0
+        concessions = 0
+        for name, entry in patch.items():
+            value = _option_of(entry)
+            previous = my_plan.get(name, _MISSING)
+            clause = clauses.get(name)
+            if clause is not None:
+                if is_redline_violation(clause, value, me):
+                    metrics["redline_hits"] += 1
+                elif is_soft_redline_violation(clause, value, me):
+                    metrics["soft_redline_hits"] += 1
+            if previous is not _MISSING and value != previous:
+                changed += 1
+                if _is_concession(clause, previous, value, opponent_plan.get(name, _MISSING)):
+                    concessions += 1
+            my_plan[name] = value
+
+        if changed and (conditions or action_type == "conditional_exchange"):
+            metrics["reciprocated_concessions"] += 1
+
+    for index in statement_indexes:
+        if index + 1 >= len(history):
+            continue
+        following = history[index + 1]
+        if (
+            following.get("actor") != me
+            and following.get("action_type") in OFFER_ACTIONS
+        ):
+            metrics["inquiry_yield"] += 1
+
+    metrics["open_issues_now"] = len(public.get("open_issues") or [])
+    return metrics
+
+
+def _speaker_feedback(metrics: dict, terminal_type: str | None) -> str:
+    if metrics["redline_hits"] or metrics["soft_redline_hits"]:
+        return "红线附近动作偏多，先稳住立场，再用条件交换换取空间。"
+    if metrics["walks"]:
+        return "过早退出让可谈议题流失，下次先试探对方可接受的条件。"
+    if terminal_type == "FULL_AGREEMENT":
+        return "达成完整协议，报价清楚、对价也换到了，继续保持节奏。"
+    if terminal_type == "PARTIAL_AGREEMENT":
+        return "拿到部分协议，未决议题还差一轮收口，下次先清空待议项。"
+    if terminal_type in ("DEADLOCK", "WITHDRAWAL", "ROUNDS_EXHAUSTED"):
+        return "本轮未能收口，探询偏少；下一步先问清优先项再报价。"
+    if not metrics["my_inquiries"]:
+        return "报价清楚但探询偏少，先问清对方优先项再让步更有空间。"
+    if metrics["my_offers"] > 1 and not metrics["reciprocated_concessions"]:
+        return "让步没有换到明确对价，下次把条件写进交换里。"
+    return "立场表达清楚，节奏稳；下一步把关键条件写实，推动对方回应。"
+
+
+def _rule_speaker_score(rec: SessionRecord, engine: RulesEngine, public: dict, history: list[dict]) -> dict | None:
+    metrics = _speaker_metrics(history, public, engine.scenario, rec.my_actor)
+    if metrics["my_actions"] == 0:
+        return None
+
+    terminal_type = None
+    coverage = 0.0
+    terminal_round = int(public.get("round") or 1)
+    if engine.state.status == "ended":
+        evaluation = engine.evaluate(rec.my_actor)
+        terminal_type = evaluation.get("terminal_type")
+        quality = evaluation.get("agreement_quality") or {}
+        coverage = quality.get("coverage") or 0.0
+        terminal = engine.state.terminal or {}
+        terminal_round = int(terminal.get("round") or terminal_round)
+
+    max_rounds = max(1, int(engine.scenario.get("max_rounds") or 12))
+    efficiency = 0
+    if engine.state.status == "ended":
+        efficiency = int(round(12 * max(0.0, 1 - (terminal_round - 1) / max_rounds)))
+
+    position = 50
+    position += min(24, 6 * metrics["my_offers"])
+    position += 8 if metrics["final_offer"] else 0
+    position += 5 if metrics["my_offers"] and metrics["condition_actions"] else 0
+    position += 4 if metrics["message_actions"] and not metrics["empty_messages"] else 0
+    position += efficiency // 2
+
+    diplomatic = 50
+    diplomatic += min(18, 6 * metrics["my_inquiries"])
+    diplomatic += min(12, 4 * metrics["condition_actions"])
+    diplomatic += 6 if metrics["reciprocated_concessions"] else 0
+    diplomatic += 4 if metrics["inquiry_yield"] else 0
+    diplomatic += 4 if not metrics["walks"] else -10
+    diplomatic -= min(12, 4 * metrics["meaningful_warnings"])
+    diplomatic -= min(9, 3 * metrics["soft_redline_hits"])
+    diplomatic += efficiency // 4
+
+    emotional = 72
+    emotional -= 18 * metrics["redline_hits"]
+    emotional -= 8 * metrics["walks"]
+    emotional -= min(15, 5 * metrics["meaningful_warnings"])
+    emotional -= min(9, 3 * metrics["soft_redline_hits"])
+    emotional += 6 if not metrics["redline_hits"] and not metrics["walks"] else 0
+    emotional += 6 if metrics["message_actions"] and not metrics["empty_messages"] else 0
+    emotional += 4 if metrics["accept_no_open_issues"] else 0
+    emotional += efficiency // 3
+
+    substance = 44
+    if terminal_type == "FULL_AGREEMENT":
+        substance += 18
+    elif terminal_type == "PARTIAL_AGREEMENT":
+        substance += 10
+    substance += int(round(16 * float(coverage)))
+    substance += 7 if metrics["accept_no_open_issues"] else 0
+    substance += min(10, 5 * metrics["reciprocated_concessions"])
+    substance += efficiency
+    if terminal_type is not None:
+        substance -= 4 * metrics["open_issues_now"]
+    if terminal_type in ("DEADLOCK", "WITHDRAWAL", "ROUNDS_EXHAUSTED"):
+        substance -= 8
+    if metrics["walks"]:
+        substance -= 6
+
+    scores = {
+        "position_clarity": _score_int(position),
+        "diplomatic_tact": _score_int(diplomatic),
+        "emotional_control": _score_int(emotional),
+        "substance_quality": _score_int(substance),
+    }
+    total = sum(scores[key] * weight for key, weight in SPEAKER_SCORE_WEIGHTS.items())
+    return {
+        "total": _score_int(total),
+        **scores,
+        "feedback": _speaker_feedback(metrics, terminal_type),
+        "source": "rule",
+    }
+
+
+def _passthrough_speaker_score(rec: SessionRecord, engine: RulesEngine, public: dict, history: list[dict]) -> None:
+    """D 选 (a)：分数由 D 端算，服务端不伪造，默认给 null。"""
+    return None
+
+
+def _off_speaker_score(rec: SessionRecord, engine: RulesEngine, public: dict, history: list[dict]) -> None:
+    """D 选 (c)：本轮不上评分，恒为 null。"""
+    return None
+
+
+SPEAKER_SCORE_STRATEGIES = {
+    "rule": _rule_speaker_score,
+    "passthrough": _passthrough_speaker_score,
+    "off": _off_speaker_score,
+}
+
+
+def speaker_score_for(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    public: dict | None = None,
+    history: list[dict] | None = None,
+) -> dict | None:
+    strategy = SPEAKER_SCORE_STRATEGIES.get(SPEAKER_SCORE_MODE)
+    if strategy is None:
+        return None
+    if public is None:
+        public = engine.public_state(rec.my_actor)
+    if history is None:
+        history = action_history_view(public, rec.runtime)
+    return strategy(rec, engine, public, history)
+
+
+def apply_learning_performance(rec: SessionRecord, engine: RulesEngine, evaluation: dict) -> dict:
+    """引擎的 learning_performance 恒为 None；在 A 侧就地覆盖，不改引擎。"""
+    if isinstance(evaluation, dict) and evaluation.get("learning_performance") is None:
+        evaluation["learning_performance"] = copy.deepcopy(speaker_score_for(rec, engine))
+    return evaluation
 
 
 def _coach_now() -> str:
@@ -1186,19 +1697,14 @@ def coach_advice_for(
         return copy.deepcopy(advice)
 
 
-def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: RuntimeMetadata) -> dict:
+def project_engine_state(
+    rec: SessionRecord,
+    engine: RulesEngine,
+    runtime: RuntimeMetadata,
+    hands_used: int | None = None,
+) -> dict:
     public = engine.public_state(MY_ACTOR)
-    action_meta = {action_id: (origin, warnings) for action_id, origin, warnings in runtime.action_meta}
-    history = []
-    for event in public["public_events"]:
-        if event.get("type") != "action":
-            continue
-        record = copy.deepcopy(event)
-        default_origin = "human" if record.get("actor") == MY_ACTOR else "opponent_ai"
-        origin, warnings = action_meta.get(record.get("action_id"), (default_origin, ()))
-        record["origin"] = origin
-        record["warnings"] = list(warnings)
-        history.append(record)
+    history = action_history_view(public, runtime)
     # 同一次遍历里得到 version：已提交行动数，不另建计数器、不落库。
     version = len(history)
     my_offer = latest_offer(public, rec.my_actor)
@@ -1216,6 +1722,17 @@ def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: Runti
         opponent_offer["offers"],
         clauses,
     )
+    registry = negotiation_rules.load_registry()
+    card_specs = {card["id"]: card for card in registry.get("cards", [])}
+    available_cards = negotiation_rules.available_cards(MY_ACTOR, engine.state, registry)
+    for card in available_cards:
+        role = (card_specs[card["id"]].get("payload") or {}).get("clause_role")
+        card["target_clause"] = role_clause(engine.scenario, role) if role else None
+    pending_hint = negotiation_rules.pending_hint(engine.state, engine.scenario, registry)
+    used = rec.my_hands_in_round if hands_used is None else hands_used
+    if isinstance(used, bool) or not isinstance(used, int):
+        used = 0
+    action_points_left = max(0, min(budget, budget - used))
     return {
         "session_id": rec.session_id,
         "round": public["round"],
@@ -1229,10 +1746,15 @@ def project_engine_state(rec: SessionRecord, engine: RulesEngine, runtime: Runti
         "clauses": clauses,
         "version": version,
         # 11/17 回签：action_points 恒等于预算（UI 只显示上限，不做递减）。
-        # 直接从场景预算取值，不读引擎那个被 -=1 的回合剩余值。
+        # 直接从场景预算取值，不读引擎那个被 -=1 的共享计数。
+        # 11/19：真实剩余手数另开 action_points_left，旧字段语义一字不动。
         "action_points": budget,
         "action_points_per_round": budget,
+        "action_points_left": action_points_left,
         "coach_advice": coach_advice,
+        "available_cards": available_cards,
+        "pending_hint": pending_hint,
+        "speaker_score": speaker_score_for(rec, engine, public, history),
     }
 
 
@@ -1241,9 +1763,279 @@ def project_state(rec: SessionRecord) -> dict:
         return project_engine_state(rec, rec.engine, rec.runtime)
 
 
+def lookup_snapshot(rec: SessionRecord, at_version: int, at_action_id: str | None) -> dict | None:
+    with rec.state_lock:
+        snapshots = copy.deepcopy(rec.snapshots)
+        current_version = rec.runtime.action_seq
+    if at_version > current_version:
+        return None
+    target = at_version
+    if at_action_id is not None:
+        versions = sorted({
+            item["version"] for item in snapshots if item["action_id"] == at_action_id
+        })
+        if not versions:
+            return None
+        if at_version not in versions:
+            raise ApiError(
+                400, "INVALID_REQUEST",
+                "at_version 与 at_action_id 指向不同快照，二者必须一致或只提供一个。",
+            )
+        target = at_version
+    candidates = [item for item in snapshots if item["version"] <= target]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item["version"])
+
+
+def fork_session(
+    rec: SessionRecord,
+    at_version: int | None = None,
+    at_action_id: str | None = None,
+    idempotency_key: str | None = None,
+) -> dict:
+    if at_version is None and at_action_id is None:
+        raise ApiError(422, "INVALID_REQUEST", "需要提供 at_version 或 at_action_id。")
+    if at_version is not None and (
+        isinstance(at_version, bool) or not isinstance(at_version, int) or at_version < 0
+    ):
+        raise ApiError(422, "INVALID_REQUEST", "字段 at_version 必须是大于等于 0 的整数。")
+    if at_action_id is not None and (
+        not isinstance(at_action_id, str) or not at_action_id.strip()
+    ):
+        raise ApiError(422, "INVALID_REQUEST", "字段 at_action_id 必须是非空字符串。")
+    key = idempotency_key.strip() if isinstance(idempotency_key, str) and idempotency_key.strip() else None
+    with FORK_LOCK:
+        ledger_key = (rec.session_id, key) if key else None
+        if ledger_key is not None and ledger_key in FORK_LEDGER:
+            return project_state(get_session(FORK_LEDGER[ledger_key]))
+        if at_version is None:
+            with rec.state_lock:
+                snapshots = copy.deepcopy(rec.snapshots)
+            versions = sorted({
+                item["version"] for item in snapshots if item["action_id"] == at_action_id
+            })
+            if not versions:
+                raise ApiError(
+                    409, "VERSION_CONFLICT", "该版本没有可用快照。",
+                    extra={"version": rec.runtime.action_seq},
+                )
+            at_version = versions[-1]
+        snapshot = lookup_snapshot(rec, at_version, at_action_id)
+        if snapshot is None:
+            current_version = rec.runtime.action_seq
+            raise ApiError(
+                409, "VERSION_CONFLICT", "该版本没有可用快照。",
+                extra={"version": current_version},
+            )
+        with rec.state_lock:
+            messages = tuple(copy.deepcopy(list(rec.runtime.messages)))
+            action_meta = tuple(copy.deepcopy(list(rec.runtime.action_meta)))
+            offline_cursor = rec.runtime.offline_cursor
+            scenario = copy.deepcopy(rec.engine.scenario)
+        messages_len = snapshot["messages_len"]
+        action_seq = snapshot["action_seq"]
+        if messages_len > len(messages) or action_seq > len(action_meta):
+            raise ApiError(
+                409, "VERSION_CONFLICT", "该版本没有可用快照。",
+                extra={"version": rec.runtime.action_seq},
+            )
+        try:
+            child_scenario = apply_overrides(scenario)
+        except ValueError:
+            raise internal_api_error()
+        with SESSIONS_LOCK:
+            new_id = str(uuid.uuid4())
+            while new_id in SESSIONS:
+                new_id = str(uuid.uuid4())
+        archive = copy.deepcopy(snapshot["engine_state"])
+        archive["session_id"] = new_id
+        try:
+            engine = restore_engine_from_archive(child_scenario, new_id, archive)
+        except ApiError:
+            raise ApiError(
+                409, "VERSION_CONFLICT", "该版本没有可用快照。",
+                extra={"version": rec.runtime.action_seq},
+            )
+        child_meta = action_meta[:action_seq]
+        if rec.mode == "offline":
+            child_cursor = sum(1 for _, origin, _ in child_meta if origin == "opponent_ai")
+        else:
+            child_cursor = offline_cursor
+        child_runtime = RuntimeMetadata(
+            messages=messages[:messages_len],
+            offline_cursor=child_cursor,
+            action_seq=action_seq,
+            action_meta=child_meta,
+        )
+        fact_status, fact_terminal, facts_valid = engine_record_facts(engine)
+        if not facts_valid:
+            raise internal_api_error()
+        if fact_status == "ended":
+            auto_status: AutoStatus = "done"
+            terminal_type = fact_terminal
+        else:
+            auto_status = "paused"
+            terminal_type = None
+        public = engine.public_state("")
+        hands_used = sum(
+            1 for event in public["public_events"]
+            if event.get("type") == "action"
+            and event.get("actor") == rec.my_actor
+            and event.get("round") == public["round"]
+        )
+        child = SessionRecord(
+            session_id=new_id,
+            scenario_id=rec.scenario_id,
+            my_actor=rec.my_actor,
+            opponent_actor=rec.opponent_actor,
+            mode=rec.mode,
+            system_prompt=rec.system_prompt,
+            initial_indexes=copy.deepcopy(rec.initial_indexes),
+            model_options=SimpleNamespace(
+                no_json_mode=rec.model_options.no_json_mode,
+                temperature=rec.model_options.temperature,
+            ),
+            mutation_lock=threading.Lock(),
+            state_lock=threading.Lock(),
+            engine=engine,
+            runtime=child_runtime,
+            idempotency_ledger={},
+            auto_status=auto_status,
+            auto_terminal_type=terminal_type,
+            auto_last_error=None,
+            my_hands_in_round=hands_used,
+        )
+        try:
+            persist_session(
+                child,
+                engine,
+                child_runtime,
+                {},
+                auto_status,
+                terminal_type,
+                None,
+                hands_used,
+            )
+        except session_store.SessionStoreCommitUnknown:
+            raise internal_api_error()
+        except Exception:
+            raise internal_api_error()
+        with SESSIONS_LOCK:
+            SESSIONS[new_id] = child
+        if ledger_key is not None:
+            FORK_LEDGER[ledger_key] = new_id
+        return project_state(child)
+
+
+def _compare_side(rec: SessionRecord) -> dict:
+    with rec.state_lock:
+        engine = rec.engine
+        public = engine.public_state(MY_ACTOR)
+        fact_status, fact_terminal, facts_valid = engine_record_facts(engine)
+        terminal_type = (
+            fact_terminal if facts_valid and fact_status == "ended" else None
+        )
+        evaluation = apply_learning_performance(
+            rec, engine, engine.evaluate(MY_ACTOR)
+        )
+        plan = engine_effective_plan(engine.state, engine.scenario)
+        actions = [
+            copy.deepcopy(event) for event in public["public_events"]
+            if event.get("type") == "action"
+        ]
+        scenario = copy.deepcopy(engine.scenario)
+    return {
+        "view": {
+            "session_id": rec.session_id,
+            "terminal_type": terminal_type,
+            "round": public["round"],
+            "evaluation": evaluation,
+        },
+        "plan": plan,
+        "actions": actions,
+        "scenario": scenario,
+    }
+
+
+def _action_event_key(event: dict) -> str:
+    return json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def compare_sessions(left_rec: SessionRecord, right_rec: SessionRecord) -> dict:
+    if left_rec.scenario_id != right_rec.scenario_id:
+        raise ApiError(
+            400, "INVALID_REQUEST",
+            "两支会话必须同源（同一 scenario_id）才能对比。",
+        )
+    left = _compare_side(left_rec)
+    right = _compare_side(right_rec)
+    common = 0
+    for left_event, right_event in zip(left["actions"], right["actions"]):
+        if _action_event_key(left_event) != _action_event_key(right_event):
+            break
+        common += 1
+    diverged_action = left["actions"][common - 1].get("action_id") if common else ""
+    diff = []
+    left_plan = left["plan"]
+    right_plan = right["plan"]
+    for clause in left["scenario"].get("clauses") or []:
+        if not isinstance(clause, dict):
+            continue
+        name = clause.get("name")
+        if not isinstance(name, str) or not name:
+            continue
+        left_value = (left_plan.get(name) or {}).get("option")
+        right_value = (right_plan.get(name) or {}).get("option")
+        if left_value != right_value:
+            diff.append({
+                "clause": name,
+                "left": left_value,
+                "right": right_value,
+            })
+    return {
+        "left": left["view"],
+        "right": right["view"],
+        "diverged_at": {"version": common, "action_id": diverged_action},
+        "diff": diff,
+    }
+
+
+def takeover_session(rec: SessionRecord) -> AutoStatusResponse:
+    if not rec.mutation_lock.acquire(blocking=False):
+        raise ApiError(
+            409, "SESSION_BUSY",
+            "本会话有另一轮正在处理，请稍后重试；本次未接管。",
+            extra={"retry_after": 1},
+        )
+    try:
+        with rec.state_lock:
+            status = rec.auto_status
+            terminal_type = rec.auto_terminal_type
+            error = rec.auto_last_error
+            engine = rec.engine
+            runtime = rec.runtime
+            ledger = copy.deepcopy(rec.idempotency_ledger)
+        if status != "running":
+            return project_auto_status(rec)
+        try:
+            persist_session(
+                rec, engine, runtime, ledger, "paused", terminal_type, error,
+            )
+        except session_store.SessionStoreCommitUnknown:
+            mark_auto_persistence_error(rec)
+            raise internal_api_error()
+        except Exception:
+            raise internal_api_error()
+        set_auto_fields(rec, "paused", terminal_type, error)
+        return project_auto_status(rec)
+    finally:
+        rec.mutation_lock.release()
+
+
 def create_session(req: "CreateSessionRequest") -> dict:
     try:
-        scenario = load_scenario(req.scenario_path)
+        scenario = apply_overrides(load_scenario(req.scenario_path))
     except (OSError, ValueError) as exc:
         raise ApiError(400, "INVALID_SCENARIO", f"场景文件加载失败：{exc}")
     scenario_id = scenario.get("scenario_id", SCENARIO_ID)
@@ -1263,6 +2055,10 @@ def create_session(req: "CreateSessionRequest") -> dict:
         while session_id in SESSIONS:
             session_id = str(uuid.uuid4())
         engine = RulesEngine(scenario, session_id)
+        # 引擎 action_points 是双方共享、每手 -1；一次 /action 提交我方 + 对手
+        # 两手，所以转换层给 2×我方手数，避免第四手被 ACTION_POINTS_INSUFFICIENT
+        # 拒掉。对外 action_points 仍只取预算，不读这个共享计数。
+        engine.state.action_points = 2 * scenario_budget(scenario)
         runtime = RuntimeMetadata(
             messages=({"role": "system", "content": prompt},),
             offline_cursor=0,
@@ -1379,10 +2175,10 @@ def extract_transport_fields(
 def adapt_client_action(payload: Any, rec: SessionRecord, action_id: str) -> tuple[dict, list]:
     if not isinstance(payload, dict):
         raise ApiError(422, "INVALID_REQUEST", "请求体顶层必须是 JSON 对象。")
-    flat = {k: v for k, v in payload.items() if k not in IDENTITY_FIELDS}
+    flat = {k: v for k, v in payload.items() if k not in ("action_id", "actor")}
     flat["action_id"] = action_id
     flat["actor"] = rec.my_actor
-    flat["card_id"] = None
+    flat.setdefault("card_id", None)
     check_flat_schema(flat)
     wrapped = {
         "action": pick_action_fields(flat),
@@ -1395,22 +2191,60 @@ def adapt_client_action(payload: Any, rec: SessionRecord, action_id: str) -> tup
 
 def build_auto_action(rec: SessionRecord, engine: RulesEngine, action_id: str) -> tuple[dict, list]:
     accepting = not engine.state.open_issues
+    pending = negotiation_rules.pending_response(engine.state, engine.scenario)
+    countering = bool(pending and pending["responder"] == rec.my_actor)
+    offer_patch = {}
+    card_payload = None
     if accepting:
         text = "我方接受当前协议，确认达成完全一致。"
         action_type = "accept"
+        card_id = None
+    elif countering:
+        # 先解决挂起版本，对方下一手才能合法产生新版本。
+        text = neg.CHINA_LINES[(engine.state.round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
+        action_type = "counter_offer"
+        card_id = None
+        offer_patch = copy.deepcopy(engine.state.offers[-1].clauses)
     else:
         text = neg.CHINA_LINES[(engine.state.round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
-        action_type = "statement"
+        registry = negotiation_rules.load_registry()
+        card_specs = {card["id"]: card for card in registry.get("cards", [])}
+        availability = {
+            card["id"]: card["available"]
+            for card in negotiation_rules.available_cards(rec.my_actor, engine.state, registry)
+        }
+        # 优先保留原来的公开承诺话术；冷却时改用其他可用过渡卡。
+        preference = (
+            "public_commitment", "probe_priority", "demand_basis",
+            "verify_capacity", "adjourn", "mediation",
+        )
+        card_id = next((item for item in preference if availability.get(item)), None)
+        if card_id is None:
+            raise ApiError(
+                400, "INVALID_ACTION", "当前没有可用的过渡卡，本轮未推进。",
+                extra={"engine_error": "CARD_EXHAUSTED"},
+            )
+        spec = card_specs[card_id]
+        action_type = spec["action_types"][0]
+        payload_kind = (spec.get("payload") or {}).get("kind")
+        if payload_kind == "probe":
+            card_payload = {"target": rec.opponent_actor}
+        elif payload_kind == "procedure":
+            card_payload = {"option": f"{spec['name']}：{text}"}
+        else:
+            card_payload = {"text": text}
     flat = {
         "action_id": action_id,
         "actor": rec.my_actor,
-        "card_id": None,
+        "card_id": card_id,
         "action_type": action_type,
-        "offer_patch": {},
+        "offer_patch": offer_patch,
         "conditions": [],
         "expected_effect": "",
         "public_message": text,
     }
+    if card_payload is not None:
+        flat["card_payload"] = card_payload
     check_flat_schema(flat, opponent=True)
     wrapped = {
         "action": pick_action_fields(flat),
@@ -1457,12 +2291,13 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
         raise ModelUnavailable()
     action["action_id"] = action_id
     action["actor"] = rec.opponent_actor
-    action["card_id"] = None
+    action.setdefault("card_id", None)
     action.setdefault("conditions", [])
     action.setdefault("expected_effect", "")
     flat = {k: action.get(k) for k in IDENTITY_FIELDS + ACTION_FIELDS}
-    if action.get("effect_labels") is not None:
-        flat["effect_labels"] = action["effect_labels"]
+    for key in OPTIONAL_ACTION_FIELDS:
+        if action.get(key) is not None:
+            flat[key] = action[key]
     flat["public_message"] = obj.get("public_message")
     check_flat_schema(flat, opponent=True)
     try:
@@ -1480,8 +2315,9 @@ def normalize_opponent_turn(raw_obj: Any, rec: SessionRecord, action_id: str) ->
         "expected_effect": checked_action["expected_effect"],
         "public_message": checked["public_message"].strip(),
     }
-    if checked_action.get("effect_labels") is not None:
-        opp_flat["effect_labels"] = checked_action["effect_labels"]
+    for key in OPTIONAL_ACTION_FIELDS:
+        if checked_action.get(key) is not None:
+            opp_flat[key] = checked_action[key]
     return opp_flat, list(warns), checked
 
 
@@ -1609,6 +2445,38 @@ def auto_error_for(exc: ApiError) -> AutoError:
     return AutoError(code, exc.detail)
 
 
+def can_accept_now(engine: RulesEngine, actor: str) -> bool:
+    """双方最新报价都已存在，且引擎的 accept 前置已通过。
+
+    这是回合结束条件 c) 的实现口径（11/19 D 确认）：真实引擎里报价
+    version 全局递增，同一 version 只会挂一条 Offer，双方
+    latest_offer.version 永远不同；能用真实状态表达的「可以 accept」
+    只能是「引擎当前允许 accept」。
+    """
+    public = engine.public_state(actor)
+    if public["status"] != "active":
+        return False
+    parties = {
+        party.get("id")
+        for party in engine.scenario.get("parties") or []
+        if isinstance(party, dict) and isinstance(party.get("id"), str)
+    }
+    have_offer = {
+        offer.get("actor")
+        for offer in public["offers"]
+        if isinstance(offer, dict)
+    }
+    if not parties or not parties <= have_offer:
+        return False
+    rules = engine.scenario.get("terminal_rules", {}) or {}
+    partial_allowed = rules.get("partial_agreement_allowed", True) is not False
+    allow_open = rules.get("allow_accept_with_open_issues") is True
+    requires_full = not partial_allowed or (
+        not allow_open and rules.get("accept_requires_no_open_issues", True)
+    )
+    return not requires_full or not public["open_issues"]
+
+
 def run_turn(
     rec: SessionRecord,
     payload: Any = None,
@@ -1639,6 +2507,15 @@ def run_turn(
             engine = rec.engine
             runtime = rec.runtime
             ledger = copy.deepcopy(rec.idempotency_ledger)
+            hands_used = rec.my_hands_in_round
+        # 终局锁必须在卡牌/行动校验之前：否则卡牌层可能先返回
+        # SELF_REVISION_LOCKED 等 400，终局后仍被当成“普通非法行动”。
+        if not auto and (engine.state.status != "active" or engine.state.phase == "ended"):
+            raise ApiError(
+                409, "ROUND_LOCKED",
+                ENGINE_ERRORS.get("PHASE_CLOSED", "谈判已结束，不能再提交行动。"),
+                extra={"engine_error": "PHASE_CLOSED"},
+            )
         if auto:
             check_auto_gate(rec, engine)
             try:
@@ -1667,6 +2544,10 @@ def run_turn(
             set_auto_fields(rec, "running", None, None)
             business_active = True
         candidate = restore_engine(engine)
+        budget = scenario_budget(candidate.scenario)
+        # 引擎侧不能被 AP 挡住：引擎 action_points 是双方共享、每手 -1，
+        # 一次 /action 提交我方 + 对手两手，所以铺满到 2×我方手数。
+        candidate.state.action_points = 2 * budget
         if not auto:
             # base_version 与顶层 version 同一口径：已提交行动数。
             # 报价版本（current_version）只在报价类行动时 +1，不能当基线。
@@ -1709,8 +2590,20 @@ def run_turn(
             candidate_seq += 1
             candidate_cursor += 1 if rec.mode == "offline" else 0
         candidate_public = candidate.public_state(MY_ACTOR)
-        if candidate_public["status"] != "ended" and candidate_public["round"] == current_round:
+        hands_used += 1
+        ended = candidate_public["status"] == "ended"
+        # 回合结束三条件（满足其一才调 next_round；不把「手数用完」当终局）：
+        #   a) 我方本回合出手数达到预算，action_points_left 归零；
+        #   b) 本手之后到达终局；
+        #   c) 双方都已报价且当前可直接 accept（引擎 accept 前置通过）。
+        # 都不满足时保持同一 round，action_points_left 继续逐手递减。
+        if ended or hands_used >= budget or can_accept_now(candidate, MY_ACTOR):
+            round_before = candidate.state.round
             candidate.next_round()
+            if candidate.state.round != round_before:
+                hands_used = 0
+                # next_round 把引擎 AP 重置回场景值；新回合仍须铺满 2×预算。
+                candidate.state.action_points = 2 * budget
         new_runtime = RuntimeMetadata(
             messages=tuple(candidate_messages),
             offline_cursor=candidate_cursor,
@@ -1732,7 +2625,7 @@ def run_turn(
             final_auto_status = rec.auto_status
             final_terminal_type = rec.auto_terminal_type
             final_auto_error = rec.auto_last_error
-        state = project_engine_state(rec, candidate, new_runtime)
+        state = project_engine_state(rec, candidate, new_runtime, hands_used)
         json.dumps(state, ensure_ascii=False)
         new_ledger = copy.deepcopy(ledger)
         if not auto:
@@ -1747,6 +2640,7 @@ def run_turn(
                 final_auto_status,
                 final_terminal_type,
                 final_auto_error,
+                hands_used,
             )
         except session_store.SessionStoreCommitUnknown:
             mark_auto_persistence_error(rec)
@@ -1768,6 +2662,7 @@ def run_turn(
             rec.auto_status = final_auto_status
             rec.auto_terminal_type = final_terminal_type
             rec.auto_last_error = final_auto_error
+            rec.my_hands_in_round = hands_used
         return state
     except ApiError as exc:
         if auto and business_active:
@@ -1806,6 +2701,12 @@ class CreateSessionRequest(BaseModel):
     scenario_id: str
     agent: str
     scenario_path: str | None = None
+
+
+class ForkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    at_version: int | None = None
+    at_action_id: str | None = None
 
 
 app = FastAPI(title="谈判 HTTP API")
@@ -1918,6 +2819,48 @@ def state_endpoint(session_id: str) -> dict:
     return project_state(get_session(session_id))
 
 
+@app.post(
+    "/session/{session_id}/fork",
+    response_model=StateProjection,
+    responses={
+        400: {"model": ErrorEnvelope, "description": "at_version / at_action_id 不一致"},
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+        409: {"model": ErrorEnvelope, "description": "VERSION_CONFLICT（该版本没有可用快照）"},
+        422: {"model": ErrorEnvelope, "description": "INVALID_REQUEST"},
+    },
+)
+def fork_endpoint(session_id: str, req: ForkRequest, request: Request) -> dict:
+    return fork_session(
+        get_session(session_id),
+        req.at_version,
+        req.at_action_id,
+        request.headers.get(IDEMPOTENCY_HEADER),
+    )
+
+
+@app.get(
+    "/session/{session_id}/compare",
+    responses={
+        400: {"model": ErrorEnvelope, "description": "两支会话不同源"},
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+    },
+)
+def compare_endpoint(session_id: str, other: str) -> dict:
+    return compare_sessions(get_session(session_id), get_session(other))
+
+
+@app.post(
+    "/session/{session_id}/takeover",
+    response_model=AutoStatusResponse,
+    responses={
+        404: {"model": ErrorEnvelope, "description": "SESSION_NOT_FOUND"},
+        409: {"model": AutoStatusResponse, "description": "SESSION_BUSY"},
+    },
+)
+def takeover_endpoint(session_id: str) -> AutoStatusResponse:
+    return takeover_session(get_session(session_id))
+
+
 @app.get("/session/{session_id}/auto_status")
 def auto_status_endpoint(session_id: str) -> AutoStatusResponse:
     return project_auto_status(get_session(session_id))
@@ -1975,7 +2918,9 @@ def debrief_endpoint(session_id: str) -> dict:
             debrief = debrief_for(engine, MY_ACTOR)
             # 对外评价唯一出口：evaluate_for 会把他方 batna / net_gain /
             # better_than_batna 置 None，禁止直出 engine.evaluate()。
-            evaluation = evaluate_for(engine, MY_ACTOR)
+            evaluation = apply_learning_performance(
+                rec, engine, evaluate_for(engine, MY_ACTOR)
+            )
         except IllegalDebriefAccess as exc:
             raise ApiError(
                 409, "DEBRIEF_NOT_AVAILABLE", str(exc),

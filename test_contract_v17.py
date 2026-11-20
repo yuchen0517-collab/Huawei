@@ -1,6 +1,6 @@
 """11/17 接口回签（给A的消息-接口回签-1117.md）的契约验收。
 
-覆盖：投影 14 字段、clauses 两种形状与数量、version 口径、base_version、
+覆盖：投影 16 字段、clauses 两种形状与数量、version 口径、base_version、
 六码归一、Idempotency-Key、TIMEOUT 504、SESSION_BUSY retry_after、
 coach_advice 三态/确定性/证据过滤、debrief fail_reason、openapi schema。
 """
@@ -42,6 +42,8 @@ OFFER = {
 }
 STATEMENT = {
     "action_type": "statement",
+    "card_id": "public_commitment",
+    "card_payload": {"text": "我方承诺继续在多方框架下磋商。"},
     "offer_patch": {},
     "conditions": [],
     "expected_effect": "",
@@ -125,24 +127,29 @@ def coach_pieces(sid: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 任务 1：投影 14 字段
+# 任务 1：投影 18 字段（v2 新增 available_cards / pending_hint；
+# 11/19 新增 action_points_left；11/20 封板新增 speaker_score，其余语义不动）
 # ---------------------------------------------------------------------------
-def test_projection_has_fourteen_fields_and_no_more():
+def test_projection_has_eighteen_fields_and_no_more():
     sid = new_session()
     state = get_state(sid)
     expected = {
         "session_id", "round", "phase", "my_offer", "opponent_offer",
         "open_issues", "action_history", "status", "mode",
         "clauses", "version", "action_points", "action_points_per_round",
-        "coach_advice",
+        "action_points_left",
+        "coach_advice", "available_cards", "pending_hint",
+        "speaker_score",
     }
     assert expected == set(api.PUBLIC_STATE_KEYS)
-    assert len(expected) == 14
+    assert len(expected) == 18
     assert set(state) == expected
     assert state["version"] == 0
-    assert state["action_points"] == 3
-    assert state["action_points_per_round"] == 3
+    assert state["speaker_score"] is None
+    assert state["action_points"] == 4
+    assert state["action_points_per_round"] == 4
     assert state["action_points"] == state["action_points_per_round"]
+    assert state["action_points_left"] == state["action_points_per_round"]
 
 
 def test_clauses_enum_and_numeric_shapes():
@@ -222,7 +229,7 @@ def test_version_is_committed_action_count_and_monotonic():
     assert versions == [0]
     state, _ = do_action(sid)
     versions.append(state["version"])
-    state, _ = do_action(sid, STATEMENT)
+    state, _ = do_action(sid, dict(OFFER, action_type="counter_offer"))
     versions.append(state["version"])
     api.SESSIONS[sid].engine.state.status = "ended"
     versions.append(get_state(sid)["version"])
@@ -399,7 +406,7 @@ def test_intent_key_is_opaque_and_replay_byte_identical():
     # 新增字段也在幂等响应里，并且账本键就是原样的意图号。
     assert state == first.json()
     assert state["version"] == 2
-    assert state["action_points"] == 3
+    assert state["action_points"] == 4
     assert set(api.SESSIONS[sid].idempotency_ledger) == {key}
 
 

@@ -27,6 +27,8 @@ VALID_OFFER = {
 
 STATEMENT = {
     "action_type": "statement",
+    "card_id": "public_commitment",
+    "card_payload": {"text": "我方承诺继续在联合国框架下磋商。"},
     "offer_patch": {},
     "conditions": [],
     "expected_effect": "",
@@ -132,7 +134,10 @@ def test_action_success_full_flow():
     assert resp.status_code == 200, resp.text
     state = resp.json()
     assert_state_keys(state)
-    assert state["round"] == before["round"] + 1
+    # 11/19 粒度：一次 /action = 我方一手 + 对手一手；预算未用完时回合不变。
+    assert state["round"] == before["round"]
+    assert state["action_points"] == before["action_points"]
+    assert state["action_points_left"] == before["action_points_left"] - 1
     assert state["phase"] == "bargaining"
     assert len(state["action_history"]) == 2
     mine, opp = state["action_history"]
@@ -147,7 +152,7 @@ def test_action_success_full_flow():
     assert opp["origin"] == "opponent_ai"
     assert opp["action_id"] == "a000002"
     assert opp["public_message"] == neg.OFFLINE_RESPONSES[0]["public_message"]
-    assert state["my_offer"]["version"] == before["my_offer"]["version"] + 1
+    assert state["my_offer"]["version"] == 1
     entry = state["my_offer"]["offers"]["全球算力资源分配"]
     assert entry == VALID_OFFER["offer_patch"]["全球算力资源分配"]
     assert "round" not in entry and "action_id" not in entry
@@ -157,15 +162,15 @@ def test_action_success_full_flow():
     assert get_state(sid) == state
 
 
-def test_action_identity_fields_stripped():
+def test_action_identity_fields_are_server_controlled_and_card_is_forwarded():
     sid = new_session()
-    payload = dict(VALID_OFFER, actor="us", action_id="fake-id", card_id="card-x")
+    payload = dict(VALID_OFFER, actor="us", action_id="fake-id", card_id="anchor_offer")
     resp = client.post(f"/session/{sid}/action", json=payload)
     assert resp.status_code == 200, resp.text
     mine = resp.json()["action_history"][0]
     assert mine["actor"] == "cn"
     assert mine["action_id"] == "a000001"
-    assert mine["card_id"] is None
+    assert mine["card_id"] == "anchor_offer"
     resp = client.post(f"/session/{sid}/action", json=dict(VALID_OFFER, unknown_field=1))
     assert resp.status_code == 400
     assert resp.json()["error"] == "INVALID_ACTION"
@@ -287,7 +292,9 @@ def test_auto_step_stub_and_single_round():
     resp = client.post(f"/session/{sid}/auto_step")
     assert resp.status_code == 200, resp.text
     state = resp.json()
-    assert state["round"] == before["round"] + 1
+    # 一次 auto_step 只推一个来回（我方一手 + 对手一手），回合按预算推进。
+    assert state["round"] == before["round"]
+    assert state["action_points_left"] == before["action_points_left"] - 1
     assert len(state["action_history"]) == 2
     mine, _ = state["action_history"]
     assert mine["origin"] == "auto_player"
@@ -295,19 +302,21 @@ def test_auto_step_stub_and_single_round():
     assert mine["offer_patch"] == {}
     assert mine["public_message"] == neg.CHINA_LINES[0].replace("\n", " ")
     assert state["my_offer"] == {"version": 0, "offers": {}}
-    assert state["opponent_offer"]["version"] == before["opponent_offer"]["version"] + 1
+    assert state["opponent_offer"]["version"] == 1
     assert get_state(sid) == state
 
 
 def test_auto_step_china_lines_cycle():
+    """话术按回合轮换：同一回合内多手复用同一句，进入下一回合才换下一句。"""
     sid = new_session()
     texts = []
-    for _ in range(4):
+    for _ in range(5):
         resp = client.post(f"/session/{sid}/auto_step")
         assert resp.status_code == 200, resp.text
         texts.append(resp.json()["action_history"][-2]["public_message"])
-    expected = [neg.CHINA_LINES[i % 3].replace("\n", " ") for i in range(4)]
-    assert texts == expected
+    same_round = neg.CHINA_LINES[0].replace("\n", " ")
+    next_round = neg.CHINA_LINES[1].replace("\n", " ")
+    assert texts == [same_round] * 4 + [next_round]
 
 
 def test_offline_cursor_isolation_and_cycle():
@@ -502,8 +511,11 @@ def test_session_isolation():
     client.post(f"/session/{s1}/auto_step")
     client.post(f"/session/{s2}/auto_step")
     st1, st2 = get_state(s1), get_state(s2)
-    assert st1["round"] == 3
-    assert st2["round"] == 2
+    # 两个会话各自按自己的手数推进，互不影响；两次/一次都未用满预算。
+    assert st1["round"] == 1
+    assert st2["round"] == 1
+    assert st1["action_points_left"] == 2
+    assert st2["action_points_left"] == 3
     assert len(st1["action_history"]) == 4
     assert len(st2["action_history"]) == 2
     assert api.SESSIONS[s1].runtime.offline_cursor == 2
@@ -531,7 +543,8 @@ def test_session_busy(monkeypatch):
         release.set()
         resp1 = future.result(timeout=15)
     assert resp1.status_code == 200
-    assert get_state(sid)["round"] == 2
+    assert get_state(sid)["round"] == 1
+    assert get_state(sid)["action_points_left"] == 3
 
 
 def test_state_reads_committed_engine_during_turn(monkeypatch):
@@ -555,7 +568,8 @@ def test_state_reads_committed_engine_during_turn(monkeypatch):
         release.set()
         resp = future.result(timeout=15)
     assert resp.status_code == 200
-    assert get_state(sid)["round"] == 2
+    assert get_state(sid)["round"] == 1
+    assert get_state(sid)["action_points_left"] == 3
 
 
 def test_restore_engine_archive_equivalence_and_isolation():
@@ -636,6 +650,7 @@ def test_effect_labels_invalid_rejected():
 
 
 def test_next_round_called_once(monkeypatch):
+    """预算 4 手：前 3 手不推进回合，第 4 手用完预算时恰好调用一次 next_round。"""
     sid = new_session()
     calls = []
     original = api.RulesEngine.next_round
@@ -645,9 +660,18 @@ def test_next_round_called_once(monkeypatch):
         return original(self)
 
     monkeypatch.setattr(api.RulesEngine, "next_round", spy)
-    resp = client.post(f"/session/{sid}/auto_step")
-    assert resp.status_code == 200
+    for step in range(4):
+        resp = client.post(f"/session/{sid}/auto_step")
+        assert resp.status_code == 200, resp.text
+        if step < 3:
+            assert resp.json()["action_points_left"] == 3 - step
+            assert calls == []
+        else:
+            # 第四手用完预算：回合推进，剩余手数回满。
+            assert resp.json()["round"] == 2
+            assert resp.json()["action_points_left"] == 4
     assert calls == [sid]
+    assert client.get(f"/session/{sid}/state").json()["round"] == 2
 
 
 def test_error_response_shape_and_privacy(monkeypatch):
@@ -770,7 +794,9 @@ def test_stale_base_version_conflict_returns_current_state():
     assert get_state(sid) == before
     assert rec.engine.state.to_archive_dict() == archive
     assert set(rec.idempotency_ledger) == {"v-1"}
-    retry = submit_action(sid, STATEMENT, "v-2", before["version"])
+    retry = submit_action(
+        sid, dict(VALID_OFFER, action_type="counter_offer"), "v-2", before["version"]
+    )
     assert retry.status_code == 200, retry.text
 
 
@@ -845,7 +871,8 @@ def test_model_timeout_fails_atomically_and_same_request_can_retry(monkeypatch):
     )
     retry = submit_action(sid, VALID_OFFER, "timeout-retry-1", 0)
     assert retry.status_code == 200, retry.text
-    assert retry.json()["round"] == 2
+    assert retry.json()["round"] == 1
+    assert retry.json()["action_points_left"] == 3
     assert [event["action_id"] for event in retry.json()["action_history"]] == [
         "a000001", "a000002",
     ]

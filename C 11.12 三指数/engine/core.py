@@ -87,6 +87,14 @@ class RulesEngine:
     def submit_action(
         self, action: dict
     ) -> Tuple[bool, Optional[str], str, list]:
+        # v2 由 A 的场景覆盖层显式启用；C 的 v1/v1.1 场景保持原有规则与错误码。
+        if self.scenario.get("action_contract_version") == 2 or self.scenario.get("clause_roles"):
+            from negotiation_rules import check_card_action
+
+            ok, code, message = check_card_action(action, self.state, self.scenario)
+            if not ok:
+                return False, code, message, []
+
         ok, code, message = validate_action(action, self.state, self.scenario)
         if not ok:
             return False, code, message, []
@@ -217,13 +225,18 @@ class RulesEngine:
                 "terminal": deepcopy(self.state.terminal),
             }
 
-        had_offer = any(
-            offer.created_round == self.state.round for offer in self.state.offers
-        )
-        if had_offer:
-            self.state.rounds_without_offer = 0
-        else:
+        parties_without_new_version = {
+            party
+            for party in party_ids(self.scenario)
+            if not any(
+                offer.actor == party and offer.created_round == self.state.round
+                for offer in self.state.offers
+            )
+        }
+        if len(parties_without_new_version) == len(party_ids(self.scenario)):
             self.state.rounds_without_offer += 1
+        else:
+            self.state.rounds_without_offer = 0
 
         self.state.round += 1
         self.state.action_points = int(
@@ -284,6 +297,12 @@ class RulesEngine:
             if resolved in ("FULL_AGREEMENT", "PARTIAL_AGREEMENT"):
                 if self.state.agreement is None and self.state.offers:
                     self._seal_partial_agreement()
+            # 场景禁止部分协议时，显式指定 PARTIAL_AGREEMENT 也不得生效；
+            # 与 determine_terminal_type / accept 分支保持同一口径。
+            if resolved == "PARTIAL_AGREEMENT":
+                rules = self.scenario.get("terminal_rules", {}) or {}
+                if rules.get("partial_agreement_allowed", True) is False:
+                    resolved = "DEADLOCK"
 
         self._record_terminal(resolved)
         return deepcopy(self.state.terminal)

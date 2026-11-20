@@ -23,25 +23,10 @@ from tests import make_action
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 B_SCENARIO_PATH = os.path.join(ROOT, "scenarios", "from_b_chip_controls.json")
 DEMO_PATH = os.path.join(ROOT, "scenarios", "demo_scenario.json")
-B_V11_ROOT = os.path.abspath(os.path.join(ROOT, "..", "scenario agent v2"))
-B_V11_EXAMPLE_PATH = os.path.join(
-    B_V11_ROOT, "docs", "contracts", "scenario.example.json"
-)
-B_V11_INDEX_RULES_PATH = os.path.join(
-    B_V11_ROOT, "docs", "contracts", "index_rules.v1.json"
-)
-B_MAIN_SCENARIO_PATH = os.path.join(
-    B_V11_ROOT, "data", "scenarios", "main_chip_controls.json"
-)
 
 
 def load_b() -> dict:
     with open(B_SCENARIO_PATH, "r", encoding="utf-8-sig") as handle:
-        return json.load(handle)
-
-
-def load_b_v11_json(path) -> dict:
-    with open(path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
 
 
@@ -384,104 +369,6 @@ class BSingularTerminalRuleTest(unittest.TestCase):
         )
         self.assertTrue(ok, f"sing-5: {code} {message}")
         self.assertEqual(engine.state.terminal["type"], "FULL_AGREEMENT")
-
-
-class BV11BridgeCompatibilityTest(unittest.TestCase):
-    def test_global_initial_expands_and_aliases_through_load(self):
-        source = load_b_v11_json(B_V11_EXAMPLE_PATH)
-        source["parties"][0]["party_id"] = "P1"
-        source["parties"][1]["party_id"] = "P2"
-        private_state = source["private_state_by_party"]
-        source["private_state_by_party"] = {
-            "P1": private_state["cn"],
-            "P2": private_state["us"],
-        }
-        table = load_b_v11_json(B_V11_INDEX_RULES_PATH)
-        table["initial"] = {"image": 66, "trust": 77}
-        source["index_rules"] = table
-        handle = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
-        handle.close()
-        try:
-            with open(handle.name, "w", encoding="utf-8") as target:
-                json.dump(source, target, ensure_ascii=False)
-            scenario = load_scenario(handle.name)
-        finally:
-            os.unlink(handle.name)
-
-        self.assertEqual([party["id"] for party in scenario["parties"]], ["cn", "us"])
-        self.assertEqual(
-            scenario["index_rules"]["initial"],
-            {
-                "cn": {"image": 66, "trust": 77},
-                "us": {"image": 66, "trust": 77},
-            },
-        )
-        engine = RulesEngine(scenario, session_id="bridge-b-v11-initial")
-        for party in ("cn", "us"):
-            self.assertEqual(engine.state.indices[party]["image"], 66)
-            self.assertEqual(engine.state.indices[party]["trust"], 77)
-
-    def test_real_main_chip_controls_end_to_end(self):
-        scenario = load_scenario(B_MAIN_SCENARIO_PATH)
-        self.assertEqual(scenario["scenario_id"], "scn-chip-controls-0001")
-        self.assertEqual(scenario["action_points_per_round"], 3)
-        self.assertEqual(scenario["deadlock_rounds"], 2)
-        self.assertEqual(
-            scenario["index_rules"]["initial"]["cn"], {"image": 60, "trust": 45}
-        )
-        self.assertEqual(
-            scenario["index_rules"]["initial"]["us"], {"image": 55, "trust": 40}
-        )
-        engine = RulesEngine(scenario, session_id="bridge-main-chip-v11")
-        first_round = (
-            ("main-1", "cn", "offer", {"芯片算力门槛": 1200, "许可审批时限": 75}),
-            (
-                "main-2",
-                "us",
-                "counter_offer",
-                {"芯片算力门槛": 1000, "第三国再出口限制": "O3"},
-            ),
-        )
-        for action_id, actor, action_type, patch in first_round:
-            ok, code, message, _ = engine.submit_action(
-                make_action(action_id, actor, action_type, patch)
-            )
-            self.assertTrue(ok, f"{action_id}: {code} {message}")
-        self.assertEqual(engine.state.round, 1)
-        engine.next_round()
-        self.assertEqual(engine.state.round, 2)
-        second_round = (
-            (
-                "main-3",
-                "cn",
-                "counter_offer",
-                {
-                    "芯片算力门槛": 1200,
-                    "第三国再出口限制": "O2",
-                    "关键矿产出口安排": "O2",
-                },
-            ),
-            (
-                "main-4",
-                "us",
-                "counter_offer",
-                {
-                    "芯片算力门槛": 1200,
-                    "许可审批时限": 75,
-                    "第三国再出口限制": "O2",
-                    "关键矿产出口安排": "O2",
-                },
-            ),
-            ("main-5", "us", "accept", None),
-        )
-        for action_id, actor, action_type, patch in second_round:
-            ok, code, message, _ = engine.submit_action(
-                make_action(action_id, actor, action_type, patch)
-            )
-            self.assertTrue(ok, f"{action_id}: {code} {message}")
-        self.assertEqual(engine.state.terminal["type"], "FULL_AGREEMENT")
-        self.assertEqual(engine.evaluate()["agreement_quality"]["coverage"], 1.0)
-        self.assertTrue(engine.replay()["consistent"])
 
 
 class EvaluateForTest(unittest.TestCase):

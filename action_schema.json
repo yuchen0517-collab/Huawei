@@ -1,8 +1,9 @@
 {
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "外交谈判行动",
-    "description": "定义一次外交谈判行动的结构。offer_patch 仅在 offer、counter_offer、conditional_exchange、final_offer 行动中允许非空，其余行动类型中必须为空对象。",
+    "$id": "https://diplomat.local/schema/action-v2.json",
+    "title": "外交谈判行动 v2",
+    "description": "v2 在 v1 基础上增加 card_payload 并收紧三条规则：①报价类行动必须至少修改一条条款（关闭空 patch 推进版本号的空转漏洞）；②非报价行动不得修改条款；③card_id 为空时不得携带 card_payload。卡牌语义见 card_registry.json，判定见 negotiation_rules.py。",
     "type": "object",
     "required": [
       "action_id",
@@ -18,17 +19,14 @@
     "properties": {
       "action_id": {
         "type": "string",
-        "description": "行动的唯一编号",
         "minLength": 1
       },
       "actor": {
         "type": "string",
-        "description": "行动方，使用国家代码，例如 us、cn",
         "minLength": 1
       },
       "action_type": {
         "type": "string",
-        "description": "行动类型",
         "enum": [
           "offer",
           "counter_offer",
@@ -42,61 +40,69 @@
         ]
       },
       "card_id": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "description": "使用的策略卡编号；未使用策略卡时为 null"
+        "type": ["string", "null"],
+        "description": "策略卡编号；基础行动（报价／接受／拒绝／退出）为 null。"
+      },
+      "card_payload": {
+        "type": "object",
+        "description": "非报价类卡牌的载荷：探询目标、程序选项或承诺文本。报价类卡牌使用 offer_patch，不得携带本字段。",
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "被探询方 party id。"
+          },
+          "clause": {
+            "type": "string",
+            "description": "可选：希望探询的具体议题名。"
+          },
+          "option": {
+            "type": "string",
+            "description": "程序选项，例如休会时长或调解方。"
+          },
+          "text": {
+            "type": "string",
+            "description": "公开承诺的内容。"
+          },
+          "condition": {
+            "type": "string",
+            "description": "可选：承诺的生效条件。"
+          }
+        }
       },
       "offer_patch": {
         "type": "object",
-        "description": "需要修改的议题条款，键为议题名，值包含 option 和 note",
+        "description": "需要修改的议题条款，键为议题名。",
         "additionalProperties": {
           "type": "object",
-          "required": [
-            "option",
-            "note"
-          ],
+          "required": ["option", "note"],
           "additionalProperties": false,
           "properties": {
             "option": {
-              "type": [
-                "string",
-                "number"
-              ],
-              "description": "选项或数值"
+              "type": ["string", "number"]
             },
             "note": {
-              "type": "string",
-              "description": "一句话说明"
+              "type": "string"
             }
           }
         }
       },
       "conditions": {
         "type": "array",
-        "description": "附加条件；没有附加条件时为空数组",
-        "items": {
-          "type": "string"
-        }
+        "items": {"type": "string"},
+        "description": "v2 起降级为自由文本备注：生效条件、履约节点、退出条款必须写成 offer_patch 里的结构化条款（见 scenario.clause_roles），否则无法做双方比对与 coverage 校验。"
       },
       "expected_effect": {
-        "type": "string",
-        "description": "一句话说明预计达到的效果"
+        "type": "string"
       },
       "public_message": {
-        "type": "string",
-        "description": "公开发言全文"
+        "type": "string"
       },
       "effect_labels": {
         "type": "array",
-        "description": "可选：本轮发言的离散行为标签，用于 Image/Trust 指数结算；不带时引擎走兜底推导",
         "items": {
           "type": "object",
-          "required": [
-            "label",
-            "magnitude"
-          ],
+          "required": ["label", "magnitude"],
           "additionalProperties": false,
           "properties": {
             "label": {
@@ -119,17 +125,10 @@
             },
             "magnitude": {
               "type": "string",
-              "enum": [
-                "slight",
-                "moderate",
-                "major"
-              ]
+              "enum": ["slight", "moderate", "major"]
             },
             "clause": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "reason": {
               "type": "string"
@@ -140,26 +139,35 @@
     },
     "allOf": [
       {
+        "$comment": "报价类行动必须至少修改一条条款，否则会产生一个没有内容的新版本，并免费重置 rounds_without_offer。",
         "if": {
           "properties": {
             "action_type": {
-              "enum": [
-                "offer",
-                "counter_offer",
-                "conditional_exchange",
-                "final_offer"
-              ]
+              "enum": ["offer", "counter_offer", "conditional_exchange", "final_offer"]
             }
           },
-          "required": [
-            "action_type"
-          ]
+          "required": ["action_type"]
+        },
+        "then": {
+          "properties": {
+            "offer_patch": {"minProperties": 1}
+          }
         },
         "else": {
           "properties": {
-            "offer_patch": {
-              "maxProperties": 0
-            }
+            "offer_patch": {"maxProperties": 0}
+          }
+        }
+      },
+      {
+        "$comment": "没有卡牌就没有载荷。",
+        "if": {
+          "properties": {"card_id": {"type": "null"}},
+          "required": ["card_id"]
+        },
+        "then": {
+          "properties": {
+            "card_payload": {"maxProperties": 0}
           }
         }
       }
