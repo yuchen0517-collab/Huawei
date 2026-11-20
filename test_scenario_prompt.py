@@ -67,6 +67,17 @@ def test_chip_prompt_does_not_leak_opponent_private_cards():
     assert cn_private["batna_note"] not in prompt
 
 
+def test_chip_prompt_lists_legal_clause_values():
+    """模型曾把 '800TFLOPS(FP16)' 整串写进 option，被引擎判 VALUE_OUT_OF_RANGE。"""
+    prompt = build_scenario_prompt(neg.load_prompt_markdown(), chip_scenario(), "us")
+
+    assert "条款取值规则" in prompt
+    assert "取值范围 100–5000" in prompt
+    assert "步长 100" in prompt
+    assert "填数字" in prompt
+    assert "O1 / O2 / O3 / O4" in prompt
+
+
 def test_chip_session_uses_scenario_prompt_and_initial_indexes():
     response = client.post(
         "/session",

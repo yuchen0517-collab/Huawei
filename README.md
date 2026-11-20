@@ -160,6 +160,8 @@ py -3 smoke_online.py
 是否泄露我方隐藏任务。退出码 `0` 成功、`2` 模型不可用（已确认状态未被污染）、`3` 其他失败。
 未设环境变量时会回落到上级目录或仓库根的 `key.txt`。
 
+11/20 22:10 真机实测：`200`、`5.6s`、`version=2`、四个议题全部被对手提及、无隐藏任务泄露。
+
 ## 6. 场景覆盖层
 
 `scenario_overrides.py` 在 `load_scenario` 之后统一补齐场景缺少的元数据：条款角色映射、我方每回合行动点（默认 4，子议题不少于 4 时为 5）和双方均无新版本才累计的僵局阈值（3 轮）。它只返回新字典，不修改 B 的场景 JSON，不改条款、选项或双方立场；B 已声明 `clause_roles` 时保留其原值。创建会话与存档恢复使用同一覆盖结果，投影中的 `available_cards[].target_clause` 也来自这份角色映射。
@@ -201,6 +203,10 @@ B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `
   与场景 `index_rules.initial` 一致。
 - 生成过程只读**本方**数据（`parties[side]` 与各条款 `positions[side]` / `redlines[side]`），
   不触碰对方私有字段；`test_scenario_prompt.py` 有专门的「不泄露对方私牌」回归。
+- Prompt 里含「条款取值规则」（数值型的范围/步长/单位、枚举型的 option_id 列表），
+  每轮 user 消息另带 `clauses` 条款板（名称/类型/范围或选项/当前值）。
+  这两处是必需的：缺了它们真实模型会把 `"800TFLOPS(FP16)"` 整串当取值，被引擎判 `VALUE_OUT_OF_RANGE`。
+- 对手动作若被引擎拒绝，会带纠正提示重试一次；仍失败才抛回原始错误（保留 `engine_error`）。
 
 ## 7. 隐私与 debrief
 

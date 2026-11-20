@@ -355,13 +355,21 @@ def find_unresolved_placeholders(text: str) -> list[str]:
 
 # ============================ 模型调用 ============================
 
-def build_user_message(round_no: int, indexes: dict, user_message: str) -> str:
-    """按 prompt §6.2 的每轮输入格式构造 user 消息。"""
+def build_user_message(round_no: int, indexes: dict, user_message: str,
+                       clauses: list[dict] | None = None) -> str:
+    """按 prompt §6.2 的每轮输入格式构造 user 消息。
+
+    `clauses` 是当前条款板（名称 / 类型 / 范围或选项 / 当前取值）。缺省时不带该字段，
+    保持旧格式兼容；接真实模型时必须带，否则对手不知道合法取值（曾把数值写成
+    "800TFLOPS(FP16)" 整串而被引擎判 VALUE_OUT_OF_RANGE）。
+    """
     payload = {
         "round": round_no,
         "current_indexes": {k: indexes[k] for k in INDEX_KEYS},
         "user_message": user_message,
     }
+    if clauses:
+        payload["clauses"] = clauses
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 

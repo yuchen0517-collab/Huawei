@@ -408,6 +408,60 @@ def test_opponent_invalid_response_503(monkeypatch):
     assert get_state(sid) == before
 
 
+def test_opponent_engine_rejection_retries_once_then_succeeds(monkeypatch):
+    """对手先给出非法动作、重试后合法：应正常推进，且只消耗两条模型调用。"""
+    sid = new_online_session(monkeypatch)
+    calls = []
+    bad = {
+        "action": {
+            "action_type": "offer",
+            "offer_patch": {"不存在的条款": {"option": "x", "note": "y"}},
+            "conditions": [],
+            "expected_effect": "",
+        },
+        "public_message": "结构上合规但条款不存在。",
+    }
+    good = copy.deepcopy(neg.OFFLINE_RESPONSES[0])
+
+    def respond(*args):
+        calls.append(1)
+        return bad if len(calls) == 1 else good
+
+    monkeypatch.setattr(api, "generate_opponent_turn", respond)
+    resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 200, resp.text
+    assert len(calls) == 2
+    # 只推进一手我方 + 一手对手，重试不额外写状态
+    assert resp.json()["version"] == 2
+
+
+def test_opponent_repair_hint_carries_legal_ranges(monkeypatch):
+    """重试提示必须带上条款板，否则模型还是会瞎猜数值。"""
+    sid = new_online_session(monkeypatch)
+    seen = []
+
+    def capture(rec, messages, runtime):
+        seen.append(messages[-1]["content"])
+        return {
+            "action": {
+                "action_type": "offer",
+                "offer_patch": {"不存在的条款": {"option": "x", "note": "y"}},
+                "conditions": [],
+                "expected_effect": "",
+            },
+            "public_message": "非法动作。",
+        }
+
+    monkeypatch.setattr(api, "generate_opponent_turn", capture)
+    resp = client.post(f"/session/{sid}/action", json=VALID_OFFER)
+    assert resp.status_code == 400
+    assert len(seen) == 2
+    repair = json.loads(seen[1])
+    assert "correction" in repair and "UNKNOWN_CLAUSE" in repair["correction"]
+    assert repair["clauses"]
+    assert any(item["name"] == "全球算力资源分配" for item in repair["clauses"])
+
+
 def test_opponent_engine_rejection_preserves_original_error(monkeypatch):
     sid = new_online_session(monkeypatch)
     before = get_state(sid)

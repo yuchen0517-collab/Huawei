@@ -269,9 +269,19 @@
 {
   "round": 3,
   "current_indexes": { "interest": 55, "image": 68, "trust": 62 },
-  "user_message": "对方本轮的发言内容…"
+  "user_message": "对方本轮的发言内容…",
+  "clauses": [
+    { "name": "芯片算力门槛", "type": "numeric", "unit": "TFLOPS(FP16)",
+      "range": { "min": 100, "max": 5000, "step": 100 }, "current": 1150 },
+    { "name": "第三国再出口限制", "type": "enum",
+      "options": ["O1", "O2", "O3", "O4"], "current": "O1" }
+  ]
 }
 ```
+
+> `clauses` 是当前条款板：数值型给 `range`，枚举型给 `options`，`current` 是当前生效值。
+> 提交 `offer_patch` 时，数值型必须写数字（**不要带单位或文字**，`{"option": 1200}`），
+> 枚举型必须写 `option_id`（`{"option": "O2"}`）。写错会被规则引擎拒绝并要求重试。
 
 > 注意：历史对话里应保留**完整的 JSON 输出**，不要只保留 `response` 文本。
 > 只留纯文本会让模型误以为"上一轮我就是这么说话的"，从第 2 轮起就不吐 JSON 了。

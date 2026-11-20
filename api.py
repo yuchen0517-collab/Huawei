@@ -2358,6 +2358,53 @@ def submit_engine_action(engine: RulesEngine, flat: dict) -> list:
     raise engine_action_error(code, engine)
 
 
+def build_clause_board(engine: RulesEngine, viewer: str) -> list[dict]:
+    """给对手模型看的条款板：合法取值范围 / 选项 + 当前取值。
+
+    此前每轮 user 消息只有 round / indexes / 用户发言，模型不知道数值条款的范围，
+    曾把展示字符串「800TFLOPS(FP16)」写进 option，被引擎判 VALUE_OUT_OF_RANGE。
+    注意这里读的是引擎场景（`engine.scenario`），不是 `public_state`——
+    引擎的公开状态里没有条款定义，条款投影是 API 层另外拼的。
+    """
+    plan = engine_effective_plan(engine.state, engine.scenario)
+    board: list[dict] = []
+    for clause in engine.scenario.get("clauses") or []:
+        item: dict = {"name": clause.get("name"), "type": clause.get("type")}
+        if clause.get("unit"):
+            item["unit"] = clause["unit"]
+        if clause.get("type") == "numeric":
+            span = clause.get("range") or []
+            item["range"] = {
+                "min": span[0] if len(span) > 0 else None,
+                "max": span[1] if len(span) > 1 else None,
+                "step": clause.get("step"),
+            }
+        else:
+            item["options"] = [
+                option.get("id") for option in clause.get("options") or []
+            ]
+        current = (plan.get(clause.get("name")) or {}).get("option")
+        if current is not None:
+            item["current"] = current
+        board.append(item)
+    return board
+
+
+def opponent_repair_hint(error: ApiError, board: list[dict]) -> str:
+    """对手动作被引擎拒绝后追加的纠正提示（只用于重试，不写入会话历史）。"""
+    engine_error = (error.extra or {}).get("engine_error") or "INVALID_ACTION"
+    return json.dumps(
+        {
+            "correction": f"你上一次的 action 被规则引擎拒绝：{engine_error}（{error.detail}）",
+            "rules": "数值型条款的 option 必须是数字，不能带单位或文字；"
+            "枚举型必须是 option_id。条款名必须与下列完全一致。",
+            "clauses": board,
+            "instruction": "请据此重新输出一个合法的 JSON 行动，格式与之前一致。",
+        },
+        ensure_ascii=False,
+    )
+
+
 def set_auto_fields(
     rec: SessionRecord,
     status: AutoStatus,
@@ -2581,18 +2628,43 @@ def run_turn(
         else:
             my_flat, my_warns = adapt_client_action(action_payload, rec, my_id)
             origin = "human"
-        user_msg = neg.build_user_message(
-            current_round, rec.initial_indexes, my_flat["public_message"]
-        )
-        candidate_messages = list(runtime.messages) + [{"role": "user", "content": user_msg}]
         submit_engine_action(candidate, my_flat)
         candidate_meta = runtime.action_meta + ((my_id, origin, tuple(my_warns)),)
         candidate_seq = runtime.action_seq + 1
         candidate_cursor = runtime.offline_cursor
+        # 条款板要在我方行动提交之后取，这样对手看到的是最新局面。
+        clause_board = build_clause_board(candidate, MY_ACTOR)
+        user_msg = neg.build_user_message(
+            current_round,
+            rec.initial_indexes,
+            my_flat["public_message"],
+            clause_board,
+        )
+        candidate_messages = list(runtime.messages) + [
+            {"role": "user", "content": user_msg}
+        ]
         if candidate.public_state(MY_ACTOR)["status"] != "ended":
             raw_opp = generate_opponent_turn(rec, candidate_messages, runtime)
             opp_flat, opp_warns, opp_checked = normalize_opponent_turn(raw_opp, rec, opp_id)
-            submit_engine_action(candidate, opp_flat)
+            try:
+                submit_engine_action(candidate, opp_flat)
+            except ApiError as first_error:
+                # 对手（模型）给出了引擎不接受的动作：带纠正提示重试一次。
+                # 仍失败则抛回原始错误，保留「engine_error 可见」的既有契约。
+                repair_messages = list(candidate_messages) + [
+                    {
+                        "role": "user",
+                        "content": opponent_repair_hint(first_error, clause_board),
+                    }
+                ]
+                raw_opp = generate_opponent_turn(rec, repair_messages, runtime)
+                opp_flat, opp_warns, opp_checked = normalize_opponent_turn(
+                    raw_opp, rec, opp_id
+                )
+                try:
+                    submit_engine_action(candidate, opp_flat)
+                except ApiError:
+                    raise first_error
             assistant_obj = {k: v for k, v in opp_checked.items() if not k.startswith("_")}
             candidate_messages.append(
                 {"role": "assistant", "content": json.dumps(assistant_obj, ensure_ascii=False)}

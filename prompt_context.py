@@ -50,11 +50,40 @@ def _format_target(clause: dict, value: Any) -> str:
         number = float(value)
         text = str(int(number)) if number.is_integer() else f"{number:g}"
         unit = clause.get("unit") or ""
-        return f"{text}{unit}"
+        # 明确标注「数字」：模型曾把展示用的 "800TFLOPS(FP16)" 整串写进 option
+        return f"{text}（数字，单位 {unit}）" if unit else f"{text}（数字）"
     for option in clause.get("options") or []:
         if option.get("id") == value:
             return f"{option.get('label') or value}（{value}）"
     return str(value)
+
+
+def clause_rules_section(scenario: dict) -> str:
+    """逐条款写清合法取值：数值填数字+范围步长，枚举填 option_id。"""
+    lines = ["## 条款取值规则（提交行动时必须遵守）"]
+    for clause in scenario.get("clauses") or []:
+        name = clause.get("name")
+        if clause.get("type") == "numeric":
+            span = clause.get("range") or []
+            piece = "填数字，不要带单位或文字"
+            if isinstance(span, (list, tuple)) and len(span) == 2:
+                piece += f"；取值范围 {float(span[0]):g}–{float(span[1]):g}"
+            step = clause.get("step")
+            if isinstance(step, (int, float)) and step:
+                piece += f"，步长 {float(step):g}"
+            unit = clause.get("unit")
+            if unit:
+                piece += f"，单位 {unit}"
+        else:
+            option_ids = [
+                str(option.get("id"))
+                for option in clause.get("options") or []
+                if option.get("id")
+            ]
+            piece = "填 option_id，只能是 " + " / ".join(option_ids)
+        lines.append(f"- 「{name}」：{piece}")
+    lines.append('数值型写成 {"option": 1200}；枚举型写成 {"option": "O2"}。')
+    return "\n".join(lines)
 
 
 def _interest_lines(scenario: dict, side: str) -> str:
@@ -181,7 +210,8 @@ def build_scenario_prompt(md: str, scenario: dict, side: str) -> str:
         if token in text:
             text = text.replace(token, str(value))
 
-    block = facts_section(scenario)
+    rules = clause_rules_section(scenario)
+    block = "\n\n".join(part for part in (rules, facts_section(scenario)) if part)
     if block:
         marker = "## 输出格式"
         if marker in text:
