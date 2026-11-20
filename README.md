@@ -147,7 +147,18 @@ cd "C 11.12 三指数" && py -3 -m pytest tests/ -q
 cd "scenario agent v2" && py -3 -m pytest -q
 ```
 
-11/20 封板实测：根 **227 passed**、C **218 passed**、B **111 passed**。根与 C 任一红都不打 tag；B 侧如有红由 B 自己处理，A 不代修。
+11/20 封板实测：根 **236 passed**、C **247 passed**、B **111 passed**。根与 C 任一红都不打 tag；B 侧如有红由 B 自己处理，A 不代修。
+
+真机冒烟（需要有效 Key；会真实调用一次模型）：
+
+```bash
+$env:DEEPSEEK_API_KEY = "sk-xxxx"
+py -3 smoke_online.py
+```
+
+脚本自建一个芯片场景会话、提交一手报价并检查对手回应：Prompt 是否按场景生成、是否提及条款、
+是否泄露我方隐藏任务。退出码 `0` 成功、`2` 模型不可用（已确认状态未被污染）、`3` 其他失败。
+未设环境变量时会回落到上级目录或仓库根的 `key.txt`。
 
 ## 6. 场景覆盖层
 
