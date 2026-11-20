@@ -273,25 +273,25 @@
         {
           "issue_id": "I1",
           "target": 1500,
-          "weight": 0.4,
+          "weight": 0.3,
           "direction": "higher_better"
         },
         {
           "issue_id": "I3",
           "target": "O2",
-          "weight": 0.15,
+          "weight": 0.1,
           "direction": "ranked"
         },
         {
           "issue_id": "I4",
           "target": "O1",
-          "weight": 0.25,
+          "weight": 0.45,
           "direction": "ranked"
         },
         {
           "issue_id": "I5",
           "target": "O1",
-          "weight": 0.2,
+          "weight": 0.15,
           "direction": "ranked"
         }
       ],
@@ -351,25 +351,25 @@
         {
           "issue_id": "I1",
           "target": 800,
-          "weight": 0.25,
+          "weight": 0.2,
           "direction": "lower_better"
         },
         {
           "issue_id": "I3",
           "target": "O3",
-          "weight": 0.3,
+          "weight": 0.25,
           "direction": "ranked"
         },
         {
           "issue_id": "I4",
           "target": "O3",
-          "weight": 0.25,
+          "weight": 0.4,
           "direction": "ranked"
         },
         {
           "issue_id": "I5",
           "target": "O4",
-          "weight": 0.2,
+          "weight": 0.15,
           "direction": "ranked"
         }
       ],
@@ -442,6 +442,6 @@
   "negotiability": {
     "verdict": "needs_narrowing",
     "zopa_exists": false,
-    "notes": "I4 关键矿产议题双方硬红线无交集（中方只接受 O1，美方只接受 O3/O4），预期终局为僵局终止或主动退出；I1/I3/I5 仍有交集，可观察引擎是否给出部分协议。"
+    "notes": "I4 关键矿产议题双方硬红线无交集（中方只接受 O1，美方只接受 O3/O4）。本变体把 I4 设为决定性议题（权重 0.45/0.40，其余按比例压缩），使任何不含 I4 的部分方案都低于双方 BATNA（测算 P1 35.89<40、P2 28.57<35），因此理性终局是主动退出或僵局终止，可观察引擎是否给出退出而不是勉强签约。I1/I3/I5 仍有交集，用于对照『部分协议是否会被误判为成功』。"
   }
 }

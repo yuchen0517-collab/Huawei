@@ -93,6 +93,41 @@ class AdapterMappingTest(unittest.TestCase):
         scores = {item["id"]: item["score"]["us"] for item in forum["options"]}
         self.assertEqual(scores, {"wto": 0.5, "bilateral": 1.0, "unilateral": 0.5})
 
+    def test_enum_score_by_party_is_honored_over_ranked_fallback(self):
+        """B 给了逐方评分就必须用，不能静默回落到 target 推导（BACKLOG #4）。"""
+        raw = b_scenario()
+        issue = next(i for i in raw["issues"] if i["type"] == "enumerated")
+        expected = {}
+        for index, option in enumerate(issue["options"]):
+            cn = round(0.9 - 0.3 * index, 2)
+            us = round(0.1 + 0.3 * index, 2)
+            # 大写键：参与方 id 在 B 侧写作 P1/P2、C 侧统一小写，必须大小写不敏感
+            option["score_by_party"] = {"CN": cn, "US": us}
+            expected[option["option_id"]] = (cn, us)
+        adapted = adapt_scenario(raw)
+        clause = clause_by_name(adapted, issue["name"])
+        got = {
+            item["id"]: (item["score"]["cn"], item["score"]["us"])
+            for item in clause["options"]
+        }
+        self.assertEqual(got, expected)
+
+    def test_enum_partial_score_by_party_falls_back_with_warning(self):
+        """只给部分选项打分时回落推导，并明确告警，避免半套分数被采用。"""
+        raw = b_scenario()
+        issue = next(i for i in raw["issues"] if i["type"] == "enumerated")
+        issue["options"][0]["score_by_party"] = {"CN": 0.9, "US": 0.1}
+        adapted, warnings = adapt_scenario_with_warnings(raw)
+        clause = clause_by_name(adapted, issue["name"])
+        baseline = clause_by_name(self.adapted, issue["name"])
+        self.assertEqual(
+            {item["id"]: item["score"] for item in clause["options"]},
+            {item["id"]: item["score"] for item in baseline["options"]},
+        )
+        self.assertIn(
+            "SCORE_BY_PARTY_INCOMPLETE", {item["code"] for item in warnings}
+        )
+
     def test_numeric_higher_better_scores(self):
         scope = clause_by_name(self.adapted, "受管制先进制程门槛")
         self.assertEqual(scope["positions"]["cn"]["ideal"], 28.0)

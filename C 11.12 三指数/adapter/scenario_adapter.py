@@ -736,6 +736,49 @@ def _ranked_scores(option_ids: List[str], target: str) -> Dict[str, float]:
 
 
 
+def _explicit_option_scores(
+    issue: dict, option_ids: List[str], party: str
+) -> Tuple[Dict[str, float], str]:
+    """读取 B 契约的可选逐方评分 `options[].score_by_party`。
+
+    返回 `(scores, state)`，state 取 `absent` / `complete` / `partial`：
+
+    - `complete`：该参与方给全部选项都打了分，直接采用；
+    - `partial`：只给部分选项打了分，调用方回落 target 推导并记 warning，
+      避免半套分数与推导值混用产生不可解释的效用；
+    - `absent`：完全没有逐方评分，回落 target 推导（原行为）。
+
+    schema 里 `score_by_party` 的口径是「缺省时沿用 order 推导」，但 order 公式
+    只在双方偏好完全相反时成立（BACKLOG #4）。逐方分是 B 在偏好不对称时的
+    唯一正确表达，适配层必须认它，否则 B 补了数据也会被静默忽略。
+    """
+    collected: Dict[str, float] = {}
+    for option in issue.get("options") or []:
+        if not isinstance(option, dict):
+            continue
+        option_id = option.get("option_id")
+        if option_id not in option_ids:
+            continue
+        scores = option.get("score_by_party")
+        if not isinstance(scores, dict):
+            continue
+        # 参与方 id 在 B 侧写作 P1/P2、在 C 侧统一小写成 p1/p2，
+        # 这里按大小写不敏感匹配，避免因为大小写差异静默回落到推导值。
+        value = None
+        for key, candidate in scores.items():
+            if isinstance(key, str) and key.lower() == party.lower():
+                value = candidate
+                break
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        collected[option_id] = max(0.0, min(1.0, float(value)))
+    if not collected:
+        return {}, "absent"
+    if len(collected) != len(option_ids):
+        return collected, "partial"
+    return collected, "complete"
+
+
 def _enum_redlines(
     redline_items: List[dict], option_ids: List[str]
 ) -> Tuple[List[str], List[str]]:
@@ -800,7 +843,20 @@ def _adapt_enum_clause(
             for item in clause_options:
                 item["score"][party] = 0.0
         else:
-            scores = _ranked_scores(option_ids, goal["target"])
+            explicit, state = _explicit_option_scores(issue, option_ids, party)
+            if state == "partial":
+                warnings.append(
+                    _warning(
+                        "SCORE_BY_PARTY_INCOMPLETE",
+                        f"issues[{issue_id}].options",
+                        f"参与方 {party} 只为 {len(explicit)}/{len(option_ids)} 个选项提供了 "
+                        "score_by_party，已回落 target 推导；请补齐该议题全部选项的逐方分。",
+                    )
+                )
+            if state == "complete":
+                scores = explicit
+            else:
+                scores = _ranked_scores(option_ids, goal["target"])
             for item in clause_options:
                 item["score"][party] = scores[item["id"]]
             raw_weights[party][name] = float(goal["weight"])

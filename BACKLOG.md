@@ -7,11 +7,18 @@
 | 1 | B 场景软红线（hard:false）在 C 引擎格式中无对应位 | 转换器只处理硬红线；main_chip_controls 中 5 条软红线（中方 I2/I3、美方 I1/I2/I4）被跳过 | 三人对齐软红线语义后再补转换，不擅自改 B 的数据 |
 | 2 | index_rules（形象/信任指数规则）B 未提供 | 转换器暂借 `C 11.12 三指数/scenarios/demo_scenario.json` 的 index_rules | 等 B 提供场景级指数规则后替换 |
 | 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | 传入 B 场景时仅引擎场景切换，Prompt 文案与初始指数展示未联动 | 三人对齐后决定 Prompt 是否随场景生成 |
-| 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | 按 negotiability.notes 口径实现，仅在双方偏好完全相反时成立 | 若后续场景双方偏好非完全相反，需 B 给出逐方 score || 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
+| 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | **11-20 代码侧已修**：适配层改为优先读 `options[].score_by_party`（大小写不敏感；只给部分选项打分时回落 target 推导并告警 `SCORE_BY_PARTY_INCOMPLETE`），配 2 条回归。**数据侧仍缺**：三份 B 场景都还没有逐方分，`check_score_alignment` 仍报 6 处排序不一致 | B 按契约补 `score_by_party`（schema 已允许），补完适配层自动生效 |
+| 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
 | 6 | 外部交付目录（C 11.12 三指数、scenario agent v2、Diplomat_webdemo2.0）被仓库 pytest 误收集 | C 的 79 条测试只能在其自身目录下运行（仓库 rootdir 下收集会 ImportError），已在 conftest.py 的 collect_ignore 中排除 | 无，属既定约束；C 的测试一律 cd 到其目录后跑 `python -m pytest tests/ -q` |
 | 7 | B 分支 feat/scenario-b 的 factcard_loader.py 带 6 处未解决合并冲突标记（<<<<<<< Updated upstream），test_factcard_loader.py 无法收集 | ✅ 11/13 已在本分支解决：按 B 自己 test_factcard_loader.py 的断言统一保留 Updated upstream 一侧，B 目录 77 条测试全绿 | B 的 feat/scenario-b 分支上仍是坏的，通知她同步修复，避免下次合并把冲突标记带回来 |
 ## 2026-11-19 引擎口径偏离 C 基线
 
 | 编号 | 事项 | 现状 | 待办 |
 | --- | --- | --- | --- |
-| 8 | 行动契约 v2 与僵局口径偏离 C 的 6b076bb 基线 | A 在 `engine/validator.py` 放行 `card_payload`，在 `engine/core.py` 对覆盖层标记的 v2 场景前置执行卡牌校验，并显式按双方均无新版本累计僵局；覆盖层注入我方 4/5 手与 3 轮阈值 | 将 C 文件 diff 贴群并同步 C；推回 `feat/rules-c` 或要求 C 下次合并保留这些改动，不能用基线整体覆盖 |
+| 8 | 行动契约 v2 与僵局口径偏离 C 的 6b076bb 基线 | ✅ 11-20 已按语义合并并验证：保留 A 的 `check_card_action` 与 `card_payload`，同时收编 C 的多方合并、accept 前置条件、`redline_check` 按 viewer 裁剪；C 引擎套件 245 条全绿 | 推回 `feat/rules-c` 时提醒 C 不要用旧基线整体覆盖 |
+
+## 2026-11-20 评分口径双轨（待 A/B 拍板，**当前最大隐患**）
+
+| 编号 | 事项 | 现状 | 待办 |
+| --- | --- | --- | --- |
+| 9 | B 的 `zopa.py` 与引擎 `engine/indices.py` 是两套打分：enumerated 前者按 order（P1 `(N-order+1)/N`、P2 `order/N`），后者按 target 位次衰减；numeric 前者按「红线→目标」比例归一，后者按「区间内 closeness(ideal)」 | 同一份参考成交方案：main 引擎 cn 82.55 / us 66.29，zopa 67.86 / 48.21；**no_zopa 引擎 93.16 / 53.37（都远高于 BATNA 40/35），zopa 35.89 / 28.57（都低于）**；backup 引擎 77.50 / 41.67，zopa 66.25 / 41.67 | 两条路对「是否该退出」给出相反结论，而 App 用引擎口径、B 的 QA 与测试用 zopa 口径。必须由 A/B 决定唯一口径，再据此重标 BATNA（40/35/38 目前是按 zopa 口径标的） |
