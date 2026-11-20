@@ -91,17 +91,21 @@ def main() -> int:
 
     if response.status_code != 200:
         body = response.json()
+        error = body.get("error")
         after = {
             "round": rec.engine.state.round,
             "version": rec.engine.state.current_version,
             "history": len(rec.engine.state.seen_action_ids),
         }
-        print("错误码：", body.get("error"), "| 详情：", str(body.get("detail"))[:120])
+        print("错误码：", error, "| 详情：", str(body.get("detail"))[:120])
         print("失败前状态：", before, "失败后状态：", after)
-        if after == before:
-            print("[结论] 模型不可用，但本轮未写入任何状态，客户端可原样重试。")
+        if after != before:
+            print("[失败] 请求失败却污染了谈判状态")
+            return 3
+        if error == "MODEL_UNAVAILABLE":
+            print("[结论] 模型不可用，本轮未写入任何状态，客户端可原样重试。")
             return 2
-        print("[失败] 模型不可用却污染了谈判状态")
+        print(f"[结论] 行动被拒绝（{error}），状态未变；需排查模型输出或规则。")
         return 3
 
     body = response.json()
