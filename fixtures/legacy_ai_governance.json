@@ -1,0 +1,324 @@
+{
+  "scenario_id": "ai_governance",
+  "parties": [
+    {
+      "id": "cn",
+      "label": "中国",
+      "private": {
+        "hidden_tasks": [
+          {
+            "text": "推动「全球AI治理研究院」落户中国",
+            "priority": "高",
+            "done": false
+          },
+          {
+            "text": "为发展中国家争取不低于 30% 的全球公共算力配额",
+            "priority": "中",
+            "done": false
+          },
+          {
+            "text": "阻止「AI安全联盟」成为全球标准制定机构",
+            "priority": "高",
+            "done": false
+          }
+        ],
+        "strategy": {
+          "template": "principled_flexible",
+          "baseline": "cooperate",
+          "trust_threshold": 50
+        }
+      }
+    },
+    {
+      "id": "us",
+      "label": "美国",
+      "batna": null,
+      "private": {
+        "red_lines": "1. 绝不接受任何限制美国 AI 研发的条款 2. 绝不接受把标准制定权交给联合国框架下的多数表决机制 3. 绝不允许对华 AI 技术限制被本决议稀释 4. 绝不接受强制性技术转让",
+        "batna": "若全球谈判失败，美国将联合五眼联盟、日本与欧盟组建「AI 安全联盟」，在小圈子内制定规则再对外推广。",
+        "hidden_task_card": "目标1（高）：推动「AI 安全联盟」成为全球 AI 治理的核心机制。目标2（中）：在算力监管条款中植入「可核查」机制，为技术监控铺路。目标3（高）：确保对中国的 AI 技术限制不被谈判决议削弱。",
+        "strategy": {
+          "template": "tit_for_tat",
+          "baseline": "escalate",
+          "retaliation": 0.7,
+          "trust_threshold": 60,
+          "escalate_triggers": [
+            "取消出口管制",
+            "解除实体清单",
+            "昇腾",
+            "军民融合",
+            "军事用途",
+            "核查我方",
+            "限制我方研发",
+            "歧视性条款"
+          ],
+          "cooperate_conditions": [
+            "逐案许可",
+            "具体配额",
+            "对等",
+            "互认",
+            "可核查",
+            "安全条件",
+            "具体数字"
+          ]
+        }
+      }
+    }
+  ],
+  "clauses": [
+    {
+      "name": "全球算力资源分配",
+      "type": "enum",
+      "initial": "附带可核查机制",
+      "options": [
+        {
+          "id": "附带可核查机制",
+          "order": 1,
+          "score": {
+            "cn": 0.6,
+            "us": 0.8
+          }
+        },
+        {
+          "id": "以既有联盟实践为蓝本设立高风险 AI 出口管制的可核查机制",
+          "order": 2,
+          "score": {
+            "cn": 0.2,
+            "us": 1.0
+          }
+        },
+        {
+          "id": "接受联合国框架下的技术性通报，但监督机制须具备实际约束力",
+          "order": 3,
+          "score": {
+            "cn": 1.0,
+            "us": 0.2
+          }
+        }
+      ],
+      "weights": {
+        "cn": 0.3333333333333333,
+        "us": 0.3333333333333333
+      }
+    },
+    {
+      "name": "前沿模型评测门槛",
+      "type": "numeric",
+      "initial": 55,
+      "range": [
+        0,
+        100
+      ],
+      "positions": {
+        "cn": {
+          "ideal": 40
+        },
+        "us": {
+          "ideal": 70
+        }
+      },
+      "weights": {
+        "cn": 0.3333333333333333,
+        "us": 0.3333333333333333
+      }
+    },
+    {
+      "name": "数据跨境流动",
+      "type": "enum",
+      "initial": "白名单互认",
+      "options": [
+        {
+          "id": "白名单互认",
+          "order": 1,
+          "score": {
+            "cn": 0.6,
+            "us": 0.8
+          }
+        },
+        {
+          "id": "增加对发展中国家的能力建设投入",
+          "order": 2,
+          "score": {
+            "cn": 1.0,
+            "us": 0.3
+          }
+        },
+        {
+          "id": "在联合国框架下建立对称适用的数据跨境通报机制",
+          "order": 3,
+          "score": {
+            "cn": 0.8,
+            "us": 0.2
+          }
+        }
+      ],
+      "weights": {
+        "cn": 0.3333333333333333,
+        "us": 0.3333333333333333
+      }
+    }
+  ],
+  "action_points_per_round": 3,
+  "max_rounds": 12,
+  "deadlock_rounds": 2,
+  "index_rules": {
+    "scale": [
+      0,
+      100
+    ],
+    "initial": {
+      "cn": {
+        "image": 70,
+        "trust": 65
+      },
+      "us": {
+        "image": 70,
+        "trust": 65
+      }
+    },
+    "sensitivity": {
+      "cn": {
+        "image": 0.9,
+        "trust": 1.2
+      },
+      "us": {
+        "image": 1.1,
+        "trust": 0.9
+      }
+    },
+    "image_actions": {
+      "constructive_proposal": {
+        "slight": 2,
+        "moderate": 3,
+        "major": 5
+      },
+      "cite_rules": {
+        "slight": 1,
+        "moderate": 2,
+        "major": 3
+      },
+      "hardline_stance": {
+        "slight": -1,
+        "moderate": -2,
+        "major": -3
+      },
+      "broken_promise": {
+        "slight": -5,
+        "moderate": -6,
+        "major": -8
+      },
+      "personal_attack": {
+        "slight": -5,
+        "moderate": -7,
+        "major": -10
+      },
+      "redline_provoke": {
+        "slight": -3,
+        "moderate": -4,
+        "major": -5
+      },
+      "procedural": {
+        "slight": 0,
+        "moderate": 0,
+        "major": 1
+      },
+      "diplomatic_reframe": {
+        "slight": 3,
+        "moderate": 4,
+        "major": 5
+      },
+      "protect_ally": {
+        "slight": 1,
+        "moderate": 2,
+        "major": 3
+      },
+      "keep_promise": {
+        "slight": 1,
+        "moderate": 2,
+        "major": 3
+      },
+      "betray_ally": {
+        "slight": -4,
+        "moderate": -5,
+        "major": -7
+      },
+      "vague_stance": {
+        "slight": -1,
+        "moderate": -2,
+        "major": -3
+      },
+      "conditional_concession": {
+        "slight": 0,
+        "moderate": 1,
+        "major": 2
+      }
+    },
+    "trust_actions": {
+      "constructive_proposal": {
+        "slight": 1,
+        "moderate": 2,
+        "major": 3
+      },
+      "cite_rules": {
+        "slight": 1,
+        "moderate": 2,
+        "major": 3
+      },
+      "hardline_stance": {
+        "slight": 2,
+        "moderate": 3,
+        "major": 4
+      },
+      "broken_promise": {
+        "slight": -5,
+        "moderate": -6,
+        "major": -8
+      },
+      "personal_attack": {
+        "slight": -4,
+        "moderate": -6,
+        "major": -8
+      },
+      "redline_provoke": {
+        "slight": -1,
+        "moderate": -2,
+        "major": -2
+      },
+      "procedural": {
+        "slight": 0,
+        "moderate": 0,
+        "major": 1
+      },
+      "diplomatic_reframe": {
+        "slight": 2,
+        "moderate": 3,
+        "major": 4
+      },
+      "protect_ally": {
+        "slight": 3,
+        "moderate": 4,
+        "major": 6
+      },
+      "keep_promise": {
+        "slight": 2,
+        "moderate": 3,
+        "major": 4
+      },
+      "betray_ally": {
+        "slight": -5,
+        "moderate": -7,
+        "major": -10
+      },
+      "vague_stance": {
+        "slight": -2,
+        "moderate": -3,
+        "major": -4
+      },
+      "conditional_concession": {
+        "slight": 0,
+        "moderate": 0,
+        "major": 1
+      }
+    }
+  }
+}

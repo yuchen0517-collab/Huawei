@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 import api
 import neg_cli as neg
+from _scenario_fixtures import legacy_body
 from load_scenario import CLAUSE_NAMES, make_scenario
 
 client = TestClient(api.app, raise_server_exceptions=False)
@@ -47,7 +48,11 @@ def clean_env(monkeypatch, tmp_path):
 
 
 def new_session(agent="us"):
-    resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": agent})
+    # 本文件守的是契约机制（幂等、版本、错误码、教练、评分），沿用旧的 3 条款
+    # 形状做夹具；产品默认场景已换成芯片，见 test_scenario_prompt.py。
+    body = legacy_body()
+    body["agent"] = agent
+    resp = client.post("/session", json=body)
     assert resp.status_code == 200, resp.text
     return resp.json()["session_id"]
 
@@ -104,14 +109,18 @@ def test_create_session_initial_state():
 
 def test_create_session_invalid_scenario():
     for value in ("default", "other", ""):
-        resp = client.post("/session", json={"scenario_id": value, "agent": "us"})
+        body = legacy_body()
+        body["scenario_id"] = value
+        resp = client.post("/session", json=body)
         assert resp.status_code == 400
         assert resp.json()["error"] == "INVALID_SCENARIO"
 
 
 def test_create_session_invalid_agent():
     for value in ("_scenario", "xx", "", "eu"):
-        resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": value})
+        body = legacy_body()
+        body["agent"] = value
+        resp = client.post("/session", json=body)
         assert resp.status_code == 400
         assert resp.json()["error"] == "INVALID_AGENT"
 
@@ -121,9 +130,9 @@ def test_create_session_request_validation():
     assert resp.status_code == 422
     assert resp.json()["error"] == "INVALID_REQUEST"
     assert set(resp.json()) == {"error", "detail"}
-    resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": "us", "extra": 1})
+    resp = client.post("/session", json={**legacy_body(), "extra": 1})
     assert resp.status_code == 422
-    resp = client.post("/session", json={"scenario_id": 1, "agent": "us"})
+    resp = client.post("/session", json={**legacy_body(), "scenario_id": 1})
     assert resp.status_code == 422
 
 
@@ -151,13 +160,16 @@ def test_action_success_full_flow():
     assert opp["actor"] == "us"
     assert opp["origin"] == "opponent_ai"
     assert opp["action_id"] == "a000002"
-    assert opp["public_message"] == neg.OFFLINE_RESPONSES[0]["public_message"]
+    assert opp["public_message"] == api.offline_opponent.build_offline_turn(
+        api.SESSIONS[sid].engine.scenario, 0
+    )["public_message"]
     assert state["my_offer"]["version"] == 1
     entry = state["my_offer"]["offers"]["全球算力资源分配"]
     assert entry == VALID_OFFER["offer_patch"]["全球算力资源分配"]
     assert "round" not in entry and "action_id" not in entry
     assert state["opponent_offer"]["version"] == 2
-    assert "全球算力资源分配" in state["opponent_offer"]["offers"]
+    # 离线对手第 1 手只谈数值条款（旧夹具里的「前沿模型评测门槛」）。
+    assert "前沿模型评测门槛" in state["opponent_offer"]["offers"]
     assert "全球算力资源分配" not in state["open_issues"]
     assert get_state(sid) == state
 
@@ -276,12 +288,12 @@ def test_action_id_sequence_not_consumed_by_failure():
 def test_offers_independent_between_sides():
     sid = new_session()
     payload = copy.deepcopy(VALID_OFFER)
-    payload["offer_patch"] = {"全球算力资源分配": {"option": "附带可核查机制", "note": "我方说明"}}
+    payload["offer_patch"] = {"前沿模型评测门槛": {"option": 40, "note": "我方说明"}}
     resp = client.post(f"/session/{sid}/action", json=payload)
     assert resp.status_code == 200, resp.text
     state = resp.json()
-    assert state["my_offer"]["offers"]["全球算力资源分配"]["option"] == "附带可核查机制"
-    assert state["opponent_offer"]["offers"]["全球算力资源分配"]["option"] != "附带可核查机制"
+    assert state["my_offer"]["offers"]["前沿模型评测门槛"]["option"] == 40
+    assert state["opponent_offer"]["offers"]["前沿模型评测门槛"]["option"] != 40
     assert state["my_offer"]["version"] == 1
     assert state["opponent_offer"]["version"] == 2
 
@@ -300,44 +312,61 @@ def test_auto_step_stub_and_single_round():
     assert mine["origin"] == "auto_player"
     assert mine["action_type"] == "statement"
     assert mine["offer_patch"] == {}
-    assert mine["public_message"] == neg.CHINA_LINES[0].replace("\n", " ")
+    assert mine["public_message"] == api.offline_opponent.auto_speech(
+        api.SESSIONS[sid].engine.scenario, 1
+    )
     assert state["my_offer"] == {"version": 0, "offers": {}}
     assert state["opponent_offer"]["version"] == 1
     assert get_state(sid) == state
 
 
-def test_auto_step_china_lines_cycle():
-    """话术按回合轮换：同一回合内多手复用同一句，进入下一回合才换下一句。"""
+def test_auto_step_talk_track_follows_round():
+    """我方自动话术按「本手所在回合」取句，同回合复用、跨回合换句。"""
     sid = new_session()
-    texts = []
-    for _ in range(5):
+    scenario = api.SESSIONS[sid].engine.scenario
+    checked = 0
+    for _ in range(6):
         resp = client.post(f"/session/{sid}/auto_step")
-        assert resp.status_code == 200, resp.text
-        texts.append(resp.json()["action_history"][-2]["public_message"])
-    same_round = neg.CHINA_LINES[0].replace("\n", " ")
-    next_round = neg.CHINA_LINES[1].replace("\n", " ")
-    assert texts == [same_round] * 4 + [next_round]
+        if resp.status_code != 200:
+            break
+        state = resp.json()
+        mine = [item for item in state["action_history"] if item["actor"] == "cn"]
+        assert mine
+        last = mine[-1]
+        expected = (
+            api.offline_opponent.ACCEPT_SPEECH
+            if last["action_type"] == "accept"
+            else api.offline_opponent.auto_speech(scenario, last["round"])
+        )
+        assert last["public_message"] == expected
+        checked += 1
+    assert checked >= 2
 
 
-def test_offline_cursor_isolation_and_cycle():
+def test_offline_cursor_isolation():
+    """两个会话的离线游标互不影响，且各自按游标推进方案。"""
     s1, s2 = new_session(), new_session()
     r1 = client.post(f"/session/{s1}/auto_step").json()
     r2 = client.post(f"/session/{s2}/auto_step").json()
     assert r1["action_history"][-1]["public_message"] == r2["action_history"][-1]["public_message"]
-    first = r1["action_history"][-1]["public_message"]
     client.post(f"/session/{s1}/auto_step")
     client.post(f"/session/{s1}/auto_step")
     r4 = client.post(f"/session/{s1}/auto_step").json()
-    assert r4["action_history"][-1]["public_message"] == first
+    # 第 4 手已经谈到第 2 批条款，与第 1 手不再相同。
+    assert r4["action_history"][-1]["public_message"] != r1["action_history"][-1]["public_message"]
     assert api.SESSIONS[s2].runtime.offline_cursor == 1
 
 
-def test_offline_samples_immutable():
-    baseline = copy.deepcopy(neg.OFFLINE_RESPONSES)
+def test_offline_opponent_is_deterministic_and_does_not_mutate_scenario():
     sid = new_session()
+    scenario = api.SESSIONS[sid].engine.scenario
+    baseline = copy.deepcopy(scenario)
+    first = api.offline_opponent.build_offline_turn(scenario, 0)
+    second = api.offline_opponent.build_offline_turn(scenario, 0)
+    assert first == second
     client.post(f"/session/{sid}/action", json=VALID_OFFER)
     client.post(f"/session/{sid}/auto_step")
-    assert neg.OFFLINE_RESPONSES == baseline
+    assert scenario == baseline
 
 
 def test_mode_detection(monkeypatch):
@@ -421,7 +450,7 @@ def test_opponent_engine_rejection_retries_once_then_succeeds(monkeypatch):
         },
         "public_message": "结构上合规但条款不存在。",
     }
-    good = copy.deepcopy(neg.OFFLINE_RESPONSES[0])
+    good = api.offline_opponent.build_offline_turn(api.SESSIONS[sid].engine.scenario, 0)
 
     def respond(*args):
         calls.append(1)
@@ -440,7 +469,7 @@ def test_opponent_repair_hint_carries_legal_ranges(monkeypatch):
     sid = new_online_session(monkeypatch)
     seen = []
 
-    def capture(rec, messages, runtime):
+    def capture(rec, messages, runtime, *extra):
         seen.append(messages[-1]["content"])
         return {
             "action": {
@@ -553,7 +582,7 @@ def test_cors_preflight_and_actual():
     assert "POST" in resp.headers["access-control-allow-methods"]
     resp = client.post(
         "/session",
-        json={"scenario_id": "ai_governance", "agent": "us"},
+        json=legacy_body(),
         headers={"Origin": "http://localhost:3000"},
     )
     assert resp.headers["access-control-allow-origin"] == "*"
@@ -582,10 +611,10 @@ def test_session_busy(monkeypatch):
     release = threading.Event()
     original = api.generate_opponent_turn
 
-    def blocking(rec, messages, runtime):
+    def blocking(rec, messages, runtime, *extra):
         started.set()
         release.wait(10)
-        return original(rec, messages, runtime)
+        return original(rec, messages, runtime, *extra)
 
     monkeypatch.setattr(api, "generate_opponent_turn", blocking)
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -607,10 +636,10 @@ def test_state_reads_committed_engine_during_turn(monkeypatch):
     release = threading.Event()
     original = api.generate_opponent_turn
 
-    def blocking(rec, messages, runtime):
+    def blocking(rec, messages, runtime, *extra):
         started.set()
         release.wait(10)
-        return original(rec, messages, runtime)
+        return original(rec, messages, runtime, *extra)
 
     monkeypatch.setattr(api, "generate_opponent_turn", blocking)
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -704,8 +733,18 @@ def test_effect_labels_invalid_rejected():
 
 
 def test_next_round_called_once(monkeypatch):
-    """预算 4 手：前 3 手不推进回合，第 4 手用完预算时恰好调用一次 next_round。"""
+    """预算 4 手：前 3 手不推进回合，第 4 手用完预算时恰好调用一次 next_round。
+
+    固定让对手只报数值条款，`open_issues` 始终非空 → 不会因为「可以 accept」
+    提前推进回合，这一手就只剩「预算用完」这个触发条件。
+    """
     sid = new_session()
+    fixed = api.offline_opponent.build_offline_turn(
+        api.SESSIONS[sid].engine.scenario, 0
+    )
+    monkeypatch.setattr(
+        api, "generate_opponent_turn", lambda *args: copy.deepcopy(fixed)
+    )
     calls = []
     original = api.RulesEngine.next_round
 
@@ -921,7 +960,11 @@ def test_model_timeout_fails_atomically_and_same_request_can_retry(monkeypatch):
     monkeypatch.setattr(
         neg,
         "call_with_retry",
-        lambda *args: (copy.deepcopy(neg.OFFLINE_RESPONSES[0]), "raw", "stop"),
+        lambda *args: (
+            api.offline_opponent.build_offline_turn(api.SESSIONS[sid].engine.scenario, 0),
+            "raw",
+            "stop",
+        ),
     )
     retry = submit_action(sid, VALID_OFFER, "timeout-retry-1", 0)
     assert retry.status_code == 200, retry.text

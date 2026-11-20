@@ -38,48 +38,43 @@ export DEEPSEEK_API_KEY=$(cat ../key.txt)
 $env:DEEPSEEK_API_KEY = Get-Content ..\key.txt
 ```
 
-未设置 Key 时，`/session` 仍可开局并进入离线模式；但离线 canned 对手的报价只覆盖默认 `ai_governance` 场景。切到 B 的芯片 / no-zopa / DST 场景时，离线对手会因条款名不匹配返回 `INVALID_ACTION / UNKNOWN_CLAUSE`，必须走在线模式（或使用测试里的 scripted opponent）。
+未设置 Key 时，`/session` 仍可开局并进入离线模式。**离线对手不再依赖议题**：`offline_opponent.py`
+从场景的条款、取值范围与双方红线推导一个双方都能接受的取值，并按「先数值、再逐条枚举」分轮报价，
+所以芯片 / no-zopa / DST 都能离线一路跑到终局。在线模式只是把对手换成真模型，契约与投影完全一致。
+
+> 默认场景已从旧的 `ai_governance` 换成芯片：`POST /session` 不带 `scenario_path` 时即加载
+> `scenario agent v2/data/scenarios/main_chip_controls.json`。旧题材不再由产品提供（见 §4.1 结尾）。
 
 ## 4. 必演示场景的脚本化命令
 
 所有写请求都必须带 `client_action_id`（或 `Idempotency-Key` 头）和 `base_version`，否则返回 `422 INVALID_REQUEST`。下面用 `.venv/Scripts/python` 从响应里取 `session_id`。
 
-### 4.1 ai_governance：一手 + 3 步自动推演到终局（离线，无需 Key）
+### 4.1 默认芯片场景：离线 5 步自动推演到终局（无需 Key）
+
+三分钟演示走这条：不传 `scenario_path`，默认就是芯片场景，双方自动对抗。
 
 ```bash
 SID=$(curl -s -X POST http://127.0.0.1:8765/session \
   -H 'Content-Type: application/json' \
-  -d '{"scenario_id":"ai_governance","agent":"us"}' \
+  -d '{"scenario_id":"scn-chip-controls-0001","agent":"us"}' \
   | .venv/Scripts/python -c "import sys,json;print(json.load(sys.stdin)['session_id'])")
 
-curl -s -X POST http://127.0.0.1:8765/session/$SID/action \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "client_action_id": "demo-ai-1",
-    "base_version": 0,
-    "action_type": "offer",
-    "card_id": null,
-    "offer_patch": {
-      "全球算力资源分配": {"option": "接受联合国框架下的技术性通报，但监督机制须具备实际约束力", "note": "给出可核查的对称安排。"},
-      "前沿模型评测门槛": {"option": 55, "note": "维持场景初始门槛。"},
-      "数据跨境流动": {"option": "在联合国框架下建立对称适用的数据跨境通报机制", "note": "以多边通报替代单边裁量。"}
-    },
-    "conditions": [],
-    "expected_effect": "给出可讨论的具体方案，推动分歧收敛。",
-    "public_message": "我方就相关条款提出具体方案，愿在相互尊重基础上继续磋商。"
-  }'
-
-for i in 1 2 3; do
+for i in 1 2 3 4 5; do
   curl -s -X POST http://127.0.0.1:8765/session/$SID/auto_step
   echo
 done
 
+curl -s -X POST http://127.0.0.1:8765/session/$SID/auto_status
 curl -s -X POST http://127.0.0.1:8765/session/$SID/debrief
 ```
 
-实测：第 3 次 `auto_step` 返回 `status=ended`，`/auto_status` 的 `terminal_type=FULL_AGREEMENT`；`/debrief` 返回 `200 {"debrief","evaluation"}`。
+实测：前 4 次 `auto_step` 依次推进到手，第 5 次返回 `status=ended`；`terminal_type=FULL_AGREEMENT`，
+`coverage=1.0`，`/debrief` 返回 `200 {"debrief","evaluation"}`。
+离线对手在每轮报价 `芯片算力门槛 1200 TFLOPS(FP16)`、`第三国再出口限制 O2`、
+`关键矿产出口安排 O2`、`协议退出与救济安排 O2`——这些取值都落在双方硬红线之内，
+所以自动化我方能一路 accept 到成交。
 
-### 4.2 main_chip_controls（B 芯片场景，需在线 Key）
+### 4.2 main_chip_controls（同一场景的显式写法，在线时由真模型当对手）
 
 ```bash
 SID=$(curl -s -X POST http://127.0.0.1:8765/session \
@@ -114,7 +109,7 @@ curl -s -X POST http://127.0.0.1:8765/session/$SID/debrief
 
 脚本化回归里该场景第 5 步到达 `FULL_AGREEMENT`（见 `test_auto.py`）；在线演示时对手由模型生成，步数可能不同，以 `/auto_status` 的 `terminal_type` 为准。
 
-### 4.3 no_zopa_variant（B 芯片场景变体，需在线 Key）
+### 4.3 no_zopa_variant（B 芯片场景变体，可离线）
 
 ```bash
 curl -s -X POST http://127.0.0.1:8765/session \
@@ -124,7 +119,7 @@ curl -s -X POST http://127.0.0.1:8765/session \
 
 拿到 `SID` 后，行动与 `4.2` 完全一致（同一组条款名），只是 `client_action_id` 换成 `demo-nozopa-1`。
 
-### 4.4 backup_dst_bilateral（B 的 DST 双边场景，需在线 Key）
+### 4.4 backup_dst_bilateral（B 的 DST 双边场景，可离线）
 
 ```bash
 curl -s -X POST http://127.0.0.1:8765/session \
@@ -147,7 +142,8 @@ cd "C 11.12 三指数" && py -3 -m pytest tests/ -q
 cd "scenario agent v2" && py -3 -m pytest -q
 ```
 
-11/20 封板实测：根 **236 passed**、C **247 passed**、B **111 passed**。根与 C 任一红都不打 tag；B 侧如有红由 B 自己处理，A 不代修。
+11/20 封板实测（默认场景切芯片 + 离线对手改为场景推导之后）：根 **240 passed**、C **251 passed**；
+B 的套件需 `openpyxl`，A 的 venv 未装该依赖，仍以 B 自己机器为准。根与 C 任一红都不打 tag；B 侧如有红由 B 自己处理，A 不代修。
 
 真机冒烟（需要有效 Key；会真实调用一次模型）：
 
@@ -195,12 +191,14 @@ B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `
 
 ## 6.2 对手 System Prompt 与初始指数
 
-- **默认场景 `ai_governance`**：沿用 `谈判对手Agent_prompt.md` 的手写文案与 `agents.json` 的初始指数（50 / 70 / 65），
-  不改已经打磨过的演示话术。
-- **其他场景（B 的芯片 / DST 等）**：`prompt_context.build_scenario_prompt()` 从运行时场景生成 Prompt——
-  主题、会议场合、议题、本方公开立场、按权重排序的目标、红线（数值红线 + 枚举禁用项）、BATNA、隐藏任务卡，
+- **所有场景统一从运行时场景生成**：`prompt_context.build_scenario_prompt()` 拼出主题、会议场合、议题、
+  本方公开立场、按权重排序的目标、红线（数值红线 + 枚举禁用项）、BATNA、隐藏任务卡，
   并附上该场景的公开事实与教学假设；初始指数取 `engine.indices.initial_indices(scenario)`，
-  与场景 `index_rules.initial` 一致。
+  与场景 `index_rules.initial` 一致。默认场景（芯片）与显式传入的场景走同一条代码路径，
+  不再有「默认场景用手写文案」的特例。
+- 旧的 `ai_governance` 手写 prompt 已从产品移除：它没有对应场景文件，条款也不在任何交付场景里。
+  `agents.json._scenario` 仅保留给 `neg_cli.py` 这个独立的 prompt 调试工具，API 不再读取；
+  历史契约回归用它冻结出来的夹具 `fixtures/legacy_ai_governance.json`（见 `_scenario_fixtures.py`）。
 - 生成过程只读**本方**数据（`parties[side]` 与各条款 `positions[side]` / `redlines[side]`），
   不触碰对方私有字段；`test_scenario_prompt.py` 有专门的「不泄露对方私牌」回归。
 - Prompt 里含「条款取值规则」（数值型的范围/步长/单位、枚举型的 option_id 列表），

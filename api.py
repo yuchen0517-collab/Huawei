@@ -55,10 +55,17 @@ from engine.validator import is_redline_violation, is_soft_redline_violation
 from engine.validator import validate_action as validate_engine_action
 
 import negotiation_rules
+import offline_opponent
 from prompt_context import build_scenario_prompt
 from scenario_overrides import apply_overrides, role_clause
 
-SCENARIO_ID = "ai_governance"
+# 默认场景：芯片出口管制。原 `ai_governance` 手写场景已下线——它的条款
+# （全球算力资源分配等）不在任何交付场景里，却霸占着「不传 scenario_path」
+# 时的默认位置，导致演示与测试都在跑一套已经没有资料支撑的题材。
+# 现在默认值指向 B 交付的真实场景，与 README 的演示脚本、smoke_online 同源。
+DEFAULT_SCENARIO_PATH = (
+    BASE_DIR / "scenario agent v2" / "data" / "scenarios" / "main_chip_controls.json"
+)
 MY_ACTOR = "cn"
 IDENTITY_FIELDS = ("action_id", "actor", "card_id")
 TRANSPORT_FIELDS = ("client_action_id", "base_version")
@@ -92,16 +99,10 @@ ACTION_SCHEMA = json.loads(
 SCHEMA_VALIDATOR = Draft202012Validator(ACTION_SCHEMA)
 
 PROMPT_MD = neg.load_prompt_markdown()
+# 对手 System Prompt 一律由运行时场景生成（prompt_context.build_scenario_prompt）。
+# 以前这里还缓存一份 agents.json._scenario 的手写 AI 治理 prompt，只服务默认场景；
+# 默认场景换成芯片后，那条分支已删除，agent 键只用于校验与日志。
 AGENTS = neg.load_agents()
-SCENARIO = AGENTS.get("_scenario", {})
-
-SYSTEM_PROMPTS = {
-    key: neg.build_system_prompt(
-        PROMPT_MD, cfg, SCENARIO, side=key if key in ("us", "cn") else None
-    )
-    for key, cfg in AGENTS.items()
-    if not key.startswith("_")
-}
 
 MODEL_ERROR_DETAIL = "AI 对手暂时不可用或返回内容不合规，本轮未推进，请稍后重试。"
 INTERNAL_ERROR_DETAIL = "服务内部错误，请稍后重试。"
@@ -2036,11 +2037,17 @@ def takeover_session(rec: SessionRecord) -> AutoStatusResponse:
 
 
 def create_session(req: "CreateSessionRequest") -> dict:
+    # 不传 scenario_path 时用默认的芯片场景（B 交付的真实场景）。
+    # 相对路径仍按进程 cwd 解析，与 README 的 curl 示例一致；默认值用绝对路径，
+    # 避免从别的目录启动服务时找不到文件。
+    scenario_path = req.scenario_path or str(DEFAULT_SCENARIO_PATH)
     try:
-        scenario = apply_overrides(load_scenario(req.scenario_path))
+        scenario = apply_overrides(load_scenario(scenario_path))
     except (OSError, ValueError) as exc:
         raise ApiError(400, "INVALID_SCENARIO", f"场景文件加载失败：{exc}")
-    scenario_id = scenario.get("scenario_id", SCENARIO_ID)
+    scenario_id = scenario.get("scenario_id")
+    if not scenario_id:
+        raise ApiError(400, "INVALID_SCENARIO", "场景文件缺少 scenario_id。")
     if req.scenario_id != scenario_id:
         raise ApiError(
             400, "INVALID_SCENARIO",
@@ -2050,17 +2057,12 @@ def create_session(req: "CreateSessionRequest") -> dict:
     if agent != "us" or agent not in AGENTS or not isinstance(AGENTS.get(agent), dict):
         raise ApiError(400, "INVALID_AGENT", f"临时场景仅支持对手国家代码 'us'，收到 {agent!r}。")
     cfg = AGENTS[agent]
-    if scenario_id == SCENARIO_ID:
-        # 默认 AI 治理场景：沿用打磨过的写死 prompt 与 agents.json 初始指数。
-        indexes = {k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS}
-        prompt = SYSTEM_PROMPTS[agent]
-    else:
-        # 自定义场景（B 的芯片 / DST 等）：prompt 与初始指数都从场景派生。
-        # 否则对手会用 AI 治理题材的口吻发言，初始指数也与场景声明不符（BACKLOG #3）。
-        indexes = initial_indices(scenario).get(agent) or {
-            k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS
-        }
-        prompt = build_scenario_prompt(PROMPT_MD, scenario, agent)
+    # prompt 与初始指数一律从场景派生：默认场景与自定义场景走同一条路径，
+    # 不再有「默认场景用手写文案」的特例（BACKLOG #3 的收尾）。
+    indexes = initial_indices(scenario).get(agent) or {
+        k: int(cfg.get(f"initial_{k}", 50)) for k in neg.INDEX_KEYS
+    }
+    prompt = build_scenario_prompt(PROMPT_MD, scenario, agent)
     with SESSIONS_LOCK:
         session_id = str(uuid.uuid4())
         while session_id in SESSIONS:
@@ -2207,43 +2209,29 @@ def build_auto_action(rec: SessionRecord, engine: RulesEngine, action_id: str) -
     offer_patch = {}
     card_payload = None
     if accepting:
-        text = "我方接受当前协议，确认达成完全一致。"
+        text = offline_opponent.ACCEPT_SPEECH
         action_type = "accept"
         card_id = None
     elif countering:
         # 先解决挂起版本，对方下一手才能合法产生新版本。
-        text = neg.CHINA_LINES[(engine.state.round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
+        text = offline_opponent.auto_speech(engine.scenario, engine.state.round)
         action_type = "counter_offer"
         card_id = None
         offer_patch = copy.deepcopy(engine.state.offers[-1].clauses)
     else:
-        text = neg.CHINA_LINES[(engine.state.round - 1) % len(neg.CHINA_LINES)].replace("\n", " ")
-        registry = negotiation_rules.load_registry()
-        card_specs = {card["id"]: card for card in registry.get("cards", [])}
-        availability = {
-            card["id"]: card["available"]
-            for card in negotiation_rules.available_cards(rec.my_actor, engine.state, registry)
-        }
-        # 优先保留原来的公开承诺话术；冷却时改用其他可用过渡卡。
-        preference = (
-            "public_commitment", "probe_priority", "demand_basis",
-            "verify_capacity", "adjourn", "mediation",
+        text = offline_opponent.auto_speech(engine.scenario, engine.state.round)
+        # 过渡卡的选择与载荷构造和离线对手共用一份实现，避免两边挑卡口径漂移。
+        turn = offline_opponent.transition_action(
+            engine.scenario, engine.state, rec.my_actor, text, rec.opponent_actor
         )
-        card_id = next((item for item in preference if availability.get(item)), None)
-        if card_id is None:
+        if turn is None:
             raise ApiError(
                 400, "INVALID_ACTION", "当前没有可用的过渡卡，本轮未推进。",
                 extra={"engine_error": "CARD_EXHAUSTED"},
             )
-        spec = card_specs[card_id]
-        action_type = spec["action_types"][0]
-        payload_kind = (spec.get("payload") or {}).get("kind")
-        if payload_kind == "probe":
-            card_payload = {"target": rec.opponent_actor}
-        elif payload_kind == "procedure":
-            card_payload = {"option": f"{spec['name']}：{text}"}
-        else:
-            card_payload = {"text": text}
+        action_type = turn["action_type"]
+        card_id = turn["card_id"]
+        card_payload = turn["card_payload"]
     flat = {
         "action_id": action_id,
         "actor": rec.my_actor,
@@ -2273,9 +2261,20 @@ def build_auto_action(rec: SessionRecord, engine: RulesEngine, action_id: str) -
     return flat, warns
 
 
-def generate_opponent_turn(rec: SessionRecord, candidate_messages: list, runtime: RuntimeMetadata) -> dict:
+def generate_opponent_turn(
+    rec: SessionRecord,
+    candidate_messages: list,
+    runtime: RuntimeMetadata,
+    engine: RulesEngine | None = None,
+) -> dict:
     if rec.mode == "offline":
-        return neg.OFFLINE_RESPONSES[runtime.offline_cursor % len(neg.OFFLINE_RESPONSES)]
+        # 离线对手按「场景 + 第几手 + 当前状态」推导行动，不再回放写死的 AI 治理
+        # 台词。换场景（芯片 / DST / 之后新增）不需要改这里，也不需要联网。
+        # 传 state 是为了遵守响应闭包：窗口不属于对手时只能走过渡卡。
+        state = engine.state if engine is not None else rec.engine.state
+        return offline_opponent.build_offline_turn(
+            rec.engine.scenario, runtime.offline_cursor, state, rec.opponent_actor
+        )
     try:
         obj, _, _ = neg.call_with_retry(
             list(candidate_messages), rec.system_prompt, rec.model_options
@@ -2644,7 +2643,7 @@ def run_turn(
             {"role": "user", "content": user_msg}
         ]
         if candidate.public_state(MY_ACTOR)["status"] != "ended":
-            raw_opp = generate_opponent_turn(rec, candidate_messages, runtime)
+            raw_opp = generate_opponent_turn(rec, candidate_messages, runtime, candidate)
             opp_flat, opp_warns, opp_checked = normalize_opponent_turn(raw_opp, rec, opp_id)
             try:
                 submit_engine_action(candidate, opp_flat)
@@ -2657,7 +2656,7 @@ def run_turn(
                         "content": opponent_repair_hint(first_error, clause_board),
                     }
                 ]
-                raw_opp = generate_opponent_turn(rec, repair_messages, runtime)
+                raw_opp = generate_opponent_turn(rec, repair_messages, runtime, candidate)
                 opp_flat, opp_warns, opp_checked = normalize_opponent_turn(
                     raw_opp, rec, opp_id
                 )

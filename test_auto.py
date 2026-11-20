@@ -81,7 +81,7 @@ def stored_document(sid):
 
 
 def opponent_with_patch(patch):
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         return {
             "action": {
                 "action_type": "offer",
@@ -99,7 +99,7 @@ def script_opponent(monkeypatch, patches):
     """脚本化对手按顺序给出报价，不是真模型推演或真实在线模型验收。"""
     calls = []
 
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         index = min(len(calls), len(patches) - 1)
         calls.append(index)
         return opponent_with_patch(patches[index])(rec, messages, runtime)
@@ -306,7 +306,7 @@ def test_auto_step_serializes_and_exposes_running(monkeypatch):
     started = threading.Event()
     release = threading.Event()
 
-    def blocking(rec, messages, runtime):
+    def blocking(rec, messages, runtime, *extra):
         started.set()
         assert release.wait(10)
         return opponent_with_patch(NUMERIC_PATCH)(rec, messages, runtime)
@@ -558,7 +558,7 @@ def test_auto_busy_rejects_action_and_allows_other_session(monkeypatch):
     started = threading.Event()
     release = threading.Event()
 
-    def controlled(rec, messages, runtime):
+    def controlled(rec, messages, runtime, *extra):
         if rec.session_id == sid:
             started.set()
             assert release.wait(10)

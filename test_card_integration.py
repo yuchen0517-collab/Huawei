@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 import api
 import negotiation_rules as rules
 import scenario_overrides as overrides
+from _scenario_fixtures import legacy_body
 from engine.core import RulesEngine
 from load_scenario_bridge import load_scenario
 
@@ -119,7 +120,7 @@ def submit_rejected(engine: RulesEngine, action: dict, expected_code: str) -> st
 
 def new_session(scenario_path: Path | None = None) -> str:
     if scenario_path is None:
-        body = {"scenario_id": "ai_governance", "agent": "us"}
+        body = legacy_body()
     else:
         scenario_id = load_scenario(scenario_path)["scenario_id"]
         body = {

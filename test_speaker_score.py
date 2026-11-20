@@ -16,6 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api
+from _scenario_fixtures import legacy_body
 
 client = TestClient(api.app, raise_server_exceptions=False)
 
@@ -86,7 +87,7 @@ def clean_env(monkeypatch, tmp_path):
 
 
 def new_ai_session():
-    resp = client.post("/session", json={"scenario_id": "ai_governance", "agent": "us"})
+    resp = client.post("/session", json=legacy_body())
     assert resp.status_code == 200, resp.text
     return resp.json()["session_id"]
 
@@ -113,7 +114,7 @@ def get_state(sid):
 def script_opponent(monkeypatch, patches):
     calls = []
 
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         index = min(len(calls), len(patches) - 1)
         calls.append(index)
         return {
@@ -198,7 +199,10 @@ def test_terminal_action_lock_precedes_card_validation():
     """终局后必须先返回 ROUND_LOCKED，不能被卡牌层的 400 抢先。"""
     sid = new_ai_session()
     assert client.post(f"/session/{sid}/action", json=AI_FULL_OFFER).status_code == 200
-    for _ in range(3):
+    # 不写死步数：离线对手的收敛轮数会随场景条款数变化，推进到终局即可。
+    for _ in range(8):
+        if get_state(sid)["status"] == "ended":
+            break
         assert client.post(f"/session/{sid}/auto_step").status_code == 200
     before = get_state(sid)
     assert before["status"] == "ended"

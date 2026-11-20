@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>外交谈判模拟器 · 当前实际流程</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #fbf7ef; }
+  body {
+    width: 1240px; background: #fbf7ef; color: #22292b;
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+    padding: 44px 46px 30px; -webkit-font-smoothing: antialiased;
+  }
+  .eyebrow { font-size: 11px; letter-spacing: .28em; color: #b08a4a; font-weight: 700; }
+  h1 { font-size: 34px; margin: 9px 0 6px; color: #1b2224; font-weight: 800; letter-spacing: .01em; }
+  h1 em { font-style: normal; color: #c08a2e; }
+  .lede {
+    font-size: 12.5px; line-height: 1.72; color: #6b5b45;
+    background: #fdf3e3; border-left: 3px solid #d9a441;
+    padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 14px 0 8px;
+  }
+  .lede b { color: #8c5a12; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 20px; font-size: 11px; color: #7a6a4f; }
+  .legend span {
+    border: 1px solid #e6dcc8; background: #fffdf8; border-radius: 20px;
+    padding: 4px 11px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #1f3b3a; }
+  .dot.gold { background: #d9a441; }
+  .dot.hollow { background: #fff; border: 1.5px dashed #b3a381; }
+
+  .stage {
+    position: relative; border: 1px solid #e7ddc9; border-radius: 16px;
+    background: #fffdf8; padding: 15px 20px 16px 72px; margin-bottom: 18px;
+  }
+  .stage::before {
+    content: attr(data-no); position: absolute; left: 16px; top: 16px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #1f3b3a; color: #f6e7c4; font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage.gold::before { background: #c08a2e; }
+  .stage h2 { font-size: 14.5px; color: #1b2224; margin-bottom: 3px; }
+  .stage .hint { font-size: 11px; color: #9a8b71; margin-bottom: 12px; }
+
+  .flow { display: flex; flex-direction: column; align-items: center; }
+  .box {
+    width: 100%; border: 1.5px solid #33403f; border-radius: 11px;
+    background: #fff; padding: 9px 14px; position: relative;
+  }
+  .box .t { font-size: 13.5px; font-weight: 700; color: #1b2224; }
+  .box .s { font-size: 11.5px; line-height: 1.6; color: #6d7580; margin-top: 3px; }
+  .box .tag {
+    position: absolute; right: 9px; top: -9px; font-size: 9.5px; letter-spacing: .06em;
+    background: #c08a2e; color: #fff; border-radius: 4px; padding: 2px 7px; font-weight: 700;
+  }
+  .box.gold { border-color: #c9a04a; background: #fffaf0; }
+  .box.dark { background: #1f3b3a; border-color: #1f3b3a; }
+  .box.dark .t { color: #f7e9c8; }
+  .box.dark .s { color: #b9cdc9; }
+  .box.dashed { border: 1.5px dashed #b3a381; background: #faf7f0; }
+  .box.dashed .t { color: #6f6047; }
+  .box.dashed .s { color: #8d7d5f; }
+
+  .arrow { width: 1.5px; height: 15px; background: #4a5754; position: relative; }
+  .arrow::after {
+    content: ""; position: absolute; bottom: -1px; left: -3.6px;
+    border: 4.5px solid transparent; border-top-color: #4a5754; border-bottom: 0;
+  }
+  .lbl { font-size: 10.5px; color: #8b949e; margin: 2px 0; letter-spacing: .04em; }
+
+  .decision {
+    width: 330px; height: 82px;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    background: #fbe7cf; display: flex; align-items: center; justify-content: center;
+  }
+  .decision span { font-size: 12px; font-weight: 700; color: #8a4a14; text-align: center; line-height: 1.35; }
+
+  .branch { display: flex; gap: 12px; width: 100%; }
+  .branch > div { flex: 1; }
+  .yesno { font-size: 10.5px; color: #b06a2a; font-weight: 700; margin-bottom: 4px; }
+
+  .cols { display: flex; gap: 12px; width: 100%; align-items: stretch; }
+  .cols > div { flex: 1; display: flex; flex-direction: column; }
+  .row { display: flex; gap: 16px; align-items: stretch; }
+  .row > .stage { flex: 1; margin-bottom: 18px; }
+
+  .err {
+    width: 100%; border: 1px solid #edd9c4; background: #fdf6ee; border-radius: 10px;
+    padding: 8px 13px; font-size: 11px; line-height: 1.7; color: #7c6047;
+  }
+  .err b { color: #a8562d; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+
+  .foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e7ddc9; font-size: 10.5px; line-height: 1.75; color: #97886d; }
+  .foot b { color: #6f6047; }
+  .kbd {
+    font-family: Consolas, "Courier New", monospace; font-size: 10.5px;
+    background: #f1ece0; border: 1px solid #e3d9c6; border-radius: 4px;
+    padding: 1px 5px; color: #5c503a;
+  }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">DIPLOMACY NEGOTIATION SIMULATOR · ACTUAL FLOW · v1.0-demo</div>
+<h1>外交谈判模拟器 · <em>当前实际流程</em></h1>
+
+<div class="lede">
+  以 <b>api.py（127.0.0.1:8765）</b> 与 <b>C 的规则引擎</b>为准，画的是代码里<b>现在真的能跑通</b>的流程。
+  你手上那张"学习与使用流程图"是<b>目标设计稿</b>——学习层、1v多、观战、复盘三出口都还只是设计，本图用 <b>虚线框</b> 标出。
+</div>
+
+<div class="legend">
+  <span><i class="dot"></i>起点 / 终点</span>
+  <span><i class="dot gold"></i>核心步骤</span>
+  <span><i class="dot hollow"></i>已实现 · 无界面</span>
+  <span>实线 = 现在能跑</span>
+  <span>虚线 = 还没露出来（无界面或未实现）</span>
+</div>
+
+<!-- 00 -->
+<div class="stage" data-no="00">
+  <h2>启动</h2>
+  <div class="hint">一条命令起服务；有没有 Key 决定对手是谁</div>
+  <div class="flow">
+    <div class="box dark">
+      <div class="t">开始使用 · 启动后端</div>
+      <div class="s"><span class="kbd">python api.py</span> → 监听 127.0.0.1:8765；加 <span class="kbd">NEG_OFFLINE=1</span> 可强制离线</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="decision"><span>配置了<br>DEEPSEEK_API_KEY？</span></div>
+    <div class="arrow"></div>
+    <div class="branch">
+      <div>
+        <div class="yesno">是 → 在线模式</div>
+        <div class="box gold">
+          <div class="t">对手 = 真模型</div>
+          <div class="s">每轮真实调用 DeepSeek，生成结构化行动 + 公开发言</div>
+        </div>
+      </div>
+      <div>
+        <div class="yesno">否 → 离线模式</div>
+        <div class="box">
+          <div class="t">对手 = 内置 3 段样例</div>
+          <div class="s">只认 ai_governance；换芯片 / DST 会因条款名不匹配报 UNKNOWN_CLAUSE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 01 -->
+<div class="stage" data-no="01">
+  <h2>开局 · 建会话（一局只做一次）</h2>
+  <div class="hint">一条 /session 就把场景、Prompt、指数、行动点、卡牌全部定下来</div>
+  <div class="flow">
+    <div class="box gold">
+      <div class="tag">核心</div>
+      <div class="t">POST /session</div>
+      <div class="s">{ scenario_id, agent: "us", scenario_path? } → 返回 18 字段公开状态</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="cols">
+      <div>
+        <div class="box">
+          <div class="t">选场景（现存 4 份）</div>
+          <div class="s">
+            · ai_governance（默认，手写 Prompt）<br>
+            · main_chip_controls（芯片主场景）<br>
+            · no_zopa_variant（无合作区变体）<br>
+            · backup_dst_bilateral（数字税双边）
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="box">
+          <div class="t">服务端同时生成</div>
+          <div class="s">
+            · 对手 System Prompt（含条款取值规则）<br>
+            · 场景事实卡 8 条 + 教学假设 3–4 条<br>
+            · 初始三指数（取自场景 index_rules）<br>
+            · 每回合行动点 4/5 · 可用策略卡 · 首条教练建议
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow"></div>
+    <div class="box">
+      <div class="t">你拿到的东西</div>
+      <div class="s">条款板（名称 / 类型 / 范围与选项 / 当前值）· 双方报价 · 未决议题 · 行动历史 · 版本号 version · 剩余手数</div>
+    </div>
+  </div>
+</div>
+
+<!-- 02 -->
+<div class="stage gold" data-no="02">
+  <h2>主循环 · 每回合怎么推进</h2>
+  <div class="hint">三种驱动方式共用同一条服务端流水线；一次请求 = 我方一手 + 对手一手</div>
+  <div class="flow">
+    <div class="cols">
+      <div>
+        <div class="box gold">
+          <div class="t">① 人工一手</div>
+          <div class="s">看条款板 → 选策略卡 → 改条款取值 → 写公开发言 → <span class="kbd">POST /action</span>（带 client_action_id + base_version）</div>
+        </div>
+      </div>
+      <div>
+        <div class="box gold">
+          <div class="t">② 自动推演</div>
+          <div class="s"><span class="kbd">POST /auto_step</span>：我方按规则出手 + 对手模型回应；一步一落盘，<span class="kbd">/auto_status</span> 看 paused / running / done / error</div>
+        </div>
+      </div>
+      <div>
+        <div class="box">
+          <div class="t">③ 中途接管</div>
+          <div class="s"><span class="kbd">POST /takeover</span>：把 running 置回 paused，从自动切回人工</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow"></div>
+    <div class="lbl">三条路汇到同一段服务端逻辑 ↓</div>
+    <div class="box">
+      <div class="t">A · 我方一手入账</div>
+      <div class="s">契约校验（schema → 卡牌归属 / 冷却 / 载荷 → 行动点 → 条款名与取值合法）→ 引擎结算（红线只查行动方，不替对手守牌）→ 写公开事件、版本与报价板更新</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="box">
+      <div class="t">B · 对手一手回击</div>
+      <div class="s">输入 = System Prompt + 全部历史 + 本轮条款板 → 输出一个行动 + 一段发言 → 引擎校验（被拒则带条款板做纠正提示、重试 1 次；仍失败才报错并保留 engine_error）</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="box">
+      <div class="t">C · 落盘 → 返回新状态</div>
+      <div class="s">先写会话记录再返回；超时 / 失败时本轮零推进，可用同一 action_id 幂等重试</div>
+    </div>
+    <div class="arrow"></div>
+    <div class="err">
+      <b>出错分支（对外只有 6 个码）：</b>
+      400 INVALID_ACTION · 409 VERSION_CONFLICT（对方刚改版）/ SESSION_BUSY（上一轮还没完）/ ROUND_LOCKED（已终局）·
+      503 MODEL_UNAVAILABLE · 504 TIMEOUT
+    </div>
+    <div class="arrow"></div>
+    <div class="decision"><span>本回合手数用完 /<br>已可接受 / 已终局？</span></div>
+    <div class="arrow"></div>
+    <div class="branch">
+      <div>
+        <div class="yesno">否 → 继续同一回合</div>
+        <div class="box"><div class="t">再出一手</div><div class="s">action_points_left 递减，回到"选驱动方式"</div></div>
+      </div>
+      <div>
+        <div class="yesno">是 → 进入下一回合</div>
+        <div class="box"><div class="t">next_round</div><div class="s">行动点重置；若终局条件已成立直接跳到 03</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 / 04 -->
+<div class="row">
+  <div class="stage gold" data-no="03">
+    <h2>终局 · 引擎裁定</h2>
+    <div class="hint">不接受模型自判，五选一</div>
+    <div class="flow">
+      <div class="box dark">
+        <div class="t">终局五态</div>
+        <div class="s">FULL_AGREEMENT 完整协议<br>PARTIAL_AGREEMENT 部分协议<br>WITHDRAWAL 主动退出<br>DEADLOCK 僵局<br>ROUNDS_EXHAUSTED 回合耗尽</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="box">
+        <div class="t">终局后再提交</div>
+        <div class="s">409 ROUND_LOCKED（engine_error = PHASE_CLOSED），会话冻结、不再推进</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" data-no="04">
+    <h2>复盘 · 只有终局后才开</h2>
+    <div class="hint">同步二态接口，没有"生成中"</div>
+    <div class="flow">
+      <div class="box gold">
+        <div class="t">POST /session/{id}/debrief</div>
+        <div class="s">→ { debrief, evaluation }：协议质量 · 是否优于 BATNA · 学习评分 · 关键决策节点（他方私牌一律置 null）</div>
+      </div>
+      <div class="arrow"></div>
+      <div class="box">
+        <div class="t">未终局就调</div>
+        <div class="s">409 DEBRIEF_NOT_AVAILABLE（fail_reason：谈判尚未结束，复盘暂不可用）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 -->
+<div class="stage" data-no="05">
+  <h2>分支与对比 · 接口已通，但还没有界面</h2>
+  <div class="hint">设计稿里"再战一局 / 对比实验"的底座就是这两个端点</div>
+  <div class="flow">
+    <div class="cols">
+      <div>
+        <div class="box dashed">
+          <div class="t">POST /session/{id}/fork</div>
+          <div class="s">按 at_version 或 at_action_id 从某一手复制出新会话，原会话零改动</div>
+        </div>
+      </div>
+      <div>
+        <div class="box dashed">
+          <div class="t">GET /session/{id}/compare?other=&lt;sid&gt;</div>
+          <div class="s">同源两支会话：分叉点在哪一手、哪些条款取值不同</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow"></div>
+    <div class="box dashed">
+      <div class="t">缺的那一层</div>
+      <div class="s">没有页面把它们串成"复盘报告 → 改一处 → 再跑一局 → 对比结果"的闭环</div>
+    </div>
+  </div>
+</div>
+
+<!-- 虚线区 -->
+<div class="stage" data-no="✕">
+  <h2>设计稿里有、现在还没有的部分</h2>
+  <div class="hint">也就是你那张图里 学习层 / 公共主干 / 1v多 / 观战 / 复盘三出口 的位置</div>
+  <div class="grid2">
+    <div class="box dashed">
+      <div class="t">学习层 · 三阶段闯关</div>
+      <div class="s">开局与立场 → 方案与交换 → 破局与成交（知识点卡片 + 情景小练 + 过关联锁）</div>
+    </div>
+    <div class="box dashed">
+      <div class="t">场景生成 · 入口 A / B</div>
+      <div class="s">先定议题（AI 反推主体）或先定主体 → Agent 生成场景 → 场景确认页（可改）。现在必须先有写好的场景 JSON</div>
+    </div>
+    <div class="box dashed">
+      <div class="t">1v多 · 观战模式</div>
+      <div class="s">引擎支持多方，但 HTTP 层只放行 agent="us"（1v1）；"Agent 自主推演、用户纯观察"没有入口</div>
+    </div>
+    <div class="box dashed">
+      <div class="t">复盘三出口 · 揭秘底牌 / 再战 / 战报卡</div>
+      <div class="s">底牌回看、换体再战、可分享战报都还没有页面</div>
+    </div>
+    <div class="box dashed" style="grid-column: 1 / -1;">
+      <div class="t">前端界面本身</div>
+      <div class="s">Diplomat-components 目前是 mock（adapter.js 里 mode:'mock'）：请求体用 action_id / round / strategy_ids，与后端 client_action_id / base_version / offer_patch 不一致，不能直连</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <b>依据：</b>api.py 的 10 个路由（/session · /state · /action · /auto_step · /auto_status · /takeover · /debrief · /fork · /compare · /）·
+  C 引擎 engine/core.py · terminal.py · negotiation_rules.py · 前端 adapter.js。<br>
+  <b>两个容易踩的点：</b>① 离线模式的对手样例只覆盖默认场景，芯片 / DST 必须在线跑；
+  ② 默认 ai_governance 场景没有事实卡（knowledge/ 目录缺失），只有芯片 / DST 场景会把 8 条事实卡注入 Prompt。
+</div>
+
+</body>
+</html>

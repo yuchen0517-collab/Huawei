@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 import api
 import session_store
+from _scenario_fixtures import LEGACY_ID, LEGACY_PATH
 from load_scenario import load_scenario
 
 ROOT = Path(__file__).resolve().parent
@@ -59,7 +60,11 @@ def clean_env(monkeypatch, tmp_path):
 
 
 def new_session(scenario_path: Path | None = None) -> str:
-    body = {"scenario_id": "ai_governance", "agent": "us"}
+    body = {
+        "scenario_id": LEGACY_ID,
+        "agent": "us",
+        "scenario_path": LEGACY_PATH,
+    }
     if scenario_path is not None:
         body["scenario_id"] = load_scenario(scenario_path)["scenario_id"]
         body["scenario_path"] = str(scenario_path)
@@ -195,7 +200,11 @@ def test_compare_same_source_and_null_terminal():
     assert resp.json()["error"] == "INVALID_REQUEST"
 
 
-def test_compare_diff_only_lists_different_clause_values():
+def test_compare_diff_only_lists_different_clause_values(monkeypatch):
+    # 固定对手只报数值条款：否则对手的收敛报价会覆盖两支分支在同一枚举条款上的
+    # 差异，对比结果看起来「没有分歧」，而本用例要验的正是差异定位。
+    fixed = api.offline_opponent.build_offline_turn(load_scenario(LEGACY_PATH), 0)
+    monkeypatch.setattr(api, "generate_opponent_turn", lambda *args: copy.deepcopy(fixed))
     sid = new_session()
     midpoint = act(sid, OFFER_A, "compare-diff-1")
     child_id = fork(sid, {"at_version": midpoint["version"]})["session_id"]

@@ -90,13 +90,25 @@ def test_chip_session_uses_scenario_prompt_and_initial_indexes():
     assert response.status_code == 200, response.text
     record = api.SESSIONS[response.json()["session_id"]]
     assert record.initial_indexes == CHIP_US_INDEXES
-    assert record.system_prompt != api.SYSTEM_PROMPTS["us"]
     assert "芯片算力门槛" in record.system_prompt
 
 
-def test_default_scenario_keeps_handwritten_prompt_and_indexes():
-    response = client.post("/session", json={"scenario_id": "ai_governance", "agent": "us"})
+def test_default_scenario_is_chip():
+    """不传 scenario_path 时默认就是芯片场景，不再回落到手写的 AI 治理题材。"""
+    response = client.post("/session", json={"scenario_id": CHIP_ID, "agent": "us"})
     assert response.status_code == 200, response.text
     record = api.SESSIONS[response.json()["session_id"]]
-    assert record.initial_indexes == DEFAULT_INDEXES
-    assert record.system_prompt == api.SYSTEM_PROMPTS["us"]
+    assert record.initial_indexes == CHIP_US_INDEXES
+    assert "芯片算力门槛" in record.system_prompt
+    assert "可引用的事实" in record.system_prompt
+    assert "全球 AI 治理" not in record.system_prompt
+    assert "AI治理框架公约" not in record.system_prompt
+
+
+def test_removed_ai_governance_scenario_is_rejected():
+    """旧默认场景已下线：只传 ai_governance、不带场景文件时必须 400。"""
+    response = client.post(
+        "/session", json={"scenario_id": "ai_governance", "agent": "us"}
+    )
+    assert response.status_code == 400
+    assert response.json()["error"] == "INVALID_SCENARIO"

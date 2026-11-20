@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | 1 | B 场景软红线（hard:false）在 C 引擎格式中无对应位 | 转换器只处理硬红线；main_chip_controls 中 5 条软红线（中方 I2/I3、美方 I1/I2/I4）被跳过 | 三人对齐软红线语义后再补转换，不擅自改 B 的数据 |
 | 2 | index_rules（形象/信任指数规则）B 未提供 | **11-20 已解决**：三份场景各自写入 `index_rules`（13 标签 × 3 档 + 逐方 `initial` / `sensitivity` + `scale`），数值先与内置表一致以保证行为不变。B 契约（`models.py` R15 / `scenario.schema.json`）已放开 `scale` 与 `sensitivity`，适配层对 `initial` / `sensitivity` 的参与方键做大小写归一（兼容 P1/P2） | 无。B 想给某个场景不同的指数手感，直接改该场景里的数字即可，不用动代码 |
-| 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | **11-20 已修**：新增 `prompt_context.py`，按运行时场景生成对手 System Prompt（主题/议题/各方立场/目标排序/红线/BATNA/隐藏任务/事实与假设），初始指数改取场景 `index_rules`；默认 `ai_governance` 仍用手写文案与 agents.json 数值 | 无。回归见 `test_scenario_prompt.py`（含「Prompt 不泄露对方私牌」） |
+| 3 | api.py 的 System Prompt 与展示用 initial_indexes 仍来自 agents.json（AI 治理题材） | **11-20 已修**：新增 `prompt_context.py`，按运行时场景生成对手 System Prompt（主题/议题/各方立场/目标排序/红线/BATNA/隐藏任务/事实与假设），初始指数改取场景 `index_rules`。**11-20 晚收尾**：默认场景换成芯片，旧的 `ai_governance` 手写 prompt 与 `SYSTEM_PROMPTS` 分支一并删除，默认与自定义场景走同一条路径 | 无。回归见 `test_scenario_prompt.py`（含「Prompt 不泄露对方私牌」「默认场景就是芯片」「旧场景被拒」） |
 | 4 | B 场景 enumerated 的 score 公式（P1 用 (N-order+1)/N、P2 用 order/N） | **11-20 已统一并补数据**：适配层优先读 `options[].score_by_party`；三份场景的枚举选项已写入逐方分（按各自 target 位次推导，行为不变，R16 校验 0 问题）；缺省值也改为「逐方 target 位次」，不再用 order 反推 P2。`check_score_alignment.py` 已重写为 zopa↔引擎比对并由 `test_score_parity.py` 守护，当前 6/6 一致 | 无。B 若要调整偏好，直接改场景里的 `score_by_party` 即可，无需改代码 |
 | 5 | test_validate.py 仍引用 v1.1 已删除符号 apply_player_indexes；test_multiagent.py 依赖未迁移的 server.py | 两文件在全量 pytest 收集阶段即 ImportError（既有遗留，非本次引入），已在 conftest.py 的 collect_ignore 中暂时排除 | test_validate.py 待重写为 v2.0 用例矩阵；server.py 迁移进仓库后恢复 test_multiagent.py |
 | 6 | 外部交付目录（C 11.12 三指数、scenario agent v2、Diplomat_webdemo2.0）被仓库 pytest 误收集 | C 的 79 条测试只能在其自身目录下运行（仓库 rootdir 下收集会 ImportError），已在 conftest.py 的 collect_ignore 中排除 | 无，属既定约束；C 的测试一律 cd 到其目录后跑 `python -m pytest tests/ -q` |
@@ -23,3 +23,10 @@
 | --- | --- | --- | --- |
 | 9 | B 的 `zopa.py` 与引擎 `engine/indices.py` 是两套打分：enumerated 一个按 order、一个按 target；numeric 一个按比例归一、一个按整段区间 closeness；部分协议一个跳过未谈成议题、一个按现状计入 | **11-20 已统一**：numeric 改「红线锚定」（红线 0、目标 1、超目标封顶）；enumerated 改「逐方 target 位次」；新增 `terminal.package_utility`，协议评价只计协议包内条款；适配层透传 `goals[].direction`（避免「越高越好 + 上限红线」被判反）；`suggest_deal` 由 order[0] 改为可行域 max-min 均衡点 | 无。`test_score_parity.py` 已守护口径，改动这两处必须同步跑 |
 | 10 | 行动校验把「双方红线」都当禁令：`validate_action` 调 `redline_violations(touched, scenario)` 时未限定参与方 | **11-20 已修**：`redline_violations` 增加 `parties` 参数，行动校验只传 `(actor,)`，终局评价仍查全部。原因：替对方守红线既不合谈判语义（对方可提出我方不能接受的方案，由我方拒绝），也会泄露对方私牌（按被拒方案反推） | 推回 `feat/rules-c` 时说明：默认行为仍是查全部，只有行动校验用 actor 过滤，别改回全局 |
+
+## 2026-11-20 演示主线切芯片 + 离线可演（已完成）
+
+| 编号 | 事项 | 现状 | 待办 |
+| --- | --- | --- | --- |
+| 11 | 离线对手是写死的三手 AI 治理报价，换场景即 `UNKNOWN_CLAUSE`；默认场景又锁在 `ai_governance` | **11-20 已修**：新增 `offline_opponent.py`，从场景的 range/step/options/redlines 推导双方都能接受的取值，按「先数值、再逐条枚举」分轮报价，并遵守响应闭包（窗口不在自己手上时改走过渡卡）。默认场景切到 `scn-chip-controls-0001`，旧的 `ai_governance` prompt/分支删除；`ai_scenario` 契约回归改用冻结夹具 `fixtures/legacy_ai_governance.json` | 无。三分钟演示见 README §4.1（离线 5 步到 `FULL_AGREEMENT`）。若之后要彻底删掉旧题材代码，需把 8 个测试文件里的条款名整体迁到芯片场景 |
+| 12 | 前端 `Diplomat-components` 仍是 mock 原型：硬编码 AI 治理议题/5 条条款、旧提交契约、不建会话 | 后端已能只传 `scenario_id` 拿芯片场景；`/state` 仍未返回场景标题/背景/轮数，枚举条款只给 `O1..O4` 不给 label | 等 UI 定稿后做：`/state` 补场景元数据 + `clauses[].options` 带 label；前端改建会话流程并按 `client_action_id/base_version/action_type/offer_patch` 重写提交 |

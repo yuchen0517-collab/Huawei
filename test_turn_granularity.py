@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import api
 import neg_cli as neg
+from _scenario_fixtures import legacy_body
 from load_scenario import load_scenario
 
 client = TestClient(api.app, raise_server_exceptions=False)
@@ -79,7 +80,7 @@ def clean_env(monkeypatch, tmp_path):
 
 def new_ai_session() -> str:
     resp = client.post(
-        "/session", json={"scenario_id": AI_SCENARIO_ID, "agent": "us"}
+        "/session", json={**legacy_body(), "scenario_id": AI_SCENARIO_ID}
     )
     assert resp.status_code == 200, resp.text
     return resp.json()["session_id"]
@@ -123,7 +124,7 @@ def counter_against_latest(sid: str) -> dict:
 
 
 def opponent_offer(patch: dict):
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         return {
             "action": {
                 "action_type": "offer",
@@ -138,7 +139,7 @@ def opponent_offer(patch: dict):
 
 
 def opponent_statement(card_id: str, payload: dict):
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         return {
             "action": {
                 "action_type": "statement",
@@ -155,7 +156,7 @@ def opponent_statement(card_id: str, payload: dict):
 
 
 def opponent_probe(target: str):
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         return {
             "action": {
                 "action_type": "probe",
@@ -175,7 +176,7 @@ def script_opponent(monkeypatch, turns):
     """按顺序回放对手响应；turns 用完后就重复最后一条。"""
     calls = []
 
-    def respond(rec, messages, runtime):
+    def respond(rec, messages, runtime, *extra):
         index = min(len(calls), len(turns) - 1)
         calls.append(index)
         return turns[index](rec, messages, runtime)

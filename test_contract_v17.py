@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 import api
 import neg_cli as neg
+from _scenario_fixtures import LEGACY_ID, LEGACY_PATH
 
 client = TestClient(api.app, raise_server_exceptions=False)
 
@@ -61,10 +62,12 @@ def clean_env(monkeypatch, tmp_path):
     api.SESSIONS.clear()
 
 
-def new_session(path: str | None = None, scenario_id: str = "ai_governance") -> str:
-    body: dict = {"scenario_id": scenario_id, "agent": "us"}
-    if path is not None:
-        body["scenario_path"] = path
+def new_session(path: str | None = None, scenario_id: str = LEGACY_ID) -> str:
+    body: dict = {
+        "scenario_id": scenario_id,
+        "agent": "us",
+        "scenario_path": path or LEGACY_PATH,
+    }
     resp = client.post("/session", json=body)
     assert resp.status_code == 200, resp.text
     return resp.json()["session_id"]
@@ -323,10 +326,10 @@ def test_session_busy_second_click_has_retry_after(monkeypatch):
     release = threading.Event()
     original = api.generate_opponent_turn
 
-    def blocking(rec, messages, runtime):
+    def blocking(rec, messages, runtime, *extra):
         started.set()
         release.wait(10)
-        return original(rec, messages, runtime)
+        return original(rec, messages, runtime, *extra)
 
     monkeypatch.setattr(api, "generate_opponent_turn", blocking)
     with ThreadPoolExecutor(max_workers=2) as pool:

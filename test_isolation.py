@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 import api
 import neg_cli as neg
+from _scenario_fixtures import legacy_body
 from load_scenario import make_scenario
 from multi_agent import CountryAgent
 
@@ -184,7 +185,7 @@ def test_api_responses_use_public_projection_without_private_markers(monkeypatch
 
     monkeypatch.setattr(api.RulesEngine, "public_state", spy_public_state)
     client = TestClient(api.app, raise_server_exceptions=False)
-    created = client.post("/session", json={"scenario_id": "ai_governance", "agent": "us"})
+    created = client.post("/session", json=legacy_body())
     assert created.status_code == 200, created.text
     session_id = created.json()["session_id"]
     _assert_without(created.json(), CN_MARKERS + US_MARKERS, "POST /session")
