@@ -69,17 +69,29 @@
         {
           "option_id": "O1",
           "label": "全球营收 1 亿元且境内营收 200 万元",
-          "order": 1
+          "order": 1,
+          "score_by_party": {
+            "P1": 1.0,
+            "P2": 0.0
+          }
         },
         {
           "option_id": "O2",
           "label": "全球营收 5 亿元且境内营收 500 万元",
-          "order": 2
+          "order": 2,
+          "score_by_party": {
+            "P1": 0.5,
+            "P2": 0.5
+          }
         },
         {
           "option_id": "O3",
           "label": "全球营收 20 亿元且境内营收 2000 万元",
-          "order": 3
+          "order": 3,
+          "score_by_party": {
+            "P1": 0.0,
+            "P2": 1.0
+          }
         }
       ],
       "description": "达到门槛才需登记纳税。门槛越低，覆盖面越广。order 按对中方有利程度排序。",
@@ -105,22 +117,38 @@
         {
           "option_id": "O1",
           "label": "立即取消全部加征关税",
-          "order": 1
+          "order": 1,
+          "score_by_party": {
+            "P1": 1.0,
+            "P2": 0.0
+          }
         },
         {
           "option_id": "O2",
           "label": "三年内分步取消",
-          "order": 2
+          "order": 2,
+          "score_by_party": {
+            "P1": 0.6667,
+            "P2": 0.3333
+          }
         },
         {
           "option_id": "O3",
           "label": "承诺不再新增但与税收进度挂钩",
-          "order": 3
+          "order": 3,
+          "score_by_party": {
+            "P1": 0.3333,
+            "P2": 0.6667
+          }
         },
         {
           "option_id": "O4",
           "label": "维持现行加征安排",
-          "order": 4
+          "order": 4,
+          "score_by_party": {
+            "P1": 0.0,
+            "P2": 1.0
+          }
         }
       ],
       "description": "order 按对中方有利程度排序，1 最有利。",

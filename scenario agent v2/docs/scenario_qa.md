@@ -1,6 +1,6 @@
 # 场景 QA 表
 
-> 生成时间：2026-11-20 21:07:42　｜　生成脚本：`scripts/build_qa.py`
+> 生成时间：2026-11-20 21:39:33　｜　生成脚本：`scripts/build_qa.py`
 > 判定口径：`validate_scenario`（R0–R11）零问题 + `zopa.py` 可行性计算
 
 ## 一、场景总表

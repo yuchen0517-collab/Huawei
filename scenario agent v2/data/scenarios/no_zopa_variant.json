@@ -74,22 +74,38 @@
         {
           "option_id": "O1",
           "label": "仅需终端用户声明",
-          "order": 1
+          "order": 1,
+          "score_by_party": {
+            "P1": 0.6667,
+            "P2": 0.3333
+          }
         },
         {
           "option_id": "O2",
           "label": "仅对实体清单对象要求许可",
-          "order": 2
+          "order": 2,
+          "score_by_party": {
+            "P1": 1.0,
+            "P2": 0.6667
+          }
         },
         {
           "option_id": "O3",
           "label": "第三国再出口一律事前许可",
-          "order": 3
+          "order": 3,
+          "score_by_party": {
+            "P1": 0.6667,
+            "P2": 1.0
+          }
         },
         {
           "option_id": "O4",
           "label": "禁止经第三国转口",
-          "order": 4
+          "order": 4,
+          "score_by_party": {
+            "P1": 0.3333,
+            "P2": 0.6667
+          }
         }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
@@ -103,22 +119,38 @@
         {
           "option_id": "O1",
           "label": "维持现行出口许可制度",
-          "order": 1
+          "order": 1,
+          "score_by_party": {
+            "P1": 1.0,
+            "P2": 0.3333
+          }
         },
         {
           "option_id": "O2",
           "label": "对民用终端设 30 天快速通道",
-          "order": 2
+          "order": 2,
+          "score_by_party": {
+            "P1": 0.6667,
+            "P2": 0.6667
+          }
         },
         {
           "option_id": "O3",
           "label": "设年度配额并接受第三方核查",
-          "order": 3
+          "order": 3,
+          "score_by_party": {
+            "P1": 0.3333,
+            "P2": 1.0
+          }
         },
         {
           "option_id": "O4",
           "label": "取消出口许可",
-          "order": 4
+          "order": 4,
+          "score_by_party": {
+            "P1": 0.0,
+            "P2": 0.6667
+          }
         }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好方向相反。"
@@ -132,22 +164,38 @@
         {
           "option_id": "O1",
           "label": "违约方限期整改并补偿损失",
-          "order": 1
+          "order": 1,
+          "score_by_party": {
+            "P1": 1.0,
+            "P2": 0.0
+          }
         },
         {
           "option_id": "O2",
           "label": "双方协商延长履约期",
-          "order": 2
+          "order": 2,
+          "score_by_party": {
+            "P1": 0.6667,
+            "P2": 0.3333
+          }
         },
         {
           "option_id": "O3",
           "label": "提交第三方仲裁",
-          "order": 3
+          "order": 3,
+          "score_by_party": {
+            "P1": 0.3333,
+            "P2": 0.6667
+          }
         },
         {
           "option_id": "O4",
           "label": "单方暂停履行并退出协议",
-          "order": 4
+          "order": 4,
+          "score_by_party": {
+            "P1": 0.0,
+            "P2": 1.0
+          }
         }
       ],
       "description": "order 按对 P1（中方）的有利程度排序，1 最有利。美方偏好相反，倾向程序化仲裁与退出权。"

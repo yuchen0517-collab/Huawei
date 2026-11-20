@@ -180,6 +180,17 @@ B 的契约（`scenario.schema.json` / `models.py` R17）用 `issue_id` 声明 `
 一致性由 `check_score_alignment.py`（逐项比对 zopa 与引擎）和 `test_score_parity.py`（回归测试）守护；
 改动上述任一公式都必须同时跑这两个文件。
 
+## 6.2 对手 System Prompt 与初始指数
+
+- **默认场景 `ai_governance`**：沿用 `谈判对手Agent_prompt.md` 的手写文案与 `agents.json` 的初始指数（50 / 70 / 65），
+  不改已经打磨过的演示话术。
+- **其他场景（B 的芯片 / DST 等）**：`prompt_context.build_scenario_prompt()` 从运行时场景生成 Prompt——
+  主题、会议场合、议题、本方公开立场、按权重排序的目标、红线（数值红线 + 枚举禁用项）、BATNA、隐藏任务卡，
+  并附上该场景的公开事实与教学假设；初始指数取 `engine.indices.initial_indices(scenario)`，
+  与场景 `index_rules.initial` 一致。
+- 生成过程只读**本方**数据（`parties[side]` 与各条款 `positions[side]` / `redlines[side]`），
+  不触碰对方私有字段；`test_scenario_prompt.py` 有专门的「不泄露对方私牌」回归。
+
 ## 7. 隐私与 debrief
 
 内部归档包含双方私有状态和行动 ID，只能用于候选事务与内部验收，不得写入 HTTP 响应或公开日志。服务重启后内存会话不会恢复（会话记录落盘在 `runtime/sessions/`，含行动账本与教练建议缓存）。

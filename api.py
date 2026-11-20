@@ -45,6 +45,7 @@ from load_scenario_bridge import (
 )
 
 from engine.core import IllegalDebriefAccess, RulesEngine
+from engine.indices import initial_indices
 from engine.state import NegotiationState, Offer
 from engine.terminal import TERMINAL_TYPES
 from engine.validator import ERRORS as ENGINE_ERRORS
@@ -54,6 +55,7 @@ from engine.validator import is_redline_violation, is_soft_redline_violation
 from engine.validator import validate_action as validate_engine_action
 
 import negotiation_rules
+from prompt_context import build_scenario_prompt
 from scenario_overrides import apply_overrides, role_clause
 
 SCENARIO_ID = "ai_governance"
@@ -2048,8 +2050,17 @@ def create_session(req: "CreateSessionRequest") -> dict:
     if agent != "us" or agent not in AGENTS or not isinstance(AGENTS.get(agent), dict):
         raise ApiError(400, "INVALID_AGENT", f"临时场景仅支持对手国家代码 'us'，收到 {agent!r}。")
     cfg = AGENTS[agent]
-    indexes = {k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS}
-    prompt = SYSTEM_PROMPTS[agent]
+    if scenario_id == SCENARIO_ID:
+        # 默认 AI 治理场景：沿用打磨过的写死 prompt 与 agents.json 初始指数。
+        indexes = {k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS}
+        prompt = SYSTEM_PROMPTS[agent]
+    else:
+        # 自定义场景（B 的芯片 / DST 等）：prompt 与初始指数都从场景派生。
+        # 否则对手会用 AI 治理题材的口吻发言，初始指数也与场景声明不符（BACKLOG #3）。
+        indexes = initial_indices(scenario).get(agent) or {
+            k: int(cfg[f"initial_{k}"]) for k in neg.INDEX_KEYS
+        }
+        prompt = build_scenario_prompt(PROMPT_MD, scenario, agent)
     with SESSIONS_LOCK:
         session_id = str(uuid.uuid4())
         while session_id in SESSIONS:
